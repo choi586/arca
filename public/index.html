@@ -9,12 +9,13 @@
 <body>
 <canvas id="game"></canvas>
 <div id="tags"></div>
+<div id="pops"></div>
 
 <!-- 접속 화면 -->
 <div id="join">
   <div class="card">
     <h1>☁️ 구름섬 아르카</h1>
-    <p class="sub">하늘에 떠 있는 섬에서 친구들과 함께 걸어 보세요</p>
+    <p class="sub">하늘에 떠 있는 섬에서 친구들과 함께 모험해요</p>
     <label>이름
       <input id="name" maxlength="12" placeholder="바람잡이" autocomplete="off">
     </label>
@@ -36,12 +37,19 @@
 <div id="hud" hidden>
   <div id="info"><b>🌿 포근언덕</b> · <span id="chan">채널 1</span> · 접속 <span id="count">1</span>명</div>
   <canvas id="minimap" width="150" height="150"></canvas>
+  <div id="stat">
+    <div class="lvrow"><span class="lv">Lv <b id="lv">1</b></span><span id="hpText">80 / 80</span></div>
+    <div class="bar hp"><i id="hpFill"></i></div>
+    <div class="bar xp"><i id="xpFill"></i></div>
+  </div>
+  <div id="skills"></div>
   <div id="chat">
     <div id="log"></div>
     <input id="say" maxlength="80" placeholder="Enter 키로 말하기" autocomplete="off">
   </div>
-  <div id="help">WASD 이동 · 마우스 끌기 시점 · 휠 줌 · Shift 달리기 · Space 점프 · 1 인사 · 2 춤 · 3 앉기 · Enter 채팅</div>
+  <div id="help">WASD 이동 · 마우스 끌기 시점 · 클릭/F 공격 · Q·E·R 기술 · Shift 달리기 · Space 점프 · 1·2·3 감정표현 · Enter 채팅</div>
   <div id="toast"></div>
+  <div id="deadView" hidden>💫 쓰러졌어요…<br><small><b id="deadCount">5</b>초 뒤 광장에서 다시 일어나요</small></div>
   <div id="touch">
     <div id="stick"><div id="knob"></div></div>
     <div id="tbtns">
@@ -51,11 +59,13 @@
       <button data-act="chat">💬</button>
       <button data-act="run" class="wide">달리기</button>
       <button data-act="jump" class="wide">점프</button>
+      <button data-act="attack" class="atk">🗡️ 공격</button>
     </div>
   </div>
 </div>
 
 <script src="three.min.js"></script>
+<script src="shared.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

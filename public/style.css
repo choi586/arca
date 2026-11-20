@@ -48,7 +48,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #9fd3ff; fon
 #touch { display: none; }
 body.touch #touch { display: block; }
 body.touch #help { display: none; }
-body.touch #chat { bottom: 170px; width: min(300px, calc(100% - 24px)); }
+body.touch #chat { bottom: 200px; width: min(300px, calc(100% - 24px)); }
 body.touch #log { max-height: 110px; }
 body.touch #minimap { width: 110px; height: 110px; }
 #stick { position: fixed; left: 24px; bottom: 24px; width: 130px; height: 130px; border-radius: 50%; background: rgba(20,30,50,.28); border: 2px solid rgba(255,255,255,.7); touch-action: none; box-shadow: 0 2px 10px rgba(0,0,0,.15); }
@@ -57,3 +57,50 @@ body.touch #minimap { width: 110px; height: 110px; }
 #tbtns button { height: 46px; border-radius: 14px; border: 0; background: rgba(255,255,255,.92); color: #1d2b3a; font-size: 20px; touch-action: none; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
 #tbtns button.wide { grid-column: span 2; font-size: 15px; font-weight: 700; }
 #tbtns button.on { background: #4dabf7; color: #fff; }
+
+/* ---------- 2단계: 전투 ---------- */
+.tag .lvl { font-size: 10px; color: #ffe066; margin-right: 3px; }
+.tag .hpb { display: block; width: 46px; height: 5px; margin: 3px auto 0; background: rgba(20,30,50,.5); border-radius: 3px; overflow: hidden; }
+.tag .hpb i { display: block; height: 100%; width: 100%; background: #51cf66; transition: width .15s; }
+.tag.mon .nm { background: rgba(120,20,20,.55); font-size: 11px; }
+.tag.mon .hpb { width: 56px; }
+.tag.mon .hpb i { background: #ff6b6b; }
+
+#pops { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.pop { position: absolute; transform: translate(-50%, -50%); font-weight: 900; font-size: 18px; color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.45), 0 0 6px rgba(0,0,0,.3); animation: popUp .9s ease-out forwards; white-space: nowrap; }
+.pop.crit { font-size: 26px; color: #ffd43b; }
+.pop.hurt { color: #ff6b6b; }
+.pop.heal { color: #8ce99a; }
+.pop.xp { color: #ffe066; font-size: 15px; }
+.pop.lvup { color: #ffd43b; font-size: 30px; animation-duration: 1.6s; }
+@keyframes popUp { 0% { opacity: 0; margin-top: 6px; } 15% { opacity: 1; } 100% { opacity: 0; margin-top: -46px; } }
+
+#stat { position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%); width: 300px; background: rgba(255,255,255,.85); padding: 7px 10px 8px; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.12); }
+.lvrow { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; color: #4a5b70; }
+.lv b { font-size: 15px; color: #1d2b3a; }
+.bar { height: 10px; background: #e3e9f1; border-radius: 6px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 100%; transition: width .2s; }
+.bar.hp i { background: linear-gradient(90deg, #fa5252, #ff8787); }
+.bar.xp { height: 5px; margin-top: 4px; }
+.bar.xp i { background: #fcc419; width: 0; }
+
+#skills { position: fixed; left: 50%; bottom: 102px; transform: translateX(-50%); display: flex; gap: 8px; }
+.sk { position: relative; width: 52px; height: 52px; border-radius: 14px; background: rgba(255,255,255,.9); border: 0; box-shadow: 0 2px 8px rgba(0,0,0,.18); font-size: 24px; cursor: pointer; overflow: hidden; padding: 0; touch-action: none; }
+.sk .key { position: absolute; left: 4px; top: 2px; font-size: 10px; font-weight: 800; color: #4a5b70; }
+.sk .cdv { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: rgba(20,30,50,.55); }
+.sk .cdn { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; font-weight: 800; color: #fff; text-shadow: 0 1px 2px #000; }
+.sk.locked { filter: grayscale(1); opacity: .55; }
+.sk.locked .cdn { font-size: 11px; color: #fff; background: rgba(20,30,50,.45); }
+
+#deadView { position: fixed; left: 50%; top: 38%; transform: translate(-50%, -50%); background: rgba(20,30,50,.8); color: #fff; text-align: center; padding: 18px 28px; border-radius: 18px; font-size: 22px; font-weight: 800; }
+#deadView small { font-size: 14px; font-weight: 400; }
+body.deadtint #game { filter: grayscale(.8) brightness(.85); }
+
+#tbtns button.atk { grid-column: span 4; height: 58px; font-size: 19px; font-weight: 800; background: #ff8787; color: #fff; }
+
+@media (max-width: 1100px) { body:not(.touch) #chat { bottom: 165px; } }
+body.touch #stat { left: 12px; top: 50px; bottom: auto; transform: none; width: min(230px, calc(100% - 150px)); padding: 5px 8px 6px; }
+body.touch #skills { left: auto; right: 16px; bottom: 236px; transform: none; flex-direction: column; }
+body.touch .sk { width: 48px; height: 48px; }
+body.touch #skills .sk[data-k="0"] { display: none; }
+body.touch #chat { width: calc(100% - 100px); }
