@@ -150,3 +150,45 @@ body.touch #bagBtn { display: none; }
 body.touch #shopHint { top: 128px; }
 body.touch .sk.potion { display: none; }
 .panel { z-index: 5; }
+
+/* ---------- 4단계: 파티·거래·월드 보스 ---------- */
+.card .guide { margin: 10px 0 0; text-align: center; font-size: 14px; }
+.card .guide a, #guideBtn { color: #1c7ed6; font-weight: 700; text-decoration: none; }
+#peopleBtn, #guideBtn { position: fixed; top: 50px; padding: 6px 12px; border: 0; border-radius: 12px; background: rgba(255,255,255,.85); font-size: 13px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.12); color: #1d2b3a; }
+#peopleBtn { left: 106px; }
+#guideBtn { left: 216px; }
+#peopleBtn small { color: #8592a3; }
+#partyBox { position: fixed; left: 12px; top: 92px; display: grid; gap: 5px; width: 150px; pointer-events: none; }
+.pm { background: rgba(255,255,255,.85); border-radius: 10px; padding: 4px 8px 6px; font-size: 12px; font-weight: 700; }
+.pm .bar { height: 6px; margin-top: 3px; }
+.pm .bar i { background: #51cf66; }
+.pm.far { opacity: .6; }
+.tag.pt .nm { background: rgba(47,158,68,.8); }
+#bossBar { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); width: min(420px, calc(100% - 340px)); min-width: 200px; background: rgba(40,20,70,.82); color: #fff; padding: 6px 12px 9px; border-radius: 14px; text-align: center; font-size: 14px; font-weight: 800; }
+#bossBar .bar { height: 12px; margin-top: 5px; background: rgba(255,255,255,.2); }
+#bossBar .bar i { background: linear-gradient(90deg, #9775fa, #da77f2); }
+#bossTimer { position: fixed; right: 12px; top: 170px; width: 150px; text-align: center; font-size: 12px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+#ask { position: fixed; left: 50%; top: 150px; transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,.97); padding: 10px 14px; border-radius: 14px; box-shadow: 0 6px 24px rgba(20,40,80,.3); font-size: 14px; max-width: calc(100% - 24px); }
+#ask button { border: 0; border-radius: 9px; padding: 7px 12px; font-weight: 800; cursor: pointer; background: #edf1f6; white-space: nowrap; }
+#ask #askYes, .tbtn .yes { background: #4dabf7; color: #fff; }
+.prow { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid #edf1f6; font-size: 14px; }
+.prow .who { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prow .who small { color: #8592a3; margin-left: 4px; }
+.prow button { border: 0; border-radius: 9px; padding: 6px 9px; font-size: 12px; font-weight: 800; background: #4dabf7; color: #fff; cursor: pointer; white-space: nowrap; }
+.prow button.gray { background: #adb5bd; }
+.prow button:disabled { background: #ced4da; cursor: default; }
+.tcols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tgold { display: flex; align-items: center; gap: 4px; font-size: 14px; margin-bottom: 6px; height: 32px; }
+.tgold input { width: 80px; font-size: 15px; padding: 4px 6px; border: 2px solid #d5e3f3; border-radius: 8px; }
+.grid.t { grid-template-columns: repeat(3, 1fr); min-height: 54px; align-content: start; }
+.tbtn { display: flex; gap: 8px; margin-top: 12px; }
+.tbtn button { flex: 1; padding: 10px; border: 0; border-radius: 12px; font-size: 15px; font-weight: 800; cursor: pointer; background: #edf1f6; }
+.tbtn .yes.done { background: #2f9e44; }
+.okmark { color: #2f9e44; font-weight: 800; }
+body.touch #peopleBtn, body.touch #guideBtn { display: none; }
+body.touch #partyBox { top: 108px; width: 120px; }
+body.touch #bossBar { top: 168px; left: 12px; right: 12px; width: auto; transform: none; }
+body.touch #bossTimer { top: 126px; width: 110px; }
+body.touch #ask { top: 230px; }
+.phead .x { margin-left: auto; }
+.phead .gold + .x { margin-left: 0; }

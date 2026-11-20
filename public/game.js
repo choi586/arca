@@ -1,4 +1,4 @@
-// 구름섬 아르카 — 3단계: 걷기 + 싸우기 + 모으기(아이템·가방·상점·무기)
+// 구름섬 아르카 — 4단계: 걷기 + 싸우기 + 모으기 + 함께하기(파티·거래·월드 보스)
 (() => {
 'use strict';
 
@@ -388,6 +388,22 @@ function makeMonster(kind) {
     for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; const d = monsterMesh(new THREE.SphereGeometry(0.13, 6, 5), '#ffffff', mats); d.position.set(Math.cos(a) * 0.62, 1.42, Math.sin(a) * 0.62); body.add(d); }
     const top = monsterMesh(new THREE.SphereGeometry(0.15, 6, 5), '#ffffff', mats); top.position.y = 1.78; body.add(top);
     [-0.25, 0.25].forEach((x) => { const f = monsterMesh(new THREE.SphereGeometry(0.18, 6, 5), '#d9c9a8', mats); f.position.set(x, 0.1, 0.1); f.scale.y = 0.6; body.add(f); });
+  } else if (kind === 'golem') { // 월드 보스: 큰 바위 거인
+    const glow = (geo, x, y, z) => { const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0x66e3ff })); m.position.set(x, y, z); return m; };
+    const torso = monsterMesh(new THREE.DodecahedronGeometry(1.7, 0), '#6c6480', mats); torso.position.y = 2.9; torso.scale.set(1.15, 1, 0.9);
+    const hip = monsterMesh(new THREE.DodecahedronGeometry(1.0, 0), '#5a536b', mats); hip.position.y = 1.7;
+    const head = monsterMesh(new THREE.BoxGeometry(1.1, 1.0, 1.0), '#7d7594', mats); head.position.y = 4.75;
+    const horn = monsterMesh(new THREE.ConeGeometry(0.25, 0.9, 5), '#b197fc', mats); horn.position.set(0, 5.6, 0);
+    body.add(torso, hip, head, horn, glow(new THREE.IcosahedronGeometry(0.5, 0), 0, 3.0, 1.35), glow(new THREE.SphereGeometry(0.13, 6, 6), -0.26, 4.85, 0.52), glow(new THREE.SphereGeometry(0.13, 6, 6), 0.26, 4.85, 0.52));
+    [-0.8, 0.8].forEach((x) => { const l = monsterMesh(new THREE.BoxGeometry(0.9, 1.6, 0.9), '#5a536b', mats); l.position.set(x, 0.8, 0); body.add(l); });
+    const arms = [-1, 1].map((sd) => {
+      const a = new THREE.Group(); a.position.set(sd * 2.1, 3.7, 0);
+      const sh = monsterMesh(new THREE.DodecahedronGeometry(0.75, 0), '#7d7594', mats);
+      const fore = monsterMesh(new THREE.BoxGeometry(0.8, 2.3, 0.8), '#6c6480', mats); fore.position.y = -1.4;
+      const fist = monsterMesh(new THREE.DodecahedronGeometry(0.7, 0), '#8a82a3', mats); fist.position.y = -2.7;
+      a.add(sh, fore, fist); body.add(a); return a;
+    });
+    g.userData.arms = arms;
   } else { // turtle
     const shell = monsterMesh(new THREE.DodecahedronGeometry(1.5, 0), '#5c7a3a', mats); shell.position.y = 1.2; shell.scale.set(1, 0.65, 1.15);
     const moss = monsterMesh(new THREE.DodecahedronGeometry(0.9, 0), '#82c91e', mats); moss.position.set(0.2, 1.95, -0.2); moss.scale.y = 0.5;
@@ -397,7 +413,7 @@ function makeMonster(kind) {
     [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach(([x, z]) => { const l = monsterMesh(new THREE.CylinderGeometry(0.35, 0.4, 0.8, 7), '#7a8a4a', mats); l.position.set(x * 1.0, 0.4, z * 0.9); body.add(l); });
   }
   g.add(body);
-  g.userData = { body, mats, t: Math.random() * 10, flash: 0 };
+  g.userData = { body, mats, t: Math.random() * 10, flash: 0, arms: g.userData.arms };
   return g;
 }
 function animateMonster(mo, dt) {
@@ -412,6 +428,11 @@ function animateMonster(mo, dt) {
     if (mo.st === 2) rx = -0.35; else if (mo.st === 1) by = Math.abs(Math.sin(t * 4)) * 0.1;
   }
   const k = Math.min(1, dt * 12);
+  if (u.arms) { // 골렘: 공격 준비 때 두 팔을 번쩍
+    const ax = mo.st === 2 ? -2.7 : mo.st === 1 ? Math.sin(t * 4) * 0.4 : Math.sin(t * 1.5) * 0.08;
+    u.arms[0].rotation.x += (ax - u.arms[0].rotation.x) * k;
+    u.arms[1].rotation.x += ((mo.st === 1 ? -ax : ax) - u.arms[1].rotation.x) * k;
+  }
   body.scale.x += (sx - body.scale.x) * k; body.scale.z = body.scale.x;
   body.scale.y += (sy - body.scale.y) * k;
   body.position.y += (by - body.position.y) * k;
@@ -685,6 +706,7 @@ const handlers = {
     me.x = m.me.x; me.y = m.me.y; me.z = m.me.z; me.ry = m.me.ry; me.vy = 0; me.dead = false;
     document.body.classList.remove('deadtint'); $('deadView').hidden = true;
     m.players.forEach(addOther);
+    party = []; partyIds = new Set(); trade = null; $('trade').hidden = true; renderPartyBox();
     $('chan').textContent = `채널 ${m.ch}`;
     updateCount();
     if (!everJoined) {
@@ -706,20 +728,25 @@ const handlers = {
       const o = others.get(id); if (!o) continue;
       o.tx = x; o.ty = y; o.tz = z; o.tr = ry; o.a = a;
       setTagLv(o.tag, lv); setTagHp(o.tag, hp, true);
+      o.hp = hp; o.lv = lv;
     }
     const seen = new Set();
+    let bossHp = null;
     for (const [id, ki, x, z, ry, hp, st, slow] of m.m) {
       seen.add(id);
       let mo = monsters.get(id);
       if (mo && mo.dying) continue;
       if (!mo) mo = addMonster(id, MONSTER_KINDS[ki], x, z, ry);
       mo.tx = x; mo.tz = z; mo.tr = ry; mo.st = st; mo.slow = slow;
+      if (mo.kind === 'golem') bossHp = hp;
       if (mo.hp !== hp) { mo.hp = hp; setTagHp(mo.tag, hp); }
     }
     for (const [id, mo] of monsters) if (!seen.has(id) && !mo.dying) removeMonster(id);
+    $('bossBar').hidden = bossHp === null;
+    if (bossHp !== null) { $('bossFill').style.width = bossHp + '%'; $('bossPct').textContent = bossHp + '%'; }
   },
-  join(m) { addOther(m.p); updateCount(); addLog(`${m.p.name} 님이 섬에 왔어요`); },
-  leave(m) { removeOther(m.id); updateCount(); addLog(`${m.name} 님이 섬을 떠났어요`); },
+  join(m) { addOther(m.p); updateCount(); addLog(`${m.p.name} 님이 섬에 왔어요`); renderPeople(); },
+  leave(m) { removeOther(m.id); updateCount(); addLog(`${m.name} 님이 섬을 떠났어요`); renderPeople(); },
   chat(m) {
     addLog(m.text, m.name);
     const tag = m.id === me.id ? me.tag : others.get(m.id)?.tag;
@@ -762,6 +789,21 @@ const handlers = {
     if (m.id === me.id) addLog(`🎉 레벨이 올랐어요! 이제 Lv${m.lv}`);
   },
   tele(m) { telegraph(m.x, m.z, m.r, m.ms); },
+  ask(m) { showAsk(m); },
+  party(m) {
+    party = m.members; partyIds = new Set(party.map((q) => q.id));
+    for (const [id, o] of others) o.tag.el.classList.toggle('pt', partyIds.has(id));
+    renderPartyBox(); renderPeople();
+  },
+  topen(m) {
+    trade = { with: m.with, name: m.name, mine: { gold: 0, items: {} }, theirs: { gold: 0, items: {} }, okMine: false, okTheirs: false };
+    $('bag').hidden = $('shop').hidden = $('people').hidden = true;
+    $('tradeName').textContent = m.name; $('tGold').value = 0; $('trade').hidden = false;
+    renderTrade();
+  },
+  tstate(m) { if (!trade) return; Object.assign(trade, { mine: m.mine, theirs: m.theirs, okMine: m.okMine, okTheirs: m.okTheirs }); renderTrade(); },
+  tclose(m) { trade = null; $('trade').hidden = true; if (m.text) { toast(m.text); addLog(m.text); } },
+  bossinfo(m) { bossAlive = m.alive; bossAt = performance.now() + m.in; },
   mdie(m) {
     const mo = monsters.get(m.id); if (!mo) return;
     mo.dying = 0.4; mo.tag.el.remove();
@@ -775,7 +817,7 @@ const handlers = {
       setWeapon(me.av, me.inv.equip);
       if (prevEquip !== me.inv.equip || !skillSlots.length) buildSkillSlots();
     }
-    refreshStats(); refreshPotion(); renderPanels();
+    refreshStats(); refreshPotion(); renderPanels(); renderTrade();
   },
   equip(m) { const o = others.get(m.id); if (o) setWeapon(o.av, m.w); },
   loot(m) {
@@ -919,7 +961,7 @@ let merchantAv = null, merchantTag = null, nearMerchant = false, shopTab = 'buy'
 function openPanel(id, open) {
   const el = $(id), show = open === undefined ? el.hidden : open;
   el.hidden = !show;
-  if (show) { (id === 'bag' ? $('shop') : $('bag')).hidden = true; renderPanels(); }
+  if (show) { for (const other of ['bag', 'shop', 'people']) if (other !== id) $(other).hidden = true; renderPanels(); renderPeople(); }
 }
 function itemCount() { return Object.keys(me.inv.items).length; }
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
@@ -995,6 +1037,104 @@ function renderShop() {
 document.querySelectorAll('.panel .x').forEach((b) => { b.onclick = () => { b.closest('.panel').hidden = true; }; });
 document.querySelectorAll('#shop .tabs button').forEach((b) => { b.onclick = () => { shopTab = b.dataset.tab; renderShop(); }; });
 $('bagBtn').onclick = () => openPanel('bag');
+$('peopleBtn').onclick = () => openPanel('people');
+
+// ================= 사람들 / 파티 / 거래 / 보스 =================
+let party = [], partyIds = new Set(), trade = null, bossAlive = false, bossAt = 0, pendingAsk = null, askTimer = 0;
+function renderPeople() {
+  if ($('people').hidden) return;
+  const pl = $('partyList'); pl.textContent = '';
+  if (!party.length) pl.appendChild(el('div', 'empty', '아직 파티가 없어요. 아래에서 초대해 보세요!'));
+  else {
+    for (const q of party) {
+      const r = el('div', 'prow'), who = el('span', 'who', q.id === me.id ? `${q.name} (나)` : q.name);
+      r.appendChild(who); pl.appendChild(r);
+    }
+    const r = el('div', 'prow'), b = el('button', 'gray', '파티 나가기');
+    b.onclick = () => net({ t: 'pleave' });
+    r.append(el('span', 'who', `${party.length} / ${ARCA.PARTY_MAX}명`), b); pl.appendChild(r);
+  }
+  const list = $('peopleList'); list.textContent = '';
+  if (!others.size) { list.appendChild(el('div', 'empty', '지금은 혼자예요. 친구에게 주소를 보내 보세요!')); return; }
+  for (const [id, o] of others) {
+    const r = el('div', 'prow'), who = el('span', 'who', o.name);
+    who.appendChild(el('small', '', `Lv${o.lv || 1}`));
+    const inv = el('button', '', partyIds.has(id) ? '같은 파티' : '파티 초대');
+    inv.disabled = partyIds.has(id) || party.length >= ARCA.PARTY_MAX;
+    inv.onclick = () => net({ t: 'pinvite', id });
+    const tr = el('button', '', '거래');
+    tr.onclick = () => net({ t: 'treq', id });
+    r.append(who, inv, tr); list.appendChild(r);
+  }
+}
+function renderPartyBox() {
+  const box = $('partyBox'); box.textContent = '';
+  for (const q of party) {
+    if (q.id === me.id) continue;
+    const d = el('div', 'pm'); d.dataset.id = q.id;
+    const bar = el('div', 'bar'); bar.appendChild(el('i'));
+    d.append(el('span', '', `💚 ${q.name}`), bar); box.appendChild(d);
+  }
+}
+function updatePartyBox() {
+  for (const d of $('partyBox').children) {
+    const o = others.get(Number(d.dataset.id)); if (!o) continue;
+    d.querySelector('i').style.width = (o.hp === undefined ? 100 : o.hp) + '%';
+    d.classList.toggle('far', Math.hypot(o.av.position.x - me.x, o.av.position.z - me.z) > ARCA.PARTY_SHARE_RANGE);
+  }
+  const bt = $('bossTimer');
+  if (bossAlive) bt.textContent = '';
+  else { const left = Math.max(0, Math.ceil((bossAt - performance.now()) / 1000)); bt.textContent = `⚡ 보스까지 ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`; }
+}
+function showAsk(m) {
+  pendingAsk = m;
+  $('askText').textContent = m.kind === 'party' ? `👥 ${m.name} 님이 파티에 초대했어요` : `🤝 ${m.name} 님이 거래를 신청했어요`;
+  $('ask').hidden = false;
+  clearTimeout(askTimer); askTimer = setTimeout(() => answerAsk(false), 15000);
+}
+function answerAsk(yes) {
+  if (!pendingAsk) return;
+  net({ t: 'answer', kind: pendingAsk.kind, from: pendingAsk.from, yes });
+  pendingAsk = null; clearTimeout(askTimer); $('ask').hidden = true;
+}
+$('askYes').onclick = () => answerAsk(true);
+$('askNo').onclick = () => answerAsk(false);
+
+function sendOffer() { if (trade) net({ t: 'toffer', gold: trade.mine.gold, items: trade.mine.items }); }
+function tradeCells(box, items, onClick) {
+  box.textContent = '';
+  for (const id of ITEM_IDS) {
+    const n = items[id]; if (!n) continue;
+    const it = ITEMS[id], b = el('button', 'cell');
+    b.append(el('span', '', it.icon), el('span', 'n', String(n)));
+    b.title = it.name;
+    if (onClick) b.onclick = () => onClick(id); else b.disabled = true;
+    box.appendChild(b);
+  }
+}
+function renderTrade() {
+  if (!trade || $('trade').hidden) return;
+  const mine = trade.mine;
+  if (document.activeElement !== $('tGold')) $('tGold').value = mine.gold;
+  $('tGold').max = me.inv.gold;
+  $('tGoldTheirs').textContent = trade.theirs.gold;
+  $('tOkMine').textContent = trade.okMine ? '✅ 확인함' : ''; $('tOkTheirs').textContent = trade.okTheirs ? '✅ 확인함' : '고르는 중…';
+  tradeCells($('tMine'), mine.items, (id) => { mine.items[id]--; if (!mine.items[id]) delete mine.items[id]; sendOffer(); });
+  tradeCells($('tTheirs'), trade.theirs.items);
+  const left = {};
+  for (const id of ITEM_IDS) { const n = (me.inv.items[id] || 0) - (mine.items[id] || 0); if (n > 0) left[id] = n; }
+  tradeCells($('tBag'), left, (id) => { mine.items[id] = (mine.items[id] || 0) + 1; sendOffer(); });
+  if (!$('tBag').children.length) $('tBag').appendChild(el('div', 'empty', '올릴 물건이 없어요'));
+  $('tOk').textContent = trade.okMine ? '확인함 ✓ (상대를 기다려요)' : '확인';
+  $('tOk').classList.toggle('done', trade.okMine);
+}
+$('tGold').addEventListener('input', () => {
+  if (!trade) return;
+  trade.mine.gold = Math.max(0, Math.min(me.inv.gold, Math.floor(Number($('tGold').value) || 0)));
+  sendOffer();
+});
+$('tOk').onclick = () => { if (trade && !trade.okMine) net({ t: 'tok' }); };
+$('tCancel').onclick = $('trade').querySelector('.x').onclick = () => net({ t: 'tcancel' });
 $('shopHint').querySelector('button').onclick = () => openPanel('shop', true);
 function updateMerchant(dt) {
   // 상인은 가까이 온 사람을 바라봄
@@ -1030,8 +1170,9 @@ addEventListener('keydown', (e) => {
     if (e.code === 'KeyR') tryAttack(3);
     if (e.code === 'KeyH') drinkPotion();
     if (e.code === 'KeyI') openPanel('bag');
+    if (e.code === 'KeyP') openPanel('people');
     if (e.code === 'KeyB') { if (nearMerchant) openPanel('shop'); else toast('상점은 광장의 상인 모모 가까이에서 열 수 있어요'); }
-    if (e.code === 'Escape') { $('bag').hidden = true; $('shop').hidden = true; }
+    if (e.code === 'Escape') { $('bag').hidden = true; $('shop').hidden = true; $('people').hidden = true; }
   }
   keys.add(e.code);
 });
@@ -1089,6 +1230,7 @@ if (('ontouchstart' in window) || navigator.maxTouchPoints > 0 && matchMedia('(p
     else if (act === 'run') { runToggle = !runToggle; b.classList.toggle('on', runToggle); }
     else if (act === 'chat') sayEl.focus();
     else if (act === 'bag') openPanel('bag');
+    else if (act === 'people') openPanel('people');
     else if (act === 'potion') drinkPotion();
     else if (act.startsWith('emote')) doEmote(Number(act.slice(5)));
   }));
@@ -1173,15 +1315,16 @@ function updateCamera(dt) {
   camera.lookAt(tx, ty, tz);
 }
 
-let sendT = 0, lastSent = '';
+let sendT = 0, lastSent = '', sameT = 0;
 function sendMove(dt) {
   sendT += dt;
   if (sendT < 1 / 15 || me.dead) return;
   sendT = 0;
   const p = [+me.x.toFixed(2), +me.y.toFixed(2), +me.z.toFixed(2), +me.ry.toFixed(2)];
   const key = p.join(',') + ':' + me.a;
-  if (key === lastSent) return;
-  lastSent = key;
+  // 가만히 있어도 1초에 한 번은 다시 보냄 (서버가 아는 내 위치가 뒤처졌을 때 따라잡도록)
+  if (key === lastSent && (sameT += 1 / 15) < 1) return;
+  lastSent = key; sameT = 0;
   net({ t: 'm', p, a: me.a });
 }
 
@@ -1230,11 +1373,11 @@ function drawMinimap() {
   for (const h of houses) { mm.fillStyle = h.color; mm.fillRect(c + h.x * s - 4, c + h.z * s - 4, 8, 8); }
   for (const mo of monsters.values()) {
     if (mo.dying) continue;
-    mm.fillStyle = mo.kind === 'turtle' ? '#7a3b00' : '#e03131';
-    mm.beginPath(); mm.arc(c + mo.av.position.x * s, c + mo.av.position.z * s, mo.kind === 'turtle' ? 3.5 : 2, 0, Math.PI * 2); mm.fill();
+    mm.fillStyle = mo.kind === 'golem' ? '#9c36b5' : mo.kind === 'turtle' ? '#7a3b00' : '#e03131';
+    mm.beginPath(); mm.arc(c + mo.av.position.x * s, c + mo.av.position.z * s, mo.kind === 'golem' ? 6 : mo.kind === 'turtle' ? 3.5 : 2, 0, Math.PI * 2); mm.fill();
   }
-  mm.fillStyle = '#fff';
-  for (const o of others.values()) {
+  for (const [id, o] of others) {
+    mm.fillStyle = partyIds.has(id) ? '#40c057' : '#fff';
     const x = o.av.position.x, z = o.av.position.z; if (Math.hypot(x, z) > R + 4) continue;
     mm.beginPath(); mm.arc(c + x * s, c + z * s, 3, 0, Math.PI * 2); mm.fill();
   }
@@ -1271,7 +1414,7 @@ function frame(now) {
     updateMerchant(dt);
     placeTag(me.tag, me.av, dt, me.a === ANIM.sit ? 2.05 : me.a === ANIM.dead ? 1.2 : 2.5);
     updateSkillSlots();
-    if ((mmT += dt) > 0.1) { mmT = 0; drawMinimap(); }
+    if ((mmT += dt) > 0.1) { mmT = 0; drawMinimap(); updatePartyBox(); }
   } else { // 접속 전에는 섬 주위를 천천히 돌기
     const a = time * 0.08;
     camera.position.set(Math.sin(a) * 75, 32, Math.cos(a) * 75); camera.lookAt(0, 2, 0);
@@ -1283,5 +1426,5 @@ requestAnimationFrame(frame);
 refreshStats();
 
 // 자동 확인용
-window.__arca = { me, others: () => others.size, monsters: () => monsters, groundAt, tryAttack, net: (o) => net(o), openPanel };
+window.__arca = { me, others: () => others.size, monsters: () => monsters, groundAt, tryAttack, net: (o) => net(o), openPanel, party: () => party, trade: () => trade, otherIds: () => [...others.keys()] };
 })();

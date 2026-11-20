@@ -60,7 +60,11 @@ const MONSTERS = {
   shroom: { name: '버섯돌이', lv: 4, hp: 120, atk: 14, speed: 3.0, xp: 16, aggro: 11, reach: 2.6, hitR: 2.8, hitAt: 0.0, windup: 900, cd: 2200, size: 1.0, respawn: 16000 },
   turtle: { name: '이끼 돌거북', lv: 8, hp: 480, atk: 26, speed: 2.0, xp: 60, aggro: 12, reach: 3.4, hitR: 4.0, hitAt: 1.6, windup: 1200, cd: 2800, size: 1.6, respawn: 30000 },
 };
-const MONSTER_KINDS = ['slime', 'shroom', 'turtle'];
+// 월드 보스 (섬 서북쪽에 가끔 나타남)
+MONSTERS.golem = { name: '폭풍 골렘', lv: 15, hp: 3000, atk: 30, speed: 2.6, xp: 300, aggro: 24, reach: 5, hitR: 5.5, hitAt: 2.5, windup: 1300, cd: 2600, size: 3, respawn: 600000, boss: true };
+const MONSTER_KINDS = ['slime', 'shroom', 'turtle', 'golem'];
+const BOSS = { x: -30, z: -26 };
+const PARTY_MAX = 4, PARTY_SHARE_RANGE = 30;
 
 // 몬스터가 사는 곳 (집 위치) — 슬라임은 광장 가까이, 버섯은 숲, 돌거북은 큰 언덕
 function monsterHomes(obstacles) {
@@ -134,6 +138,7 @@ const ITEMS = {
   jelly: { name: '슬라임 젤리', icon: '🟢', type: 'mat', sell: 3, desc: '말랑말랑. 상인에게 팔 수 있어요' },
   spore: { name: '버섯 포자', icon: '🍄', type: 'mat', sell: 8, desc: '반짝이는 가루. 상인에게 팔 수 있어요' },
   shell: { name: '이끼 껍질', icon: '🐚', type: 'mat', sell: 30, desc: '돌거북의 단단한 껍질 조각' },
+  shard: { name: '폭풍의 조각', icon: '💎', type: 'mat', sell: 120, desc: '폭풍 골렘을 쓰러뜨린 증표. 비싸게 팔려요' },
 };
 const ITEM_IDS = Object.keys(ITEMS);
 const SHOP_ITEMS = ['potion', 'bigpotion'];
@@ -162,7 +167,7 @@ const MAX_LV = 30;
 const needXp = (lv) => 10 * lv * lv + 10;
 const statsFor = (lv) => ({ maxHp: 80 + (lv - 1) * 15, atk: 10 + (lv - 1) * 3 });
 
-const api = { R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, monsterHomes,
+const api = { R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
   UNLOCK, KEYS, WEAPONS, WEAPON_IDS, ITEMS, ITEM_IDS, SHOP_ITEMS, MAX_STACK, BAG_SLOTS, LOOT, cleanInv, MAX_LV, needXp, statsFor };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ARCA = api;
 })(this);
