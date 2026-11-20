@@ -81,11 +81,14 @@ function broadcast(ch, msg, exceptId) {
   const s = JSON.stringify(msg);
   for (const p of channels.get(ch).players.values()) if (p.id !== exceptId && p.ws.readyState === 1) p.ws.send(s);
 }
-function publicInfo(p) { return { id: p.id, name: p.name, color: p.color, hat: p.hat, x: p.x, y: p.y, z: p.z, ry: p.ry, lv: p.lv, w: p.inv.equip }; }
+function publicInfo(p) { return { id: p.id, name: p.name, color: p.color, hat: p.hat, x: p.x, y: p.y, z: p.z, ry: p.ry, lv: p.lv, w: p.inv.equip, title: titleName(p) }; }
 function cleanText(s, max) { return String(s || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, max); }
 const num = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
 const r2 = (v) => Math.round(v * 100) / 100;
 function sendStats(p) { send(p.ws, { t: 'stats', hp: Math.ceil(p.hp), maxHp: p.maxHp, lv: p.lv, xp: p.xp, need: A.needXp(p.lv), atk: p.atk }); }
+function titleName(p) { return p.title && A.TITLES[p.title] ? A.TITLES[p.title].name : ''; }
+function statsOf(p) { return { lv: p.lv, gold: p.inv.gold, kills: p.st.kills, boss: p.st.boss, wins: p.st.wins, quests: p.st.quests, maxUp: Math.max(0, ...Object.values(p.inv.up)) }; }
+function sendSt(p) { send(p.ws, { t: 'st', st: p.st, title: p.title }); }
 function sendInv(p) { send(p.ws, { t: 'inv', ...p.inv }); }
 function bagSlots(inv) { return Object.keys(inv.items).length; }
 function addItem(inv, id, n) { // 가방이 꽉 차면 못 넣음
@@ -125,6 +128,7 @@ function killMonster(ch, m) {
     const p = list.get(pid); if (!p) continue;
     giveXp(ch, p, Math.round(m.def.xp * bonus));
     questEvent(p, 'kill', m.kind);
+    p.st.kills++; sendSt(p);
     const gold = Math.round((loot.gold[0] + Math.floor(Math.random() * (loot.gold[1] - loot.gold[0] + 1))) * bonus);
     p.inv.gold = Math.min(999999, p.inv.gold + gold);
     const got = [];
@@ -152,6 +156,7 @@ function hurtPlayer(ch, p, dmgRaw) {
   broadcast(ch, { t: 'hit', p: p.id, dmg });
   if (p.hp <= 0) {
     p.hp = 0; p.dead = true; p.deadAt = Date.now(); p.a = 9;
+    if (p.duel) endDuel(p.duel, null, '결투 중에 몬스터에게 쓰러져서 결투가 무효가 됐어요');
     broadcast(ch, { t: 'pdie', id: p.id });
   }
   sendStats(p);
@@ -220,7 +225,58 @@ function playerAttack(ch, p, k, ry) {
       if (hit) { hurtMonster(ch, m, p, sk.mult); if (sk.slow) m.slowUntil = now + sk.slow; }
     }
   }
+  // 결투 중이면 상대도 맞음
+  const q = p.duel && now >= p.duel.start ? (p.duel.a === p ? p.duel.b : p.duel.a) : null;
+  if (q && !q.dead && sk.mult) {
+    const dx = q.x - p.x, dz = q.z - p.z, d = Math.hypot(dx, dz), front = d < 0.8 ? 1 : (dx * fx + dz * fz) / d;
+    let hit = false;
+    if (sk.kind === 'arc') hit = d < sk.range + 0.5 && Math.acos(Math.max(-1, Math.min(1, front))) < sk.arc;
+    else if (sk.kind === 'around') hit = d < sk.range + 0.5;
+    else if (sk.kind === 'line') { const along = dx * fx + dz * fz, side = Math.abs(dx * fz - dz * fx); hit = along > -0.5 && along < sk.range + 0.5 && side < sk.width + 0.5; }
+    else hit = d < sk.range + 0.5 && front > 0.3; // 화살·마법은 상대 쪽을 보고 있어야 맞음
+    if (hit && Math.abs(q.y - p.y) < 4) { if (!fxMsg.tg) fxMsg.tg = [[r2(q.x), r2(q.z)]]; hurtDuel(ch, p, q, sk.mult); }
+  }
   broadcast(ch, fxMsg, p.id);
+}
+
+// ---------- 결투 ----------
+function hurtDuel(ch, p, q, mult) {
+  const crit = Math.random() < 0.12, up = 1 + A.UP_BONUS * (p.inv.up[p.inv.equip] || 0);
+  const guard = Date.now() < q.guardUntil ? q.guard : 0;
+  const dmg = Math.max(1, Math.round(p.atk * mult * up * A.DUEL.dmg * (0.9 + Math.random() * 0.2) * (crit ? 1.6 : 1) * (1 - guard)));
+  q.hp -= dmg; q.lastHurt = Date.now();
+  broadcast(ch, { t: 'hit', p: q.id, dmg, crit, by: p.id });
+  if (q.hp <= 0) { q.hp = Math.ceil(q.maxHp * A.DUEL.loserHp); endDuel(p.duel, p); }
+  sendStats(q);
+}
+function startDuel(a, b) {
+  const d = { a, b, start: Date.now() + A.DUEL.countdown, end: Date.now() + A.DUEL.countdown + A.DUEL.maxMs };
+  a.duel = b.duel = d;
+  for (const p of [a, b]) { p.hp = p.maxHp; sendStats(p); }
+  broadcast(a.ch, { t: 'duel', a: a.id, b: b.id, an: a.name, bn: b.name, in: A.DUEL.countdown });
+}
+function endDuel(d, winner, text) {
+  const { a, b } = d;
+  a.duel = b.duel = null;
+  if (winner) {
+    const loser = winner === a ? b : a;
+    winner.st.wins++; loser.st.loses++; sendSt(winner); sendSt(loser);
+    text = `⚔️ ${winner.name} 님이 ${loser.name} 님과의 결투에서 이겼어요!`;
+  }
+  if (channels.has(a.ch)) broadcast(a.ch, { t: 'duelend', a: a.id, b: b.id, win: winner ? winner.id : 0, text });
+}
+function handleRecord(me, m) {
+  if (m.t === 'title') {
+    const t = A.TITLES[m.id];
+    if (m.id && (!t || !t.ok(statsOf(me)))) return notice(me, '아직 얻지 못한 칭호예요');
+    me.title = m.id || '';
+    sendSt(me);
+    broadcast(me.ch, { t: 'title', id: me.id, title: titleName(me) });
+  } else if (m.t === 'rank') {
+    const all = []; for (const c of channels.values()) for (const p of c.players.values()) all.push(p);
+    const top = (f) => all.filter((p) => f(p) > 0).sort((x, y) => f(y) - f(x)).slice(0, 5).map((p) => [p.name, f(p), p.id === me.id]);
+    send(me.ws, { t: 'rank', lv: top((p) => p.lv), wins: top((p) => p.st.wins), kills: top((p) => p.st.kills), n: all.length });
+  }
 }
 
 // ---------- 가방과 상점 ----------
@@ -336,6 +392,7 @@ function handleQuest(p, m) {
     if (q.type === 'collect') removeItem(inv, q.key, q.n);
     delete p.q.active[m.id];
     p.q.done[m.id] = (p.q.done[m.id] || 0) + 1;
+    p.st.quests++; sendSt(p);
     inv.gold = Math.min(999999, inv.gold + q.gold);
     if (q.stones) addItem(inv, 'windstone', q.stones);
     giveXp(p.ch, p, q.xp);
@@ -380,7 +437,7 @@ function startAttack(ch, m, pat) {
 }
 function bossRewards(ch, m) {
   const list = channels.get(ch).players;
-  for (const pid of m.dmgBy.keys()) { const p = list.get(pid); if (p) questEvent(p, 'kill', 'golem'); }
+  for (const pid of m.dmgBy.keys()) { const p = list.get(pid); if (p) { questEvent(p, 'kill', 'golem'); p.st.boss++; p.st.kills++; sendSt(p); } }
   const total = [...m.dmgBy.values()].reduce((a, b) => a + b, 0) || 1;
   const rank = [...m.dmgBy.entries()].sort((a, b) => b[1] - a[1]);
   const names = [];
@@ -517,26 +574,35 @@ function findPlayer(me, id) { const q = channels.get(me.ch).players.get(id); ret
 function handleSocial(me, m) {
   const now = Date.now();
   if (m.t === 'pleave') return leaveParty(me);
-  if (m.t === 'pinvite' || m.t === 'treq') {
+  if (m.t === 'pinvite' || m.t === 'treq' || m.t === 'dreq') {
     const q = findPlayer(me, m.id); if (!q) return;
-    const kind = m.t === 'pinvite' ? 'party' : 'trade';
+    const kind = m.t === 'pinvite' ? 'party' : m.t === 'treq' ? 'trade' : 'duel';
     if (kind === 'party') {
       if (q.party) return notice(me, q.party === me.party ? '이미 같은 파티예요' : `${q.name} 님은 이미 다른 파티에 있어요`);
       if (me.party && parties.get(me.party).size >= A.PARTY_MAX) return notice(me, `파티는 ${A.PARTY_MAX}명까지예요`);
+    } else if (kind === 'duel') {
+      if (me.duel || q.duel) return notice(me, '지금은 결투할 수 없어요 (이미 결투 중)');
+      if (me.dead || q.dead) return notice(me, '쓰러져 있을 때는 결투할 수 없어요');
+      if (Math.hypot(q.x - me.x, q.z - me.z) > A.DUEL.range) return notice(me, '결투하려면 더 가까이 가야 해요');
     } else {
       if (me.trade || q.trade) return notice(me, '지금은 거래할 수 없어요 (이미 거래 중)');
       if (Math.hypot(q.x - me.x, q.z - me.z) > 10) return notice(me, '거래하려면 더 가까이 가야 해요');
     }
     q.asks.set(kind + me.id, now);
     send(q.ws, { t: 'ask', kind, from: me.id, name: me.name });
-    return notice(me, `${q.name} 님에게 ${kind === 'party' ? '파티 초대를' : '거래 요청을'} 보냈어요`);
+    return notice(me, `${q.name} 님에게 ${kind === 'party' ? '파티 초대를' : kind === 'duel' ? '결투 신청을' : '거래 요청을'} 보냈어요`);
   }
   if (m.t === 'answer') {
-    const kind = m.kind === 'party' ? 'party' : 'trade', key = kind + m.from;
+    const kind = m.kind === 'party' ? 'party' : m.kind === 'duel' ? 'duel' : 'trade', key = kind + m.from;
     const at = me.asks.get(key); me.asks.delete(key);
     const q = findPlayer(me, m.from);
     if (!at || now - at > ASK_MS || !q) return;
-    if (!m.yes) return notice(q, `${me.name} 님이 ${kind === 'party' ? '초대' : '거래'}를 거절했어요`);
+    if (!m.yes) return notice(q, `${me.name} 님이 ${kind === 'party' ? '초대' : kind === 'duel' ? '결투' : '거래'}를 거절했어요`);
+    if (kind === 'duel') {
+      if (me.duel || q.duel || me.dead || q.dead) return notice(me, '지금은 결투할 수 없어요');
+      if (Math.hypot(q.x - me.x, q.z - me.z) > A.DUEL.range) return notice(me, '결투하려면 더 가까이 가야 해요');
+      return startDuel(q, me);
+    }
     if (kind === 'party') {
       if (me.party) return notice(me, '이미 파티가 있어요. 먼저 나가야 해요');
       if (!q.party) { q.party = nextPartyId++; parties.set(q.party, new Set([q])); }
@@ -638,9 +704,11 @@ wss.on('connection', (ws) => {
         hp: 0, maxHp: 0, atk: 0, dead: false, deadAt: 0, lastHurt: 0, lastAtk: 0, cds: {}, guard: 0, guardUntil: 0, potionAt: 0,
         inv: A.cleanInv(m.inv), // 가방도 브라우저에 저장된 것을 이어받음
         party: 0, trade: null, asks: new Map(), uid, lastAct: Date.now(),
+        st: A.cleanStats(m.st), title: '', duel: null, // 기록도 브라우저에 저장된 것을 이어받음
         q: A.cleanQuests(m.q), // 의뢰 진행도 브라우저에 저장된 것을 이어받음
       };
       applyLevel(me); me.hp = me.maxHp;
+      if (A.TITLES[m.title] && A.TITLES[m.title].ok(statsOf(me))) me.title = m.title;
       const c = channels.get(ch);
       c.players.set(me.id, me);
       // 전에 놓아 둔 꾸미기 물건을 다시 놓음 (브라우저에 저장된 목록)
@@ -649,7 +717,7 @@ wss.on('connection', (ws) => {
         if (d) { c.decos.set(d.id, d); broadcast(ch, { t: 'decoadd', d }, me.id); }
       }
       send(ws, { t: 'welcome', id: me.id, ch, players: [...c.players.values()].filter((q) => q !== me).map(publicInfo), me: publicInfo(me), decos: [...c.decos.values()], phase: phaseNow(), dayMs: DAY_MS });
-      sendStats(me); sendInv(me); sendQuests(me); send(ws, windMsg());
+      sendStats(me); sendInv(me); sendQuests(me); sendSt(me); send(ws, windMsg());
       send(ws, { t: 'bossinfo', alive: c.boss.alive, in: c.boss.alive ? 0 : Math.max(0, c.boss.deadUntil - Date.now()) });
       broadcast(ch, { t: 'join', p: publicInfo(me) }, me.id);
       return;
@@ -673,7 +741,9 @@ wss.on('connection', (ws) => {
       playerAttack(me.ch, me, Math.floor(num(m.k, -1)), num(m.ry, me.ry));
     } else if (m.t === 'use' || m.t === 'equip' || m.t === 'buy' || m.t === 'sell') {
       handleShop(me, m);
-    } else if (['pinvite', 'pleave', 'treq', 'answer', 'toffer', 'tok', 'tcancel'].includes(m.t)) {
+    } else if (m.t === 'title' || m.t === 'rank') {
+      handleRecord(me, m);
+    } else if (['pinvite', 'pleave', 'treq', 'dreq', 'answer', 'toffer', 'tok', 'tcancel'].includes(m.t)) {
       handleSocial(me, m);
     } else if (m.t === 'deco' || m.t === 'decodel') {
       handleDeco(me, m);
@@ -699,6 +769,7 @@ wss.on('connection', (ws) => {
     if (!me) return;
     const c = channels.get(me.ch);
     c.players.delete(me.id);
+    if (me.duel) endDuel(me.duel, null, `${me.name} 님이 나가서 결투가 끝났어요`);
     if (me.trade) cancelTrade(me.trade, `${me.name} 님이 나가서 거래가 취소됐어요`);
     leaveParty(me, true);
     for (const d of myDecos(me)) { c.decos.delete(d.id); broadcast(me.ch, { t: 'decodel', id: d.id }); }
@@ -750,6 +821,11 @@ setInterval(() => {
     if (p.trade && Math.hypot(p.trade.a.x - p.trade.b.x, p.trade.a.z - p.trade.b.z) > 14) cancelTrade(p.trade, '서로 너무 멀어져서 거래가 취소됐어요');
     // 화면을 안 보고 있어서(다른 창, 꺼진 화면) 부활 요청을 못 보낸 사람은 서버가 대신 일으킴
     if (p.dead && now - p.deadAt > RESPAWN_MS + 4000) revive(p);
+    if (p.duel && p.duel.a === p) { // 결투가 너무 길어지거나 서로 멀어지면 끝냄
+      const d = p.duel;
+      if (now > d.end) endDuel(d, null, '⚔️ 시간이 다 돼서 결투가 비겼어요');
+      else if (Math.hypot(d.a.x - d.b.x, d.a.z - d.b.z) > A.DUEL.leave) endDuel(d, null, '⚔️ 서로 너무 멀어져서 결투가 끝났어요');
+    }
     if (p.dead || p.hp >= p.maxHp || now - p.lastHurt < 6000) continue;
     p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.04);
     sendStats(p);

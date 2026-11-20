@@ -221,3 +221,24 @@ body.touch #qtrack { top: 146px; width: 130px; }
 #kicked b { font-size: 19px; }
 #kicked p { margin: 10px 0 16px; color: #4a5b70; font-size: 14px; }
 #kicked button { padding: 11px 22px; border: 0; border-radius: 12px; background: #1c7ed6; color: #fff; font-size: 15px; font-weight: 800; cursor: pointer; }
+
+/* ---------- 7단계: 기록 · 칭호 · 결투 ---------- */
+.tag .ttl { display: block; font-size: 10px; font-weight: 700; color: #ffe066; text-shadow: 0 1px 2px rgba(0,0,0,.8); margin-bottom: 1px; }
+.tag.foe .nm { background: rgba(201,42,42,.85); }
+#recordBtn { position: fixed; left: 306px; top: 50px; padding: 6px 12px; border: 0; border-radius: 12px; background: rgba(255,255,255,.85); font-size: 13px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+#recordBtn small { color: #8592a3; }
+body.touch #recordBtn { display: none; }
+.recstats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.recstats div { background: #edf1f6; border-radius: 10px; padding: 6px 4px; text-align: center; }
+.recstats small { display: block; font-size: 11px; color: #4a5b70; }
+.recstats b { font-size: 15px; }
+#recTitles button:disabled { opacity: .6; cursor: default; font-size: 12px; }
+#recTitles button small { color: #8592a3; }
+.rank3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 13px; }
+.rank3 > div { background: #f6f8fb; border-radius: 10px; padding: 8px; min-width: 0; }
+.rank3 b { display: block; margin-bottom: 4px; }
+.rank3 > div > div { display: flex; justify-content: space-between; gap: 4px; padding: 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rank3 .mine { font-weight: 800; color: #1c7ed6; }
+.rank3 span { color: #4a5b70; }
+.rank3 small { color: #8592a3; }
+#people .wide-btn { width: 100%; margin-top: 10px; }

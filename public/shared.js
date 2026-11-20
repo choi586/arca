@@ -273,11 +273,34 @@ const DECOS = {
 const DECO_MAX = 8, DECO_TEXT = 16;
 function decoAllowed(x, z) { return groundAt(x, z) > -Infinity && Math.hypot(x, z) > 15 && !UPDRAFTS.some((u) => Math.hypot(u.x - x, u.z - z) < u.r + 1); }
 
+// ---------- 기록과 칭호 ----------
+// s = { lv, gold, kills 사냥 수, boss 골렘 처치, wins 결투 승, quests 의뢰 완료, maxUp 가장 높은 강화 }
+const TITLES = {
+  rookie: { name: '새내기 바람잡이', how: '처음부터', ok: () => true },
+  hunter: { name: '슬라임의 악몽', how: '몬스터 50마리 사냥', ok: (s) => s.kills >= 50 },
+  veteran: { name: '백전노장', how: '몬스터 300마리 사냥', ok: (s) => s.kills >= 300 },
+  helper: { name: '마을의 해결사', how: '의뢰 10번 완료', ok: (s) => s.quests >= 10 },
+  smith: { name: '모모의 단골', how: '무기 하나를 +5까지 강화', ok: (s) => s.maxUp >= 5 },
+  rich: { name: '걸어 다니는 금고', how: '골드 2,000G 넘게 가지기', ok: (s) => s.gold >= 2000 },
+  storm: { name: '폭풍을 잠재운 자', how: '폭풍 골렘 처치에 참여', ok: (s) => s.boss >= 1 },
+  duelist: { name: '결투가', how: '결투 3번 승리', ok: (s) => s.wins >= 3 },
+  champion: { name: '광장의 챔피언', how: '결투 10번 승리', ok: (s) => s.wins >= 10 },
+  sky: { name: '하늘의 주인', how: 'Lv 20 달성', ok: (s) => s.lv >= 20 },
+};
+const TITLE_IDS = Object.keys(TITLES);
+function cleanStats(raw) {
+  const n = (v) => Math.max(0, Math.min(9999999, Math.floor(Number(v) || 0)));
+  raw = raw && typeof raw === 'object' ? raw : {};
+  return { kills: n(raw.kills), boss: n(raw.boss), wins: n(raw.wins), loses: n(raw.loses), quests: n(raw.quests) };
+}
+// ---------- 결투 ----------
+const DUEL = { countdown: 3000, maxMs: 90000, range: 12, leave: 45, dmg: 0.5, loserHp: 0.3 };
+
 const MAX_LV = 30;
 const needXp = (lv) => 10 * lv * lv + 10;
 const statsFor = (lv) => ({ maxHp: 80 + (lv - 1) * 15, atk: 10 + (lv - 1) * 3 });
 
-const api = { ELDER, TALK_RANGE, ALTAR_RANGE, BRIDGE, world, onBridge, MAX_UP, UP_BONUS, UPGRADES, QUESTS, QUEST_IDS, QUEST_ACTIVE_MAX, cleanQuests, ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
+const api = { TITLES, TITLE_IDS, cleanStats, DUEL, ELDER, TALK_RANGE, ALTAR_RANGE, BRIDGE, world, onBridge, MAX_UP, UP_BONUS, UPGRADES, QUESTS, QUEST_IDS, QUEST_ACTIVE_MAX, cleanQuests, ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
   UNLOCK, KEYS, WEAPONS, WEAPON_IDS, ITEMS, ITEM_IDS, SHOP_ITEMS, MAX_STACK, BAG_SLOTS, LOOT, cleanInv, MAX_LV, needXp, statsFor };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ARCA = api;
 })(this);

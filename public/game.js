@@ -542,9 +542,11 @@ function makeTag(name, opts = {}) {
   nm.append(lvl, txt);
   const hpb = document.createElement('span'); hpb.className = 'hpb'; hpb.hidden = !opts.mon;
   const hpi = document.createElement('i'); hpb.appendChild(hpi);
-  el.append(emo, bub, nm, hpb); tagLayer.appendChild(el);
-  return { el, emo, bub, lvl, hpb, hpi, bubT: 0, emoT: 0, lv: 0, hp: 100 };
+  const ttl = document.createElement('span'); ttl.className = 'ttl'; ttl.hidden = true;
+  el.append(emo, bub, ttl, nm, hpb); tagLayer.appendChild(el);
+  return { el, emo, bub, ttl, lvl, hpb, hpi, bubT: 0, emoT: 0, lv: 0, hp: 100 };
 }
+function setTagTitle(tag, text) { tag.ttl.textContent = text ? `〈${text}〉` : ''; tag.ttl.hidden = !text; }
 function setTagLv(tag, lv) { if (tag.lv !== lv) { tag.lv = lv; tag.lvl.textContent = 'Lv' + lv; } }
 function setTagHp(tag, hp, hideFull) {
   if (tag.hp === hp && !hideFull) return;
@@ -679,7 +681,7 @@ function addOther(p) {
   setWeapon(av, p.w);
   av.position.set(p.x, p.y, p.z); av.rotation.y = p.ry;
   scene.add(av);
-  const tag = makeTag(p.name); setTagLv(tag, p.lv || 1);
+  const tag = makeTag(p.name); setTagLv(tag, p.lv || 1); setTagTitle(tag, p.title);
   others.set(p.id, { av, tag, tx: p.x, ty: p.y, tz: p.z, tr: p.ry, a: 0, name: p.name });
 }
 function removeOther(id) {
@@ -778,13 +780,14 @@ function touchAct() { // 키나 화면을 누르면 '아직 여기 있어요'를
   if (now - lastActSent > 30000) { lastActSent = now; net({ t: 'act' }); }
 }
 addEventListener('keydown', touchAct); addEventListener('pointerdown', touchAct);
+function loadSt() { try { return JSON.parse(store.get('arca.st') || 'null'); } catch (e) { return null; } }
 function loadQ() { try { return JSON.parse(store.get('arca.q') || 'null'); } catch (e) { return null; } }
 function loadInv() { try { return JSON.parse(store.get('arca.inv') || 'null'); } catch (e) { return null; } }
 function connect() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   ws = new WebSocket(`${proto}://${location.host}`);
   ws.onopen = () => ws.send(JSON.stringify({ t: 'join', name: profile.name, color: profile.color, hat: profile.hat,
-    lv: Number(store.get('arca.lv')) || 1, xp: Number(store.get('arca.xp')) || 0, inv: loadInv(), deco: loadDeco(), q: loadQ(), uid: myUid() }));
+    lv: Number(store.get('arca.lv')) || 1, xp: Number(store.get('arca.xp')) || 0, inv: loadInv(), deco: loadDeco(), q: loadQ(), uid: myUid(), st: loadSt(), title: store.get('arca.title') || '' }));
   ws.onmessage = (ev) => {
     let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
     const h = handlers[m.t]; if (h) h(m);
@@ -923,7 +926,7 @@ const handlers = {
       setWeapon(me.av, me.inv.equip);
       if (prevEquip !== me.inv.equip || !skillSlots.length) buildSkillSlots();
     }
-    refreshStats(); refreshPotion(); renderPanels(); renderTrade(); renderQuest(); renderTrack();
+    refreshStats(); refreshPotion(); renderPanels(); renderTrade(); renderQuest(); renderTrack(); if (knownTitles) checkNewTitles();
   },
   equip(m) { const o = others.get(m.id); if (o) setWeapon(o.av, m.w); },
   loot(m) {
@@ -936,6 +939,31 @@ const handlers = {
     }
   },
   notice(m) { toast(m.text); addLog(m.text); },
+  st(m) {
+    myst = m.st; myTitle = m.title || '';
+    store.set('arca.st', JSON.stringify(myst)); store.set('arca.title', myTitle);
+    if (me.tag) setTagTitle(me.tag, myTitle && ARCA.TITLES[myTitle] ? ARCA.TITLES[myTitle].name : '');
+    checkNewTitles(); renderRecord();
+  },
+  title(m) { const o = others.get(m.id); if (o) setTagTitle(o.tag, m.title); },
+  rank(m) { rankData = m; renderRecord(); },
+  duel(m) {
+    if (m.a !== me.id && m.b !== me.id) { addLog(`⚔️ ${m.an} 님과 ${m.bn} 님이 결투를 시작해요!`); return; }
+    duelOp = m.a === me.id ? m.b : m.a; duelStart = performance.now() + m.in;
+    const o = others.get(duelOp); if (o) { o.tag.el.classList.add('foe'); o.tag.hpb.hidden = false; }
+    addLog(`⚔️ ${m.a === me.id ? m.bn : m.an} 님과 결투! 져도 쓰러지지 않아요`);
+    ['⚔️ 결투 준비… 3', '⚔️ 2', '⚔️ 1', '⚔️ 시작!'].forEach((t, i) => setTimeout(() => { if (duelOp) toast(t); }, i * 1000));
+    $('people').hidden = true; renderPeople();
+  },
+  duelend(m) {
+    if (m.a === me.id || m.b === me.id) {
+      const o = others.get(duelOp); if (o) o.tag.el.classList.remove('foe');
+      duelOp = 0;
+      if (m.win) pop(m.win === me.id ? '승리!' : '패배…', me.x, me.y + 3, me.z, 'lvup');
+      toast(m.text); renderPeople();
+    }
+    if (m.text) addLog(m.text);
+  },
   kicked(m) {
     kickedOut = true; joined = false;
     const box = $('kicked');
@@ -1022,6 +1050,8 @@ function nearMonsters(range) {
 }
 // 가까운 몬스터 쪽으로 몸을 돌려 주기 (조준 도우미)
 function autoAim(range) {
+  const foe = duelOp && performance.now() >= duelStart ? others.get(duelOp) : null; // 결투 중에는 상대를 먼저 겨눔
+  if (foe && Math.hypot(foe.av.position.x - me.x, foe.av.position.z - me.z) < range + 0.5) { me.ry = Math.atan2(foe.av.position.x - me.x, foe.av.position.z - me.z); return foe; }
   const best = nearMonsters(range)[0];
   if (best) me.ry = Math.atan2(best.av.position.x - me.x, best.av.position.z - me.z);
   return best;
@@ -1083,7 +1113,7 @@ let merchantAv = null, merchantTag = null, nearMerchant = false, shopTab = 'buy'
 function openPanel(id, open) {
   const el = $(id), show = open === undefined ? el.hidden : open;
   el.hidden = !show;
-  if (show) { for (const other of ['bag', 'shop', 'people', 'deco', 'quest']) if (other !== id) $(other).hidden = true; renderPanels(); renderPeople(); renderDeco(); renderQuest(); }
+  if (show) { for (const other of ['bag', 'shop', 'people', 'deco', 'quest', 'record']) if (other !== id) $(other).hidden = true; renderPanels(); renderPeople(); renderDeco(); renderQuest(); if (id === 'record') { net({ t: 'rank' }); renderRecord(); } }
 }
 function itemCount() { return Object.keys(me.inv.items).length; }
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
@@ -1265,6 +1295,52 @@ function updateElder(dt) {
 }
 $('quest').querySelector('.x').onclick = () => { $('quest').hidden = true; };
 
+// ================= 기록 · 칭호 · 순위 · 결투 =================
+let myst = { kills: 0, boss: 0, wins: 0, loses: 0, quests: 0 }, myTitle = '', rankData = null, duelOp = 0, duelStart = 0, knownTitles = null;
+function myStats() { return { lv: me.lv, gold: me.inv.gold, kills: myst.kills, boss: myst.boss, wins: myst.wins, quests: myst.quests, maxUp: Math.max(0, ...Object.values(me.inv.up || {})) }; }
+function earnedTitles() { const st = myStats(); return ARCA.TITLE_IDS.filter((id) => ARCA.TITLES[id].ok(st)); }
+function checkNewTitles() { // 새 칭호를 얻으면 알려 줌
+  const now = earnedTitles();
+  if (knownTitles) for (const id of now) if (!knownTitles.includes(id)) { toast(`🏅 새 칭호: ${ARCA.TITLES[id].name}`); addLog(`🏅 새 칭호를 얻었어요: 〈${ARCA.TITLES[id].name}〉 — 기록 창(L)에서 달 수 있어요`); }
+  knownTitles = now;
+}
+{
+  const panel = el('div', 'panel'); panel.id = 'record'; panel.hidden = true;
+  panel.innerHTML = '<div class="phead"><b>🏆 기록 · 칭호 · 순위</b><button class="x" aria-label="닫기">✕</button></div><div class="ptitle">내 기록</div><div id="recStats" class="recstats"></div><div class="ptitle">칭호 <small>눌러서 이름표 위에 달아요</small></div><div id="recTitles" class="chips"></div><div class="ptitle">지금 접속한 사람들의 순위 <small id="recN"></small></div><div id="recRank" class="rank3"></div>';
+  $('hud').appendChild(panel);
+  panel.querySelector('.x').onclick = () => { panel.hidden = true; };
+  const btn = el('button', '', '🏆 기록 '); btn.id = 'recordBtn'; btn.appendChild(el('small', '', '(L)')); btn.onclick = () => openPanel('record');
+  $('hud').appendChild(btn);
+  const inPeople = el('button', 'wide-btn', '🏆 기록 · 칭호 · 순위 보기'); inPeople.onclick = () => openPanel('record', true);
+  $('people').appendChild(inPeople);
+}
+function renderRecord() {
+  if (!$('record') || $('record').hidden) return;
+  const box = $('recStats'); box.textContent = '';
+  for (const [label, v] of [['🗡️ 사냥', myst.kills], ['⚡ 골렘 처치', myst.boss], ['⚔️ 결투', `${myst.wins}승 ${myst.loses}패`], ['📜 의뢰', myst.quests]]) {
+    const d = el('div'); d.append(el('small', '', label), el('b', '', String(v))); box.appendChild(d);
+  }
+  const st = myStats(), tl = $('recTitles'); tl.textContent = '';
+  const none = el('button', myTitle ? '' : 'on', '칭호 없음'); none.onclick = () => net({ t: 'title', id: '' }); tl.appendChild(none);
+  for (const id of ARCA.TITLE_IDS) {
+    const t = ARCA.TITLES[id], ok = t.ok(st), b = el('button', id === myTitle ? 'on' : '', ok ? t.name : `🔒 ${t.name}`);
+    b.title = t.how; b.disabled = !ok;
+    if (!ok) b.appendChild(el('small', '', ` ${t.how}`));
+    b.onclick = () => net({ t: 'title', id });
+    tl.appendChild(b);
+  }
+  const rk = $('recRank'); rk.textContent = '';
+  if (!rankData) { rk.appendChild(el('div', 'empty', '순위를 불러오는 중…')); return; }
+  $('recN').textContent = `${rankData.n}명 접속 중`;
+  for (const [label, key, unit] of [['레벨', 'lv', 'Lv'], ['결투 승', 'wins', '승'], ['사냥', 'kills', '마리']]) {
+    const col = el('div'); col.appendChild(el('b', '', label));
+    const rows = rankData[key];
+    if (!rows.length) col.appendChild(el('small', '', '아직 없어요'));
+    rows.forEach(([name, v, mine], i) => { const r = el('div', mine ? 'mine' : '', `${['🥇', '🥈', '🥉', '4.', '5.'][i]} ${name}`); r.appendChild(el('span', '', unit === 'Lv' ? `Lv${v}` : `${v}${unit}`)); col.appendChild(r); });
+    rk.appendChild(col);
+  }
+}
+
 // ================= 꾸미기 =================
 const decos = new Map(); // id -> { d, obj, tag, flame }
 function makeDeco(d) {
@@ -1391,7 +1467,10 @@ function renderPeople() {
     inv.onclick = () => net({ t: 'pinvite', id });
     const tr = el('button', '', '거래');
     tr.onclick = () => net({ t: 'treq', id });
-    r.append(who, inv, tr); list.appendChild(r);
+    const du = el('button', '', '결투');
+    du.disabled = !!duelOp;
+    du.onclick = () => net({ t: 'dreq', id });
+    r.append(who, inv, tr, du); list.appendChild(r);
   }
 }
 function renderPartyBox() {
@@ -1415,7 +1494,7 @@ function updatePartyBox() {
 }
 function showAsk(m) {
   pendingAsk = m;
-  $('askText').textContent = m.kind === 'party' ? `👥 ${m.name} 님이 파티에 초대했어요` : `🤝 ${m.name} 님이 거래를 신청했어요`;
+  $('askText').textContent = m.kind === 'party' ? `👥 ${m.name} 님이 파티에 초대했어요` : m.kind === 'duel' ? `⚔️ ${m.name} 님이 결투를 신청했어요` : `🤝 ${m.name} 님이 거래를 신청했어요`;
   $('ask').hidden = false;
   clearTimeout(askTimer); askTimer = setTimeout(() => answerAsk(false), 15000);
 }
@@ -1499,6 +1578,7 @@ addEventListener('keydown', (e) => {
     if (e.code === 'KeyI') openPanel('bag');
     if (e.code === 'KeyP') openPanel('people');
     if (e.code === 'KeyK') openPanel('deco');
+    if (e.code === 'KeyL') openPanel('record');
     if (e.code === 'KeyT') { if (nearElderNow) openPanel('quest'); else toast('의뢰는 광장의 촌장 루루 가까이에서 볼 수 있어요'); }
     if (e.code === 'KeyV') net({ t: 'donate' });
     if (e.code === 'KeyG') glideQueued = true;
