@@ -1,0 +1,16 @@
+{
+  "name": "arca",
+  "version": "1.0.0",
+  "description": "구름섬 아르카 — 여러 명이 함께 노는 3D 브라우저 RPG (Three.js + WebSocket)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.23.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

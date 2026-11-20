@@ -1,0 +1,59 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #9fd3ff; font-family: -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; color: #1d2b3a; -webkit-user-select: none; user-select: none; }
+#game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+[hidden] { display: none !important; }
+
+/* 이름표와 말풍선 */
+#tags { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.tag { position: absolute; transform: translate(-50%, -100%); text-align: center; white-space: nowrap; }
+.tag .nm { display: inline-block; font-size: 12px; font-weight: 700; color: #fff; background: rgba(20, 30, 50, .55); padding: 2px 8px; border-radius: 10px; }
+.tag.me .nm { background: rgba(40, 120, 220, .75); }
+.tag .bub { display: block; max-width: 220px; white-space: normal; margin: 0 auto 4px; font-size: 13px; background: #fff; color: #1d2b3a; padding: 6px 10px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,.15); position: relative; word-break: keep-all; overflow-wrap: anywhere; }
+.tag .bub::after { content: ""; position: absolute; left: 50%; bottom: -6px; margin-left: -6px; border: 6px solid transparent; border-top-color: #fff; border-bottom: 0; }
+.tag .emo { display: block; font-size: 22px; margin-bottom: 2px; }
+
+/* 접속 화면 */
+#join { position: fixed; inset: 0; display: grid; place-items: center; padding: 16px; background: linear-gradient(180deg, rgba(120,190,255,.35), rgba(255,255,255,.15)); }
+.card { width: 100%; max-width: 380px; background: rgba(255,255,255,.92); border-radius: 20px; padding: 24px; box-shadow: 0 10px 40px rgba(30,60,120,.25); }
+.card h1 { margin: 0 0 4px; font-size: 26px; }
+.sub { margin: 0 0 18px; color: #4a5b70; font-size: 14px; }
+.card label, .label { display: block; font-size: 13px; font-weight: 700; color: #4a5b70; margin: 12px 0 6px; }
+.card input { width: 100%; margin-top: 6px; font-size: 16px; padding: 10px 12px; border: 2px solid #d5e3f3; border-radius: 12px; outline: none; }
+.card input:focus { border-color: #4dabf7; }
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatches button { width: 30px; height: 30px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1px #c8d6e5; cursor: pointer; }
+.swatches button.on { box-shadow: 0 0 0 3px #1d2b3a; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chips button { padding: 7px 12px; border-radius: 10px; border: 2px solid #d5e3f3; background: #fff; font-size: 14px; cursor: pointer; }
+.chips button.on { border-color: #1d2b3a; background: #eef5ff; font-weight: 700; }
+.big { width: 100%; margin-top: 20px; padding: 14px; font-size: 17px; font-weight: 800; color: #fff; background: linear-gradient(180deg, #4dabf7, #1c7ed6); border: 0; border-radius: 14px; cursor: pointer; }
+.big:disabled { opacity: .6; }
+.status { min-height: 18px; margin: 10px 0 0; font-size: 13px; color: #c92a2a; text-align: center; }
+
+/* 게임 화면 */
+#info { position: fixed; left: 12px; top: 12px; background: rgba(255,255,255,.85); padding: 7px 12px; border-radius: 12px; font-size: 13px; }
+#minimap { position: fixed; right: 12px; top: 12px; width: 150px; height: 150px; border-radius: 50%; background: rgba(255,255,255,.35); box-shadow: 0 2px 10px rgba(0,0,0,.15); }
+#chat { position: fixed; left: 12px; bottom: 40px; width: min(360px, calc(100% - 24px)); }
+#log { max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px; pointer-events: auto; }
+#log div { font-size: 13px; background: rgba(20,30,50,.45); color: #fff; padding: 3px 8px; border-radius: 8px; width: fit-content; max-width: 100%; overflow-wrap: anywhere; }
+#log div.sys { background: rgba(40,120,220,.5); }
+#log b { color: #ffe066; }
+#say { width: 100%; font-size: 15px; padding: 8px 12px; border-radius: 10px; border: 2px solid transparent; background: rgba(255,255,255,.75); outline: none; }
+#say:focus { border-color: #4dabf7; background: #fff; }
+#help { position: fixed; left: 0; right: 0; bottom: 10px; text-align: center; font-size: 12px; color: rgba(20,30,50,.75); pointer-events: none; padding: 0 16px; }
+#toast { position: fixed; left: 50%; top: 22%; transform: translateX(-50%); background: rgba(20,30,50,.75); color: #fff; padding: 10px 18px; border-radius: 14px; font-size: 15px; opacity: 0; transition: opacity .3s; pointer-events: none; text-align: center; }
+#toast.show { opacity: 1; }
+
+/* 휴대폰 조작 */
+#touch { display: none; }
+body.touch #touch { display: block; }
+body.touch #help { display: none; }
+body.touch #chat { bottom: 170px; width: min(300px, calc(100% - 24px)); }
+body.touch #log { max-height: 110px; }
+body.touch #minimap { width: 110px; height: 110px; }
+#stick { position: fixed; left: 24px; bottom: 24px; width: 130px; height: 130px; border-radius: 50%; background: rgba(20,30,50,.28); border: 2px solid rgba(255,255,255,.7); touch-action: none; box-shadow: 0 2px 10px rgba(0,0,0,.15); }
+#knob { position: absolute; left: 38px; top: 38px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,.95); box-shadow: 0 2px 6px rgba(0,0,0,.25); }
+#tbtns { position: fixed; right: 16px; bottom: 24px; display: grid; grid-template-columns: repeat(4, 46px); gap: 8px; }
+#tbtns button { height: 46px; border-radius: 14px; border: 0; background: rgba(255,255,255,.92); color: #1d2b3a; font-size: 20px; touch-action: none; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+#tbtns button.wide { grid-column: span 2; font-size: 15px; font-weight: 700; }
+#tbtns button.on { background: #4dabf7; color: #fff; }

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>구름섬 아르카</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="tags"></div>
+
+<!-- 접속 화면 -->
+<div id="join">
+  <div class="card">
+    <h1>☁️ 구름섬 아르카</h1>
+    <p class="sub">하늘에 떠 있는 섬에서 친구들과 함께 걸어 보세요</p>
+    <label>이름
+      <input id="name" maxlength="12" placeholder="바람잡이" autocomplete="off">
+    </label>
+    <div class="label">옷 색깔</div>
+    <div id="colors" class="swatches"></div>
+    <div class="label">모자</div>
+    <div id="hats" class="chips">
+      <button data-hat="0">없음</button>
+      <button data-hat="1">고깔</button>
+      <button data-hat="2">밀짚</button>
+      <button data-hat="3">왕관</button>
+    </div>
+    <button id="start" class="big">섬에 들어가기</button>
+    <p id="status" class="status"></p>
+  </div>
+</div>
+
+<!-- 게임 화면 -->
+<div id="hud" hidden>
+  <div id="info"><b>🌿 포근언덕</b> · <span id="chan">채널 1</span> · 접속 <span id="count">1</span>명</div>
+  <canvas id="minimap" width="150" height="150"></canvas>
+  <div id="chat">
+    <div id="log"></div>
+    <input id="say" maxlength="80" placeholder="Enter 키로 말하기" autocomplete="off">
+  </div>
+  <div id="help">WASD 이동 · 마우스 끌기 시점 · 휠 줌 · Shift 달리기 · Space 점프 · 1 인사 · 2 춤 · 3 앉기 · Enter 채팅</div>
+  <div id="toast"></div>
+  <div id="touch">
+    <div id="stick"><div id="knob"></div></div>
+    <div id="tbtns">
+      <button data-act="emote1">👋</button>
+      <button data-act="emote2">💃</button>
+      <button data-act="emote3">🪑</button>
+      <button data-act="chat">💬</button>
+      <button data-act="run" class="wide">달리기</button>
+      <button data-act="jump" class="wide">점프</button>
+    </div>
+  </div>
+</div>
+
+<script src="three.min.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
