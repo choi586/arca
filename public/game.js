@@ -767,18 +767,31 @@ function toast(text) { const t = $('toast'); t.textContent = text; t.classList.a
 // ================= 서버 연결 =================
 let ws = null, joined = false, everJoined = false, statsReady = false;
 function loadDeco() { try { return JSON.parse(store.get('arca.deco') || '[]'); } catch (e) { return []; } }
+let kickedOut = false, lastActSent = 0;
+function myUid() { // 이 브라우저의 이름표 (같은 브라우저로 두 번 들어오면 서버가 알아봄)
+  let u = store.get('arca.uid');
+  if (!u) { u = Math.random().toString(36).slice(2) + Date.now().toString(36); store.set('arca.uid', u); }
+  return u;
+}
+function touchAct() { // 키나 화면을 누르면 '아직 여기 있어요'를 30초에 한 번 알림
+  const now = performance.now();
+  if (now - lastActSent > 30000) { lastActSent = now; net({ t: 'act' }); }
+}
+addEventListener('keydown', touchAct); addEventListener('pointerdown', touchAct);
+function loadQ() { try { return JSON.parse(store.get('arca.q') || 'null'); } catch (e) { return null; } }
 function loadInv() { try { return JSON.parse(store.get('arca.inv') || 'null'); } catch (e) { return null; } }
 function connect() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   ws = new WebSocket(`${proto}://${location.host}`);
   ws.onopen = () => ws.send(JSON.stringify({ t: 'join', name: profile.name, color: profile.color, hat: profile.hat,
-    lv: Number(store.get('arca.lv')) || 1, xp: Number(store.get('arca.xp')) || 0, inv: loadInv(), deco: loadDeco() }));
+    lv: Number(store.get('arca.lv')) || 1, xp: Number(store.get('arca.xp')) || 0, inv: loadInv(), deco: loadDeco(), q: loadQ(), uid: myUid() }));
   ws.onmessage = (ev) => {
     let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
     const h = handlers[m.t]; if (h) h(m);
   };
   ws.onclose = () => {
     const wasJoined = joined; joined = false;
+    if (kickedOut) return; // 서버가 내보낸 창은 스스로 다시 들어가지 않음
     if (!everJoined) { $('status').textContent = '서버에 연결하지 못했어요. 잠시 뒤 다시 눌러 주세요.'; $('start').disabled = false; return; }
     if (wasJoined) { toast('연결이 끊겼어요. 다시 연결하는 중…'); addLog('연결이 끊겨서 다시 연결하는 중이에요'); }
     setTimeout(connect, 2000);
@@ -904,13 +917,13 @@ const handlers = {
   fx(m) { const o = others.get(m.id); if (o && WEAPONS[m.w]) { setWeapon(o.av, m.w); skillFx(o.av, m.w, m.k, m.tg); } },
   inv(m) {
     const prevEquip = me.inv.equip;
-    me.inv = { gold: m.gold, items: m.items, weapons: m.weapons, equip: m.equip };
+    me.inv = { gold: m.gold, items: m.items, weapons: m.weapons, equip: m.equip, up: m.up || {} };
     store.set('arca.inv', JSON.stringify(me.inv));
     if (me.av) {
       setWeapon(me.av, me.inv.equip);
       if (prevEquip !== me.inv.equip || !skillSlots.length) buildSkillSlots();
     }
-    refreshStats(); refreshPotion(); renderPanels(); renderTrade();
+    refreshStats(); refreshPotion(); renderPanels(); renderTrade(); renderQuest(); renderTrack();
   },
   equip(m) { const o = others.get(m.id); if (o) setWeapon(o.av, m.w); },
   loot(m) {
@@ -923,6 +936,21 @@ const handlers = {
     }
   },
   notice(m) { toast(m.text); addLog(m.text); },
+  kicked(m) {
+    kickedOut = true; joined = false;
+    const box = $('kicked');
+    box.querySelector('p').textContent = m.text;
+    box.hidden = false;
+  },
+  quests(m) { quests = { active: m.active || {}, done: m.done || {} }; store.set('arca.q', JSON.stringify(quests)); renderQuest(); renderTrack(); },
+  wind(m) {
+    wind = { n: m.n, need: m.need, bridge: m.bridge };
+    ARCA.world.bridge = m.bridge; bridgeMesh.visible = m.bridge;
+    fountainOrb.material.emissiveIntensity = 0.6 + 1.6 * Math.min(1, m.n / m.need);
+    if (m.by) addLog(`🌀 ${m.by} 님이 바람의 돌 ${m.add}개를 바쳤어요 (${Math.min(m.n, m.need)}/${m.need})`);
+    if (m.opened) { toast('🌉 바람의 다리가 열렸어요! 섬 동쪽 끝으로 가 보세요'); addLog('🌉 바람의 다리가 열렸어요! 이제 걸어서 버섯숲 섬에 갈 수 있어요'); bridgeT = 0; }
+    renderTrack();
+  },
   buff(m) { const av = avatarOf(m.id); if (av) bubble(av, m.dur); },
   pdie(m) {
     if (m.id === me.id) {
@@ -1055,7 +1083,7 @@ let merchantAv = null, merchantTag = null, nearMerchant = false, shopTab = 'buy'
 function openPanel(id, open) {
   const el = $(id), show = open === undefined ? el.hidden : open;
   el.hidden = !show;
-  if (show) { for (const other of ['bag', 'shop', 'people', 'deco']) if (other !== id) $(other).hidden = true; renderPanels(); renderPeople(); renderDeco(); }
+  if (show) { for (const other of ['bag', 'shop', 'people', 'deco', 'quest']) if (other !== id) $(other).hidden = true; renderPanels(); renderPeople(); renderDeco(); renderQuest(); }
 }
 function itemCount() { return Object.keys(me.inv.items).length; }
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
@@ -1069,7 +1097,7 @@ function renderBag() {
   const wl = $('bagWeapons'); wl.textContent = '';
   for (const id of me.inv.weapons) {
     const w = WEAPONS[id], b = el('button', 'wcard' + (id === me.inv.equip ? ' on' : ''));
-    const what = el('span'); what.append(el('b', '', w.name), el('small', '', `${w.desc} · ${w.skills.map((s) => s.icon).join(' ')}`));
+    const what = el('span'); what.append(el('b', '', w.name + (me.inv.up[id] ? ` +${me.inv.up[id]}` : '')), el('small', '', `${w.desc} · ${w.skills.map((s) => s.icon).join(' ')}`));
     b.append(el('span', 'ic', w.icon), what, el('span', 'badge', id === me.inv.equip ? '들고 있음' : '바꿔 들기'));
     b.onclick = () => { if (id !== me.inv.equip) net({ t: 'equip', w: id }); };
     wl.appendChild(b);
@@ -1117,8 +1145,17 @@ function renderShop() {
       r.querySelector('.what').appendChild(el('small', 'sks', w.skills.map((s) => s.icon).join(' ')));
       list.appendChild(r);
     }
+  } else if (shopTab === 'up') { // 무기 강화
+    list.appendChild(el('div', 'tip', `재료와 골드로 무기를 강화해요. 한 단계마다 그 무기의 피해가 ${ARCA.UP_BONUS * 100}%씩 늘어요 (최대 +${ARCA.MAX_UP}).`));
+    for (const id of me.inv.weapons) {
+      const w = WEAPONS[id], lv = me.inv.up[id] || 0, cost = ARCA.UPGRADES[lv];
+      if (!cost) { list.appendChild(shopRow(w.icon, `${w.name} +${lv}`, `피해 +${Math.round(lv * ARCA.UP_BONUS * 100)}%`, '', [['끝까지 강화함', false, () => {}]])); continue; }
+      const mats = Object.entries(cost.mats), ok = g >= cost.gold && mats.every(([m, n]) => (me.inv.items[m] || 0) >= n);
+      const need = mats.map(([m, n]) => `${ITEMS[m].icon} ${ITEMS[m].name} ${me.inv.items[m] || 0}/${n}`).join(' · ');
+      list.appendChild(shopRow(w.icon, `${w.name}${lv ? ` +${lv}` : ''} → +${lv + 1}`, need, `${cost.gold}G`, [['강화', ok, () => net({ t: 'upgrade', w: id })]]));
+    }
   } else {
-    const ids = ITEM_IDS.filter((id) => me.inv.items[id]);
+    const ids = ITEM_IDS.filter((id) => me.inv.items[id] && ITEMS[id].sell);
     if (!ids.length) { list.appendChild(el('div', 'empty', '팔 물건이 없어요. 몬스터를 잡으면 재료가 나와요!')); return; }
     for (const id of ids) {
       const it = ITEMS[id], n = me.inv.items[id];
@@ -1134,6 +1171,99 @@ document.querySelectorAll('#shop .tabs button').forEach((b) => { b.onclick = () 
 $('bagBtn').onclick = () => openPanel('bag');
 $('peopleBtn').onclick = () => openPanel('people');
 $('decoOpen').onclick = () => openPanel('deco', true);
+
+// ================= 촌장 · 의뢰 · 바람의 돌 · 다리 =================
+const { ELDER, QUESTS, BRIDGE } = ARCA;
+let quests = { active: {}, done: {} }, wind = { n: 0, need: BRIDGE.need, bridge: false };
+let elderAv = null, elderTag = null, nearElderNow = false, nearAltar = false, bridgeT = 9;
+const bridgeMesh = new THREE.Group();
+{
+  // 촌장 루루
+  elderAv = makeAvatar('#e8590c', 1);
+  setWeapon(elderAv, 'staff');
+  elderAv.position.set(ELDER.x, islandH(ELDER.x, ELDER.z), ELDER.z);
+  elderAv.rotation.y = ELDER.ry;
+  elderAv.scale.setScalar(0.92);
+  scene.add(elderAv);
+  elderTag = makeTag('📜 촌장 루루');
+  const board = mesh(new THREE.BoxGeometry(1.6, 1.1, 0.1), '#c8955a'); board.position.set(ELDER.x + 1.5, islandH(ELDER.x, ELDER.z) + 1.5, ELDER.z + 0.6); board.rotation.y = ELDER.ry;
+  const post = mesh(new THREE.BoxGeometry(0.14, 1.6, 0.14), '#7a4b2a'); post.position.set(ELDER.x + 1.5, islandH(ELDER.x, ELDER.z) + 0.6, ELDER.z + 0.6);
+  scene.add(board, post);
+  for (let i = 0; i < 3; i++) { const note = mesh(new THREE.BoxGeometry(0.36, 0.42, 0.02), ['#fff9db', '#e7f5ff', '#fff0f6'][i], null, false); note.position.set(-0.5 + i * 0.5, 0.05 - (i % 2) * 0.12, 0.07); note.rotation.z = (i - 1) * 0.12; board.add(note); }
+
+  // 바람의 다리 (열리기 전에는 안 보임)
+  const len = BRIDGE.x1 - BRIDGE.x0, cx = (BRIDGE.x0 + BRIDGE.x1) / 2;
+  for (let i = 0; i < len / 1.2; i++) {
+    const plank = mesh(new THREE.BoxGeometry(1.0, 0.18, BRIDGE.half * 2), i % 2 ? '#c9a06a' : '#b98d58');
+    plank.position.set(BRIDGE.x0 + 0.6 + i * 1.2, BRIDGE.y - 0.09, 0); bridgeMesh.add(plank);
+  }
+  for (const z of [-BRIDGE.half, BRIDGE.half]) {
+    const rail = mesh(new THREE.BoxGeometry(len, 0.1, 0.1), '#7a4b2a'); rail.position.set(cx, BRIDGE.y + 0.9, z); bridgeMesh.add(rail);
+    for (let x = BRIDGE.x0; x <= BRIDGE.x1; x += 4) { const p = mesh(new THREE.BoxGeometry(0.14, 1.0, 0.14), '#7a4b2a'); p.position.set(x, BRIDGE.y + 0.45, z); bridgeMesh.add(p); }
+  }
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(len, BRIDGE.half * 2 + 1.2), flatMat(0x9be7ff, 0.25)); glow.rotation.x = -Math.PI / 2; glow.position.set(cx, BRIDGE.y - 0.25, 0); bridgeMesh.add(glow);
+  bridgeMesh.visible = false;
+  scene.add(bridgeMesh);
+
+  // 화면 틀: 안내 버튼 묶음, 의뢰 창, 진행 표시
+  const hints = el('div'); hints.id = 'hints';
+  const sh = $('shopHint'); sh.replaceWith(hints); hints.appendChild(sh);
+  const mk = (id, text, fn) => { const d = el('div'); d.id = id; d.hidden = true; const b = el('button', '', text); b.onclick = fn; d.appendChild(b); hints.appendChild(d); };
+  mk('elderHint', '📜 촌장 루루와 이야기하기 (T)', () => openPanel('quest', true));
+  mk('altarHint', '🌀 바람의 돌 바치기 (V)', () => net({ t: 'donate' }));
+  const panel = el('div', 'panel'); panel.id = 'quest'; panel.hidden = true;
+  panel.innerHTML = '<div class="phead"><b>📜 촌장 루루의 의뢰</b><button class="x" aria-label="닫기">✕</button></div><div class="tip" id="questTip"></div><div id="questList"></div>';
+  $('hud').appendChild(panel);
+  const track = el('div'); track.id = 'qtrack'; $('hud').appendChild(track);
+  const tabUp = el('button', '', '강화'); tabUp.dataset.tab = 'up'; document.querySelector('#shop .tabs').appendChild(tabUp);
+}
+function questProg(id) { // [지금, 목표]
+  const q = QUESTS[id];
+  if (q.type === 'collect') return [Math.min(q.n, me.inv.items[q.key] || 0), q.n];
+  return [quests.active[id] || 0, q.n];
+}
+function renderQuest() {
+  if (!$('quest') || $('quest').hidden) return;
+  const stones = me.inv.items.windstone || 0;
+  $('questTip').textContent = wind.bridge
+    ? '바람의 다리가 열려 있어요. 고마워요, 바람잡이!'
+    : `바람의 돌을 모아 분수의 수정에 바치면 두 섬을 잇는 다리가 열려요. 지금 ${Math.min(wind.n, wind.need)}/${wind.need}개${stones ? ` · 내 가방에 ${stones}개` : ''}`;
+  const list = $('questList'); list.textContent = '';
+  for (const id of ARCA.QUEST_IDS) {
+    const q = QUESTS[id], active = quests.active[id] !== undefined, [n, need] = questProg(id), done = quests.done[id] || 0;
+    const reward = `${q.gold}G · 경험치 ${q.xp}${q.stones ? ` · 🌀×${q.stones}` : ''}`;
+    const sub = `${q.desc} (추천 Lv ${q.lv}${done ? ` · ${done}번 해결` : ''})`;
+    const btns = !active ? [['맡기', true, () => net({ t: 'qtake', id })]]
+      : n >= need ? [['완료!', true, () => net({ t: 'qdone', id })]]
+      : [[`${n}/${need}`, false, () => {}], ['그만두기', true, () => net({ t: 'qdrop', id })]];
+    list.appendChild(shopRow(active ? (n >= need ? '✅' : '📌') : '📜', q.name, sub, reward, btns));
+  }
+}
+function renderTrack() {
+  const box = $('qtrack'); if (!box) return;
+  box.textContent = '';
+  box.appendChild(el('div', 'w', wind.bridge ? '🌉 바람의 다리 열림' : `🌀 바람의 돌 ${Math.min(wind.n, wind.need)}/${wind.need}`));
+  for (const id in quests.active) {
+    const [n, need] = questProg(id);
+    box.appendChild(el('div', n >= need ? 'ok' : '', `${n >= need ? '✅' : '📌'} ${QUESTS[id].name} ${n}/${need}`));
+  }
+}
+function updateElder(dt) {
+  const d = Math.hypot(me.x - ELDER.x, me.z - ELDER.z);
+  elderAv.rotation.y = lerpAngle(elderAv.rotation.y, d < 9 ? Math.atan2(me.x - ELDER.x, me.z - ELDER.z) : ELDER.ry, Math.min(1, dt * 4));
+  animate(elderAv, !$('quest').hidden ? ANIM.wave : ANIM.idle, dt);
+  placeTag(elderTag, elderAv, dt, 2.5, 40);
+  const near = d < ARCA.TALK_RANGE - 1 && !me.dead;
+  if (near !== nearElderNow) { nearElderNow = near; $('elderHint').hidden = !near; if (!near) $('quest').hidden = true; }
+  const altar = Math.hypot(me.x, me.z) < ARCA.ALTAR_RANGE - 0.5 && !me.dead && (me.inv.items.windstone || 0) > 0;
+  if (altar !== nearAltar) { nearAltar = altar; $('altarHint').hidden = !altar; }
+  if (bridgeT < 3) { // 다리가 열릴 때 서쪽부터 차례로 나타남
+    bridgeT += dt;
+    const n = bridgeMesh.children.length;
+    bridgeMesh.children.forEach((c, i) => { c.visible = i / n < bridgeT / 2.5; });
+  }
+}
+$('quest').querySelector('.x').onclick = () => { $('quest').hidden = true; };
 
 // ================= 꾸미기 =================
 const decos = new Map(); // id -> { d, obj, tag, flame }
@@ -1369,6 +1499,8 @@ addEventListener('keydown', (e) => {
     if (e.code === 'KeyI') openPanel('bag');
     if (e.code === 'KeyP') openPanel('people');
     if (e.code === 'KeyK') openPanel('deco');
+    if (e.code === 'KeyT') { if (nearElderNow) openPanel('quest'); else toast('의뢰는 광장의 촌장 루루 가까이에서 볼 수 있어요'); }
+    if (e.code === 'KeyV') net({ t: 'donate' });
     if (e.code === 'KeyG') glideQueued = true;
     if (e.code === 'KeyB') { if (nearMerchant) openPanel('shop'); else toast('상점은 광장의 상인 모모 가까이에서 열 수 있어요'); }
     if (e.code === 'Escape') { $('bag').hidden = true; $('shop').hidden = true; $('people').hidden = true; $('deco').hidden = true; }
@@ -1602,7 +1734,8 @@ function drawMinimap() { // 내가 있는 섬을 보여 줌
     mm.fillStyle = partyIds.has(id) ? '#40c057' : '#fff';
     dot(o.av.position.x, o.av.position.z, 3);
   }
-  if (I.id === 0) { mm.fillStyle = '#ffd43b'; mm.strokeStyle = '#7a4b2a'; mm.lineWidth = 1.5; dot(MERCHANT.x, MERCHANT.z, 4); mm.stroke(); }
+  if (I.id === 0) { mm.fillStyle = '#ffd43b'; mm.strokeStyle = '#7a4b2a'; mm.lineWidth = 1.5; dot(MERCHANT.x, MERCHANT.z, 4); mm.stroke(); mm.fillStyle = '#ff922b'; dot(ARCA.ELDER.x, ARCA.ELDER.z, 4); mm.stroke(); }
+  if (wind.bridge) { mm.strokeStyle = '#c9a06a'; mm.lineWidth = 4; mm.beginPath(); mm.moveTo(X(BRIDGE.x0), Z(0)); mm.lineTo(X(BRIDGE.x1), Z(0)); mm.stroke(); }
   mm.save(); mm.translate(X(me.x), Z(me.z)); mm.rotate(-me.ry + Math.PI);
   mm.fillStyle = '#1c7ed6'; mm.strokeStyle = '#fff'; mm.lineWidth = 1.5;
   mm.beginPath(); mm.moveTo(0, -7); mm.lineTo(5, 5); mm.lineTo(0, 2); mm.lineTo(-5, 5); mm.closePath(); mm.fill(); mm.stroke();
@@ -1635,6 +1768,7 @@ function frame(now) {
     updateOthers(dt);
     updateMonsters(dt);
     updateMerchant(dt);
+    updateElder(dt);
     updateDecos(dt);
     placeTag(me.tag, me.av, dt, me.a === ANIM.sit ? 2.05 : me.a === ANIM.dead ? 1.2 : 2.5);
     updateSkillSlots();

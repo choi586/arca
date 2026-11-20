@@ -20,6 +20,7 @@ const DAY_MS = Number(process.env.DAY_MS) || A.DAY_MS;   // 게임 속 하루 �
 const dayStart = Date.now() - DAY_MS * 0.1;              // 서버가 켜질 때는 아침
 const phaseNow = () => ((Date.now() - dayStart) % DAY_MS) / DAY_MS;
 const isNight = () => A.isNightPhase(phaseNow());
+const AFK_MS = Number(process.env.AFK_MS) || 10 * 60000; // 이만큼 아무것도 안 하면 섬에서 내보냄
 const ASK_MS = 30000;            // 초대·거래 요청이 살아 있는 시간
 const LEASH = 18;               // 몬스터가 집에서 이만큼 멀어지면 돌아감
 const COLORS = ['#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#38d9a9', '#4dabf7', '#748ffc', '#da77f2', '#f783ac', '#f8f9fa'];
@@ -99,7 +100,8 @@ function applyLevel(p) { const s = A.statsFor(p.lv); p.maxHp = s.maxHp; p.atk = 
 function hurtMonster(ch, m, p, mult) {
   if (!m.alive) return;
   const crit = Math.random() < 0.12;
-  const dmg = Math.max(1, Math.round(p.atk * mult * (0.9 + Math.random() * 0.2) * (crit ? 1.6 : 1)));
+  const up = 1 + A.UP_BONUS * (p.inv.up[p.inv.equip] || 0); // 강화한 무기는 더 아픔
+  const dmg = Math.max(1, Math.round(p.atk * mult * up * (0.9 + Math.random() * 0.2) * (crit ? 1.6 : 1)));
   m.hp -= dmg;
   m.hitters.add(p.id);
   if (m.def.boss) m.dmgBy.set(p.id, (m.dmgBy.get(p.id) || 0) + dmg);
@@ -122,6 +124,7 @@ function killMonster(ch, m) {
   for (const pid of m.hitters) {
     const p = list.get(pid); if (!p) continue;
     giveXp(ch, p, Math.round(m.def.xp * bonus));
+    questEvent(p, 'kill', m.kind);
     const gold = Math.round((loot.gold[0] + Math.floor(Math.random() * (loot.gold[1] - loot.gold[0] + 1))) * bonus);
     p.inv.gold = Math.min(999999, p.inv.gold + gold);
     const got = [];
@@ -261,11 +264,83 @@ function handleShop(p, m) {
   } else if (m.t === 'sell') {
     if (!nearShop(p)) return notice(p, '상인 모모 가까이에서만 팔 수 있어요');
     const it = A.ITEMS[m.id]; if (!it) return;
+    if (!it.sell) return notice(p, `${it.icon} ${it.name}은(는) 팔 수 없어요`);
     const have = inv.items[m.id] || 0, n = Math.max(1, Math.min(have, Math.floor(num(m.n, 1))));
     if (!have || !removeItem(inv, m.id, n)) return;
     inv.gold = Math.min(999999, inv.gold + it.sell * n);
     notice(p, `${it.icon} ${it.name} ${n}개를 ${it.sell * n}G에 팔았어요`);
     sendInv(p);
+  }
+}
+
+// ---------- 의뢰 · 바람의 돌 · 무기 강화 ----------
+let windStones = 0; // 서버 전체가 함께 모은 바람의 돌 (서버가 잠들면 0으로 돌아감)
+function windMsg(extra) { return Object.assign({ t: 'wind', n: windStones, need: A.BRIDGE.need, bridge: A.world.bridge }, extra); }
+function broadcastAll(msg) { for (const ch of channels.keys()) broadcast(ch, msg); }
+function sendQuests(p) { send(p.ws, { t: 'quests', active: p.q.active, done: p.q.done }); }
+function questEvent(p, type, key) {
+  for (const id in p.q.active) {
+    const q = A.QUESTS[id];
+    if (q.type !== type || q.key !== key || p.q.active[id] >= q.n) continue;
+    p.q.active[id]++;
+    sendQuests(p);
+    if (p.q.active[id] >= q.n) notice(p, `📜 '${q.name}' 의뢰를 다 했어요! 촌장 루루에게 돌아가요`);
+  }
+}
+function nearElder(p) { return Math.hypot(p.x - A.ELDER.x, p.z - A.ELDER.z) < A.TALK_RANGE; }
+function handleQuest(p, m) {
+  const inv = p.inv;
+  if (m.t === 'donate') {
+    if (Math.hypot(p.x, p.z) > A.ALTAR_RANGE) return notice(p, '광장 분수 가까이에서 바칠 수 있어요');
+    const n = inv.items.windstone || 0;
+    if (!n) return notice(p, '바람의 돌이 없어요. 촌장 루루의 의뢰를 해결하면 얻을 수 있어요');
+    removeItem(inv, 'windstone', n);
+    const was = A.world.bridge;
+    windStones += n;
+    if (windStones >= A.BRIDGE.need) A.world.bridge = true;
+    inv.gold = Math.min(999999, inv.gold + 40 * n);
+    giveXp(p.ch, p, 30 * n);
+    sendInv(p);
+    broadcastAll(windMsg({ by: p.name, add: n, opened: !was && A.world.bridge }));
+    return;
+  }
+  if (m.t === 'upgrade') {
+    if (!nearShop(p)) return notice(p, '상인 모모 가까이에서만 강화할 수 있어요');
+    const w = A.WEAPONS[m.w]; if (!w || !inv.weapons.includes(m.w)) return;
+    const lv = inv.up[m.w] || 0, cost = A.UPGRADES[lv];
+    if (!cost) return notice(p, '이미 끝까지 강화했어요');
+    if (inv.gold < cost.gold) return notice(p, '골드가 모자라요');
+    for (const id in cost.mats) if ((inv.items[id] || 0) < cost.mats[id]) return notice(p, `${A.ITEMS[id].name}이(가) 모자라요`);
+    inv.gold -= cost.gold;
+    for (const id in cost.mats) removeItem(inv, id, cost.mats[id]);
+    inv.up[m.w] = lv + 1;
+    sendInv(p);
+    notice(p, `🔨 ${w.name} +${lv + 1} 강화 성공! 피해가 ${Math.round(A.UP_BONUS * (lv + 1) * 100)}% 늘었어요`);
+    return;
+  }
+  const q = A.QUESTS[m.id]; if (!q) return;
+  if (m.t === 'qdrop') { if (p.q.active[m.id] !== undefined) { delete p.q.active[m.id]; sendQuests(p); } return; }
+  if (!nearElder(p)) return notice(p, '촌장 루루 가까이에서 이야기할 수 있어요');
+  if (m.t === 'qtake') {
+    if (p.q.active[m.id] !== undefined) return;
+    if (Object.keys(p.q.active).length >= A.QUEST_ACTIVE_MAX) return notice(p, `의뢰는 한 번에 ${A.QUEST_ACTIVE_MAX}개까지 맡을 수 있어요`);
+    p.q.active[m.id] = 0;
+    if (q.type === 'visit') { const I = A.islandOf(p.x, p.z); if (I && String(I.id) === q.key) p.q.active[m.id] = 1; }
+    sendQuests(p);
+    notice(p, `📜 의뢰를 맡았어요: ${q.name}`);
+  } else if (m.t === 'qdone') {
+    if (p.q.active[m.id] === undefined) return;
+    if (q.type === 'collect') { if ((inv.items[q.key] || 0) < q.n) return notice(p, `${A.ITEMS[q.key].name}이(가) 아직 모자라요`); }
+    else if (p.q.active[m.id] < q.n) return notice(p, '아직 다 하지 못했어요');
+    if (q.stones && !inv.items.windstone && bagSlots(inv) >= A.BAG_SLOTS && !(q.type === 'collect' && inv.items[q.key] === q.n)) return notice(p, '가방이 꽉 차서 보상을 받을 수 없어요');
+    if (q.type === 'collect') removeItem(inv, q.key, q.n);
+    delete p.q.active[m.id];
+    p.q.done[m.id] = (p.q.done[m.id] || 0) + 1;
+    inv.gold = Math.min(999999, inv.gold + q.gold);
+    if (q.stones) addItem(inv, 'windstone', q.stones);
+    giveXp(p.ch, p, q.xp);
+    sendInv(p); sendQuests(p);
+    notice(p, `🎉 '${q.name}' 완료! ${q.gold}G${q.stones ? ` · 🌀 바람의 돌 ${q.stones}개` : ''}`);
   }
 }
 
@@ -305,6 +380,7 @@ function startAttack(ch, m, pat) {
 }
 function bossRewards(ch, m) {
   const list = channels.get(ch).players;
+  for (const pid of m.dmgBy.keys()) { const p = list.get(pid); if (p) questEvent(p, 'kill', 'golem'); }
   const total = [...m.dmgBy.values()].reduce((a, b) => a + b, 0) || 1;
   const rank = [...m.dmgBy.entries()].sort((a, b) => b[1] - a[1]);
   const names = [];
@@ -543,8 +619,12 @@ wss.on('connection', (ws) => {
     let m;
     try { m = JSON.parse(raw); } catch (e) { return; }
     if (!m || typeof m.t !== 'string') return;
+    if (me) me.lastAct = Date.now();
 
     if (m.t === 'join' && !me) {
+      // 같은 브라우저가 또 들어오면 먼저 있던 캐릭터를 내보냄 (창을 두 개 열었거나, 끊긴 접속이 남은 경우)
+      const uid = cleanText(m.uid, 40);
+      if (uid) for (const c of channels.values()) for (const q of c.players.values()) if (q.uid === uid) kick(q, '다른 창에서 다시 접속해서 이 창은 섬에서 나왔어요');
       const ch = pickChannel();
       // 레벨은 브라우저에 저장된 값을 이어받음 (무료 서버는 잠들면 기억이 지워져서)
       const lv = Math.max(1, Math.min(A.MAX_LV, Math.floor(num(m.lv, 1))));
@@ -557,7 +637,8 @@ wss.on('connection', (ws) => {
         lastChat: 0, lv, xp: Math.max(0, Math.min(A.needXp(lv) - 1, Math.floor(num(m.xp)))),
         hp: 0, maxHp: 0, atk: 0, dead: false, deadAt: 0, lastHurt: 0, lastAtk: 0, cds: {}, guard: 0, guardUntil: 0, potionAt: 0,
         inv: A.cleanInv(m.inv), // 가방도 브라우저에 저장된 것을 이어받음
-        party: 0, trade: null, asks: new Map(),
+        party: 0, trade: null, asks: new Map(), uid, lastAct: Date.now(),
+        q: A.cleanQuests(m.q), // 의뢰 진행도 브라우저에 저장된 것을 이어받음
       };
       applyLevel(me); me.hp = me.maxHp;
       const c = channels.get(ch);
@@ -568,7 +649,7 @@ wss.on('connection', (ws) => {
         if (d) { c.decos.set(d.id, d); broadcast(ch, { t: 'decoadd', d }, me.id); }
       }
       send(ws, { t: 'welcome', id: me.id, ch, players: [...c.players.values()].filter((q) => q !== me).map(publicInfo), me: publicInfo(me), decos: [...c.decos.values()], phase: phaseNow(), dayMs: DAY_MS });
-      sendStats(me); sendInv(me);
+      sendStats(me); sendInv(me); sendQuests(me); send(ws, windMsg());
       send(ws, { t: 'bossinfo', alive: c.boss.alive, in: c.boss.alive ? 0 : Math.max(0, c.boss.deadUntil - Date.now()) });
       broadcast(ch, { t: 'join', p: publicInfo(me) }, me.id);
       return;
@@ -587,6 +668,7 @@ wss.on('connection', (ws) => {
       me.z = Math.max(-200, Math.min(200, z));
       me.ry = ry;
       me.a = Math.max(0, Math.min(15, Math.floor(num(m.a))));
+      if (me.x > 90) { const I = A.islandOf(me.x, me.z); if (I && I.id === 1) questEvent(me, 'visit', '1'); }
     } else if (m.t === 'atk') {
       playerAttack(me.ch, me, Math.floor(num(m.k, -1)), num(m.ry, me.ry));
     } else if (m.t === 'use' || m.t === 'equip' || m.t === 'buy' || m.t === 'sell') {
@@ -595,6 +677,8 @@ wss.on('connection', (ws) => {
       handleSocial(me, m);
     } else if (m.t === 'deco' || m.t === 'decodel') {
       handleDeco(me, m);
+    } else if (['qtake', 'qdone', 'qdrop', 'donate', 'upgrade'].includes(m.t)) {
+      handleQuest(me, m);
     } else if (m.t === 'respawn') {
       if (!me.dead || Date.now() - me.deadAt < RESPAWN_MS - 300) return;
       revive(me);
@@ -619,7 +703,7 @@ wss.on('connection', (ws) => {
     leaveParty(me, true);
     for (const d of myDecos(me)) { c.decos.delete(d.id); broadcast(me.ch, { t: 'decodel', id: d.id }); }
     for (const mo of c.monsters) { if (mo.target === me.id) mo.target = 0; mo.hitters.delete(me.id); mo.dmgBy.delete(me.id); }
-    broadcast(me.ch, { t: 'leave', id: me.id, name: me.name });
+    if (!me.kicked) broadcast(me.ch, { t: 'leave', id: me.id, name: me.name });
   });
 });
 
@@ -636,6 +720,19 @@ setInterval(() => {
     broadcast(ch, { t: 's', p, m: mo });
   }
 }, TICK_MS);
+
+// 섬에서 내보내기 (오래 쉰 사람, 같은 브라우저의 예전 접속)
+function kick(p, text) {
+  send(p.ws, { t: 'kicked', text });
+  channels.get(p.ch).players.delete(p.id); // 바로 안 보이게 하고, 나머지 정리는 연결이 닫힐 때
+  broadcast(p.ch, { t: 'leave', id: p.id, name: p.name });
+  p.kicked = true;
+  p.ws.close();
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const c of channels.values()) for (const p of [...c.players.values()]) if (now - p.lastAct > AFK_MS) kick(p, '오랫동안 움직임이 없어서 섬에서 나왔어요');
+}, 15000);
 
 // 쓰러진 사람을 광장에서 다시 일으킴
 function revive(p) {

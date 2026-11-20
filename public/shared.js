@@ -6,6 +6,12 @@ const R = 62;                 // 섬 반지름
 const SPAWN = { x: 0, z: 7 }; // 광장 시작 위치
 const MERCHANT = { x: -7.5, z: 6, ry: 1.3 }; // 광장 상인 모모
 const SHOP_RANGE = 6;
+const ELDER = { x: 8, z: 9.5, ry: -2.4 };    // 광장의 촌장 루루 (의뢰를 줌)
+const TALK_RANGE = 6, ALTAR_RANGE = 8;        // 촌장과 이야기 / 분수 수정에 돌을 바치는 거리
+// 바람의 다리: 모두가 바람의 돌을 모으면 두 섬 사이에 놓임 (서버가 world.bridge 를 켬)
+const BRIDGE = { x0: 60, x1: 96, half: 2.2, y: 1.1, need: 10 };
+const world = { bridge: false };
+function onBridge(x, z) { return world.bridge && x >= BRIDGE.x0 && x <= BRIDGE.x1 && Math.abs(z) <= BRIDGE.half; }
 
 function rng(seed) { // 모두에게 같은 섬이 보이도록 같은 순서의 난수
   return () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -38,7 +44,7 @@ function mainH(x, z) {
   const edge = smooth(R - 10, R, r);
   return Math.max(0.6, 2 + flat * (hills + 1.2 + bigHill) - edge * 2.2);
 }
-function groundAt(x, z) { return islandOf(x, z) ? islandH(x, z) : -Infinity; }
+function groundAt(x, z) { return islandOf(x, z) ? islandH(x, z) : onBridge(x, z) ? BRIDGE.y : -Infinity; }
 
 // 섬 위 물건 배치 (집, 나무, 바위) — 서버도 똑같이 알아야 몬스터가 나무를 통과하지 않음
 function buildLayout() {
@@ -53,6 +59,7 @@ function buildLayout() {
   });
   obstacles.push({ x: 5.5, z: 4, r: 0.5 }); // 환영 팻말
   obstacles.push({ x: MERCHANT.x, z: MERCHANT.z, r: 1.7 }); // 상인 가게
+  obstacles.push({ x: ELDER.x, z: ELDER.z, r: 0.7 });       // 촌장
   for (let i = 0, made = 0; i < 400 && made < 95; i++) {
     const a = rand() * Math.PI * 2, r = 25 + rand() * (R - 30), x = Math.cos(a) * r, z = Math.sin(a) * r;
     if (obstacles.some((o) => Math.hypot(o.x - x, o.z - z) < o.r + 2.2)) continue;
@@ -183,6 +190,7 @@ const ITEMS = {
   shell: { name: '이끼 껍질', icon: '🐚', type: 'mat', sell: 30, desc: '돌거북의 단단한 껍질 조각' },
   glowcap: { name: '빛나는 갓', icon: '🌟', type: 'mat', sell: 20, desc: '독버섯 두꺼비의 반짝이는 갓 조각' },
   dust: { name: '정령 가루', icon: '✨', type: 'mat', sell: 38, desc: '숲의 정령이 남긴 가루' },
+  windstone: { name: '바람의 돌', icon: '🌀', type: 'key', sell: 0, desc: '광장 분수의 수정에 바치면 바람의 다리가 가까워져요' },
   shard: { name: '폭풍의 조각', icon: '💎', type: 'mat', sell: 120, desc: '폭풍 골렘을 쓰러뜨린 증표. 비싸게 팔려요' },
 };
 const ITEM_IDS = Object.keys(ITEMS);
@@ -196,8 +204,43 @@ const LOOT = {
   toad: { gold: [15, 25], drops: [['glowcap', 0.6], ['potion', 0.15]] },
   wisp: { gold: [22, 36], drops: [['dust', 0.55], ['bigpotion', 0.1]] },
 };
+// ---------- 무기 강화 ----------
+// 한 단계마다 그 무기의 피해가 8%씩 늘어남. UPGRADES[n] = n강에서 n+1강으로 올릴 때 드는 것
+const MAX_UP = 5, UP_BONUS = 0.08;
+const UPGRADES = [
+  { gold: 60, mats: { jelly: 4 } },
+  { gold: 120, mats: { spore: 4 } },
+  { gold: 200, mats: { shell: 3 } },
+  { gold: 300, mats: { glowcap: 4 } },
+  { gold: 450, mats: { dust: 3, shard: 1 } },
+];
+
+// ---------- 의뢰(퀘스트) ----------
+// type: kill 몬스터 잡기 · collect 재료 가져오기(완료할 때 가져감) · visit 섬에 가 보기
+const QUESTS = {
+  q1: { name: '말랑말랑 대청소', type: 'kill', key: 'slime', n: 5, gold: 30, xp: 20, stones: 0, lv: 1, desc: '광장 밖 풀밭의 말랑 슬라임을 5마리 잡아 줘요.' },
+  q2: { name: '포자 수집', type: 'collect', key: 'spore', n: 3, gold: 70, xp: 50, stones: 0, lv: 3, desc: '버섯돌이가 떨어뜨리는 버섯 포자 3개를 가져다줘요.' },
+  q3: { name: '언덕 위의 돌덩이', type: 'kill', key: 'turtle', n: 2, gold: 150, xp: 120, stones: 1, lv: 6, desc: '큰 언덕의 이끼 돌거북을 2마리 잡아 줘요.' },
+  q4: { name: '하늘을 건너', type: 'visit', key: '1', n: 1, gold: 100, xp: 80, stones: 1, lv: 5, desc: '글라이더를 타고 동쪽의 버섯숲 섬에 발을 디뎌 봐요.' },
+  q5: { name: '두꺼비 소동', type: 'kill', key: 'toad', n: 4, gold: 220, xp: 220, stones: 1, lv: 9, desc: '버섯숲 섬의 독버섯 두꺼비를 4마리 잡아 줘요.' },
+  q6: { name: '정령의 흔적', type: 'collect', key: 'dust', n: 2, gold: 260, xp: 200, stones: 2, lv: 12, desc: '숲의 정령이 남기는 정령 가루 2개를 가져다줘요.' },
+  q7: { name: '폭풍을 잠재워라', type: 'kill', key: 'golem', n: 1, gold: 300, xp: 300, stones: 3, lv: 10, desc: '월드 보스 폭풍 골렘을 함께 쓰러뜨려요. 한 대라도 때리면 돼요.' },
+};
+const QUEST_IDS = Object.keys(QUESTS), QUEST_ACTIVE_MAX = 3;
+function cleanQuests(raw) {
+  const q = { active: {}, done: {} };
+  if (!raw || typeof raw !== 'object') return q;
+  const n = (v, max) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)));
+  let cnt = 0;
+  for (const id of QUEST_IDS) {
+    if (raw.active && raw.active[id] !== undefined && cnt < QUEST_ACTIVE_MAX) { q.active[id] = n(raw.active[id], QUESTS[id].n); cnt++; }
+    const d = raw.done && n(raw.done[id], 9999); if (d) q.done[id] = d;
+  }
+  return q;
+}
+
 function cleanInv(raw) { // 저장된 가방을 안전하게 정리
-  const inv = { gold: 0, items: {}, weapons: ['sword'], equip: 'sword' };
+  const inv = { gold: 0, items: {}, weapons: ['sword'], equip: 'sword', up: {} };
   if (!raw || typeof raw !== 'object') return inv;
   const n = (v, max) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)));
   inv.gold = n(raw.gold, 999999);
@@ -207,6 +250,7 @@ function cleanInv(raw) { // 저장된 가방을 안전하게 정리
   }
   if (Array.isArray(raw.weapons)) for (const w of raw.weapons) if (WEAPONS[w] && !inv.weapons.includes(w)) inv.weapons.push(w);
   if (inv.weapons.includes(raw.equip)) inv.equip = raw.equip;
+  if (raw.up && typeof raw.up === 'object') for (const w of inv.weapons) { const u = n(raw.up[w], MAX_UP); if (u) inv.up[w] = u; }
   return inv;
 }
 
@@ -233,7 +277,7 @@ const MAX_LV = 30;
 const needXp = (lv) => 10 * lv * lv + 10;
 const statsFor = (lv) => ({ maxHp: 80 + (lv - 1) * 15, atk: 10 + (lv - 1) * 3 });
 
-const api = { ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
+const api = { ELDER, TALK_RANGE, ALTAR_RANGE, BRIDGE, world, onBridge, MAX_UP, UP_BONUS, UPGRADES, QUESTS, QUEST_IDS, QUEST_ACTIVE_MAX, cleanQuests, ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
   UNLOCK, KEYS, WEAPONS, WEAPON_IDS, ITEMS, ITEM_IDS, SHOP_ITEMS, MAX_STACK, BAG_SLOTS, LOOT, cleanInv, MAX_LV, needXp, statsFor };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ARCA = api;
 })(this);
