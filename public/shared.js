@@ -4,6 +4,8 @@
 
 const R = 62;                 // 섬 반지름
 const SPAWN = { x: 0, z: 7 }; // 광장 시작 위치
+const MERCHANT = { x: -7.5, z: 6, ry: 1.3 }; // 광장 상인 모모
+const SHOP_RANGE = 6;
 
 function rng(seed) { // 모두에게 같은 섬이 보이도록 같은 순서의 난수
   return () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -32,6 +34,7 @@ function buildLayout() {
     obstacles.push({ x, z, r: 3.4 });
   });
   obstacles.push({ x: 5.5, z: 4, r: 0.5 }); // 환영 팻말
+  obstacles.push({ x: MERCHANT.x, z: MERCHANT.z, r: 1.7 }); // 상인 가게
   for (let i = 0, made = 0; i < 400 && made < 95; i++) {
     const a = rand() * Math.PI * 2, r = 25 + rand() * (R - 30), x = Math.cos(a) * r, z = Math.sin(a) * r;
     if (obstacles.some((o) => Math.hypot(o.x - x, o.z - z) < o.r + 2.2)) continue;
@@ -79,18 +82,87 @@ function monsterHomes(obstacles) {
   return homes;
 }
 
-// ---------- 플레이어 기술 ----------
-// k: 0 기본 공격, 1 회전베기, 2 돌진 찌르기, 3 치유의 바람
-const SKILLS = [
-  { key: '클릭', name: '기본 공격', icon: '🗡️', cd: 450, unlock: 1, mult: 1.0, range: 2.9, arc: 1.25 },
-  { key: 'Q', name: '회전베기', icon: '🌀', cd: 4000, unlock: 2, mult: 1.6, range: 3.6 },
-  { key: 'E', name: '돌진 찌르기', icon: '💨', cd: 6000, unlock: 3, mult: 2.3, range: 7, width: 1.6 },
-  { key: 'R', name: '치유의 바람', icon: '🍃', cd: 12000, unlock: 4, heal: 0.35, range: 7 },
-];
+// ---------- 무기와 기술 ----------
+// kind: arc 앞쪽 부채꼴 · around 내 주변 원 · line 앞으로 돌진 · shot 가까운 적 하나 · multi 여러 적
+//       blast 적 자리에 폭발 · heal 주변 회복 · guard 내 방어 · shield 친구 방어 · taunt 몬스터 끌어오기
+// 슬롯마다 배우는 레벨: 기본 1, Q 2, E 3, R 4
+const UNLOCK = [1, 2, 3, 4];
+const KEYS = ['클릭', 'Q', 'E', 'R'];
+const WEAPONS = {
+  sword: { name: '바람검', icon: '🗡️', price: 0, color: 0xffffff, desc: '균형 잡힌 근접 무기',
+    skills: [
+      { name: '베기', icon: '🗡️', kind: 'arc', cd: 450, mult: 1.0, range: 2.9, arc: 1.25 },
+      { name: '회전베기', icon: '🌀', kind: 'around', cd: 4000, mult: 1.6, range: 3.6 },
+      { name: '돌진 찌르기', icon: '💨', kind: 'line', cd: 6000, mult: 2.3, range: 7, width: 1.6, move: 'dash' },
+      { name: '치유의 바람', icon: '🍃', kind: 'heal', cd: 12000, heal: 0.35, range: 7 },
+    ] },
+  bow: { name: '참나무 활', icon: '🏹', price: 150, color: 0xffe066, desc: '멀리서 쏘는 무기',
+    skills: [
+      { name: '화살', icon: '🏹', kind: 'shot', cd: 650, mult: 0.95, range: 15 },
+      { name: '세 갈래 화살', icon: '🎯', kind: 'multi', cd: 4000, mult: 1.15, range: 13, n: 3 },
+      { name: '뒤구르기 사격', icon: '↩️', kind: 'shot', cd: 6000, mult: 2.0, range: 15, move: 'back' },
+      { name: '화살비', icon: '🌧️', kind: 'blast', cd: 10000, mult: 1.7, range: 15, radius: 4.2 },
+    ] },
+  staff: { name: '별빛 지팡이', icon: '🪄', price: 150, color: 0xb197fc, desc: '마법으로 여러 적을 한 번에',
+    skills: [
+      { name: '마법 구슬', icon: '🔮', kind: 'shot', cd: 700, mult: 1.05, range: 12 },
+      { name: '불꽃 폭발', icon: '🔥', kind: 'blast', cd: 4500, mult: 1.9, range: 12, radius: 3.2 },
+      { name: '얼음 고리', icon: '❄️', kind: 'around', cd: 7000, mult: 1.2, range: 4.5, slow: 3000 },
+      { name: '번개', icon: '⚡', kind: 'shot', cd: 11000, mult: 3.4, range: 15 },
+    ] },
+  hammer: { name: '바위 망치와 방패', icon: '🔨', price: 220, color: 0xadb5bd, desc: '튼튼하게 버티며 친구를 지키는 역할',
+    skills: [
+      { name: '망치질', icon: '🔨', kind: 'arc', cd: 750, mult: 1.35, range: 2.8, arc: 1.4 },
+      { name: '내려찍기', icon: '💥', kind: 'around', cd: 5000, mult: 1.6, range: 4 },
+      { name: '방패 막기', icon: '🛡️', kind: 'guard', cd: 9000, guard: 0.7, dur: 3000 },
+      { name: '도발 함성', icon: '📣', kind: 'taunt', cd: 12000, range: 11, heal: 0.2 },
+    ] },
+  lantern: { name: '반딧불 등불', icon: '🏮', price: 220, color: 0x8ce99a, desc: '친구를 치료하고 지켜 주는 역할',
+    skills: [
+      { name: '빛 구슬', icon: '✨', kind: 'shot', cd: 600, mult: 0.8, range: 11 },
+      { name: '치유의 빛', icon: '💚', kind: 'heal', cd: 5000, heal: 0.3, range: 8 },
+      { name: '보호막', icon: '🫧', kind: 'shield', cd: 9000, guard: 0.5, dur: 5000, range: 8 },
+      { name: '회복의 비', icon: '🌈', kind: 'heal', cd: 14000, heal: 0.6, range: 11 },
+    ] },
+};
+const WEAPON_IDS = Object.keys(WEAPONS);
+
+// ---------- 아이템 ----------
+const ITEMS = {
+  potion: { name: '빨간 물약', icon: '🧪', type: 'potion', heal: 0.5, buy: 20, sell: 5, desc: '체력을 절반 채워요' },
+  bigpotion: { name: '큰 물약', icon: '⚗️', type: 'potion', heal: 1.0, buy: 60, sell: 15, desc: '체력을 모두 채워요' },
+  jelly: { name: '슬라임 젤리', icon: '🟢', type: 'mat', sell: 3, desc: '말랑말랑. 상인에게 팔 수 있어요' },
+  spore: { name: '버섯 포자', icon: '🍄', type: 'mat', sell: 8, desc: '반짝이는 가루. 상인에게 팔 수 있어요' },
+  shell: { name: '이끼 껍질', icon: '🐚', type: 'mat', sell: 30, desc: '돌거북의 단단한 껍질 조각' },
+};
+const ITEM_IDS = Object.keys(ITEMS);
+const SHOP_ITEMS = ['potion', 'bigpotion'];
+const MAX_STACK = 99, BAG_SLOTS = 20;
+// 몬스터를 잡으면 나오는 것
+const LOOT = {
+  slime: { gold: [2, 5], drops: [['jelly', 0.6], ['potion', 0.06]] },
+  shroom: { gold: [6, 12], drops: [['spore', 0.55], ['potion', 0.12]] },
+  turtle: { gold: [25, 40], drops: [['shell', 1], ['bigpotion', 0.3]] },
+};
+function cleanInv(raw) { // 저장된 가방을 안전하게 정리
+  const inv = { gold: 0, items: {}, weapons: ['sword'], equip: 'sword' };
+  if (!raw || typeof raw !== 'object') return inv;
+  const n = (v, max) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)));
+  inv.gold = n(raw.gold, 999999);
+  if (raw.items && typeof raw.items === 'object') {
+    let slots = 0;
+    for (const id of ITEM_IDS) { const c = n(raw.items[id], MAX_STACK); if (c > 0 && slots < BAG_SLOTS) { inv.items[id] = c; slots++; } }
+  }
+  if (Array.isArray(raw.weapons)) for (const w of raw.weapons) if (WEAPONS[w] && !inv.weapons.includes(w)) inv.weapons.push(w);
+  if (inv.weapons.includes(raw.equip)) inv.equip = raw.equip;
+  return inv;
+}
+
 const MAX_LV = 30;
 const needXp = (lv) => 10 * lv * lv + 10;
 const statsFor = (lv) => ({ maxHp: 80 + (lv - 1) * 15, atk: 10 + (lv - 1) * 3 });
 
-const api = { R, SPAWN, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, monsterHomes, SKILLS, MAX_LV, needXp, statsFor };
+const api = { R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, monsterHomes,
+  UNLOCK, KEYS, WEAPONS, WEAPON_IDS, ITEMS, ITEM_IDS, SHOP_ITEMS, MAX_STACK, BAG_SLOTS, LOOT, cleanInv, MAX_LV, needXp, statsFor };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ARCA = api;
 })(this);

@@ -104,3 +104,49 @@ body.touch #skills { left: auto; right: 16px; bottom: 236px; transform: none; fl
 body.touch .sk { width: 48px; height: 48px; }
 body.touch #skills .sk[data-k="0"] { display: none; }
 body.touch #chat { width: calc(100% - 100px); }
+
+/* ---------- 3단계: 가방과 상점 ---------- */
+.lvrow .gold b { color: #e67700; }
+.pop.gold { color: #ffd43b; font-size: 16px; }
+.pop.item { font-size: 15px; }
+.sk.potion .cnt { position: absolute; right: 4px; bottom: 2px; font-size: 11px; font-weight: 800; color: #1d2b3a; }
+.sk.potion.empty { opacity: .45; }
+#bagBtn { position: fixed; left: 12px; top: 50px; padding: 6px 12px; border: 0; border-radius: 12px; background: rgba(255,255,255,.85); font-size: 13px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+#bagBtn small { color: #8592a3; }
+#shopHint { position: fixed; left: 50%; top: 96px; transform: translateX(-50%); z-index: 4; }
+#shopHint button { padding: 10px 18px; border: 0; border-radius: 14px; background: #ffd43b; color: #1d2b3a; font-size: 15px; font-weight: 800; cursor: pointer; box-shadow: 0 3px 12px rgba(0,0,0,.2); }
+.panel { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(440px, calc(100% - 24px)); max-height: calc(100% - 140px); overflow-y: auto; background: rgba(255,255,255,.96); border-radius: 18px; padding: 14px 16px 16px; box-shadow: 0 12px 40px rgba(20,40,80,.3); }
+.phead { display: flex; align-items: center; gap: 10px; font-size: 17px; margin-bottom: 6px; }
+.phead .gold { margin-left: auto; font-size: 14px; }
+.phead .gold b { color: #e67700; }
+.phead .x { border: 0; background: #edf1f6; width: 32px; height: 32px; border-radius: 10px; font-size: 15px; cursor: pointer; }
+.ptitle { font-size: 13px; font-weight: 800; color: #4a5b70; margin: 12px 0 6px; }
+.ptitle small { font-weight: 400; color: #8592a3; }
+.wlist { display: grid; gap: 6px; }
+.wcard { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 8px 10px; border: 2px solid #e3e9f1; border-radius: 12px; background: #fff; cursor: pointer; font-size: 14px; }
+.wcard .ic { font-size: 26px; }
+.wcard small { display: block; color: #8592a3; font-size: 12px; }
+.wcard.on { border-color: #4dabf7; background: #eef6ff; }
+.wcard .badge { margin-left: auto; font-size: 11px; font-weight: 800; color: #1c7ed6; white-space: nowrap; }
+.grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.cell { position: relative; aspect-ratio: 1; border-radius: 10px; background: #edf1f6; border: 0; font-size: 24px; padding: 0; cursor: pointer; }
+.cell:disabled { cursor: default; }
+.cell .n { position: absolute; right: 4px; bottom: 2px; font-size: 11px; font-weight: 800; color: #1d2b3a; }
+.tip { margin-top: 10px; font-size: 13px; color: #4a5b70; min-height: 18px; }
+.tabs { display: flex; gap: 6px; margin: 4px 0 10px; }
+.tabs button { flex: 1; padding: 8px; border: 2px solid #e3e9f1; background: #fff; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; }
+.tabs button.on { border-color: #1d2b3a; background: #eef5ff; }
+.row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #edf1f6; font-size: 14px; }
+.row .ic { font-size: 26px; width: 32px; text-align: center; }
+.row .what { flex: 1; min-width: 0; }
+.row small { display: block; color: #8592a3; font-size: 12px; }
+.row .sks { font-size: 15px; letter-spacing: 2px; }
+.row .act { display: flex; gap: 4px; flex-shrink: 0; }
+.row .act button { padding: 6px 9px; border: 0; border-radius: 9px; background: #4dabf7; color: #fff; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.row .act button:disabled { background: #ced4da; cursor: default; }
+.row .price { font-weight: 800; color: #e67700; white-space: nowrap; font-size: 13px; }
+.empty { text-align: center; color: #8592a3; padding: 20px 0; font-size: 14px; }
+body.touch #bagBtn { display: none; }
+body.touch #shopHint { top: 128px; }
+body.touch .sk.potion { display: none; }
+.panel { z-index: 5; }

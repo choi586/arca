@@ -1,13 +1,13 @@
-// 구름섬 아르카 — 2단계: 함께 걷기 + 몬스터와 싸우기
+// 구름섬 아르카 — 3단계: 걷기 + 싸우기 + 모으기(아이템·가방·상점·무기)
 (() => {
 'use strict';
 
 // ================= 기본 설정 =================
-const { R, SPAWN, rng, islandH, groundAt, MONSTERS, MONSTER_KINDS, SKILLS, needXp } = ARCA;
+const { R, SPAWN, MERCHANT, SHOP_RANGE, rng, islandH, groundAt, MONSTERS, MONSTER_KINDS, WEAPONS, UNLOCK, KEYS, ITEMS, ITEM_IDS, SHOP_ITEMS, BAG_SLOTS, needXp } = ARCA;
 const LAYOUT = ARCA.buildLayout();
 const WALK = 6, RUN = 10.5, GRAV = 26, JUMP = 9.5, DASH_SPEED = 34, DASH_TIME = 0.2;
 const COLORS = ['#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#38d9a9', '#4dabf7', '#748ffc', '#da77f2', '#f783ac', '#f8f9fa'];
-const ANIM = { idle: 0, walk: 1, run: 2, air: 3, wave: 4, dance: 5, sit: 6, attack: 7, spin: 8, dead: 9 };
+const ANIM = { idle: 0, walk: 1, run: 2, air: 3, wave: 4, dance: 5, sit: 6, attack: 7, spin: 8, dead: 9, cast: 10, guard: 11 };
 const EMOJI = { 1: '👋', 2: '💃', 3: '🪑' };
 
 const $ = (id) => document.getElementById(id);
@@ -260,14 +260,9 @@ function makeAvatar(color, hat) {
   const armL = limb(0.62, 0.11, darker); armL.position.set(-0.52, 1.32, 0);
   const armR = limb(0.62, 0.11, darker); armR.position.set(0.52, 1.32, 0);
   [armL, armR].forEach((a) => { const hnd = mesh(new THREE.SphereGeometry(0.12, 6, 6), '#ffd8b0'); hnd.position.y = -0.66; a.add(hnd); });
-  // 오른손에 든 칼
-  const sword = new THREE.Group();
-  const grip = mesh(new THREE.BoxGeometry(0.08, 0.08, 0.3), '#6b3f1f'); grip.position.z = 0.05;
-  const guard = mesh(new THREE.BoxGeometry(0.34, 0.07, 0.07), '#c9a227', { metalness: 0.5, roughness: 0.4 }); guard.position.z = 0.22;
-  const blade = mesh(new THREE.BoxGeometry(0.1, 0.035, 0.95), '#e9ecef', { metalness: 0.7, roughness: 0.25 }); blade.position.z = 0.72;
-  sword.add(grip, guard, blade);
-  sword.position.y = -0.68;
-  armR.add(sword);
+  // 손에 드는 무기 자리
+  const holdR = new THREE.Group(); holdR.position.y = -0.68; armR.add(holdR);
+  const holdL = new THREE.Group(); holdL.position.y = -0.66; armL.add(holdL);
   const legL = limb(0.52, 0.13, '#3b4a6b'); legL.position.set(-0.2, 0.52, 0);
   const legR = limb(0.52, 0.13, '#3b4a6b'); legR.position.set(0.2, 0.52, 0);
   body.add(armL, armR, legL, legR);
@@ -285,8 +280,50 @@ function makeAvatar(color, hat) {
     for (let k = 0; k < 5; k++) { const sp = mesh(new THREE.ConeGeometry(0.07, 0.18, 4), '#fcc419', { metalness: 0.6, roughness: 0.3 }); const a = k / 5 * Math.PI * 2; sp.position.set(Math.cos(a) * 0.28, 2.27, Math.sin(a) * 0.28); body.add(sp); }
   }
   g.add(body);
-  g.userData = { body, armL, armR, legL, legR, t: Math.random() * 10, lastA: 0, actT: 0 };
+  g.userData = { body, armL, armR, legL, legR, holdR, holdL, weapon: '', t: Math.random() * 10, lastA: 0, actT: 0 };
+  setWeapon(g, 'sword');
   return g;
+}
+function setWeapon(av, w) {
+  const u = av.userData;
+  if (!WEAPONS[w] || u.weapon === w) return;
+  u.weapon = w;
+  u.holdR.clear(); u.holdL.clear();
+  const R_ = u.holdR, L_ = u.holdL;
+  if (w === 'sword') {
+    const grip = mesh(new THREE.BoxGeometry(0.08, 0.08, 0.3), '#6b3f1f'); grip.position.z = 0.05;
+    const guard = mesh(new THREE.BoxGeometry(0.34, 0.07, 0.07), '#c9a227', { metalness: 0.5, roughness: 0.4 }); guard.position.z = 0.22;
+    const blade = mesh(new THREE.BoxGeometry(0.1, 0.035, 0.95), '#e9ecef', { metalness: 0.7, roughness: 0.25 }); blade.position.z = 0.72;
+    R_.add(grip, guard, blade);
+  } else if (w === 'bow') {
+    const bow = new THREE.Group(), inner = new THREE.Group();
+    const arc = mesh(new THREE.TorusGeometry(0.55, 0.045, 5, 14, Math.PI), '#8b5a2b');
+    const str = mesh(new THREE.CylinderGeometry(0.008, 0.008, 1.1, 4), '#f1f3f5', null, false); str.rotation.z = Math.PI / 2;
+    inner.add(arc, str); inner.rotation.z = Math.PI / 2;
+    bow.add(inner); bow.rotation.y = Math.PI / 2; bow.position.z = -0.5;
+    R_.add(bow);
+    const quiver = mesh(new THREE.CylinderGeometry(0.11, 0.09, 0.6, 7), '#7a4b2a'); quiver.position.set(0.25, 1.1, -0.5); quiver.rotation.z = -0.4;
+    av.userData.body.add(quiver); u.extra && av.userData.body.remove(u.extra); u.extra = quiver;
+    return;
+  } else if (w === 'staff') {
+    const pole = mesh(new THREE.CylinderGeometry(0.045, 0.055, 1.7, 6), '#7a4b2a'); pole.position.y = 0.25;
+    const gem = mesh(new THREE.IcosahedronGeometry(0.17, 0), '#b197fc', { emissive: '#7048e8', emissiveIntensity: 0.8, roughness: 0.3 }); gem.position.y = 1.18;
+    R_.add(pole, gem);
+  } else if (w === 'hammer') {
+    const handle = mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.9, 6), '#6b3f1f'); handle.rotation.x = Math.PI / 2; handle.position.z = 0.35;
+    const head = mesh(new THREE.BoxGeometry(0.32, 0.55, 0.32), '#868e96', { metalness: 0.4, roughness: 0.5 }); head.position.z = 0.82;
+    R_.add(handle, head);
+    const shield = mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.08, 10), '#c92a2a'); shield.rotation.z = Math.PI / 2; shield.position.set(-0.14, 0.1, 0);
+    const boss = mesh(new THREE.SphereGeometry(0.12, 6, 5), '#fcc419', { metalness: 0.6, roughness: 0.3 }); boss.position.set(-0.2, 0.1, 0);
+    L_.add(shield, boss);
+  } else if (w === 'lantern') {
+    const hook = mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.25, 4), '#495057'); hook.position.y = -0.12;
+    const frame = mesh(new THREE.BoxGeometry(0.26, 0.32, 0.26), '#495057', { transparent: true, opacity: 0.35 }); frame.position.y = -0.4;
+    const glow = mesh(new THREE.IcosahedronGeometry(0.11, 0), '#fff3bf', { emissive: '#ffd43b', emissiveIntensity: 1.2 }, false); glow.position.y = -0.4;
+    const capT = mesh(new THREE.ConeGeometry(0.2, 0.14, 4), '#2f9e44'); capT.position.y = -0.18; capT.rotation.y = Math.PI / 4;
+    R_.add(hook, frame, glow, capT);
+  }
+  if (u.extra) { u.body.remove(u.extra); u.extra = null; }
 }
 function animate(av, a, dt) {
   const u = av.userData; u.t += dt;
@@ -313,6 +350,10 @@ function animate(av, a, dt) {
     la = 0.4; ll = 0.3; rl = -0.3;
   } else if (a === ANIM.spin) { // 빙글빙글 회전베기
     k = 1; bry = u.actT * 28; ra = -1.55; raz = 0; la = -1.4; laz = -0.6;
+  } else if (a === ANIM.cast) { // 앞으로 팔을 뻗어 쏘기
+    k = Math.min(1, dt * 25); ra = -1.55; la = u.weapon === 'bow' ? -1.4 : 0.2; laz = u.weapon === 'bow' ? -0.5 : 0; bry = -0.1;
+  } else if (a === ANIM.guard) { // 방패 들기
+    la = -1.4; laz = 0.7; ra = -0.4; ll = 0.25; rl = -0.25; by = -0.08;
   } else if (a === ANIM.dead) {
     brx = -1.45; by = 0.35; la = -2.8; ra = -2.8; k = Math.min(1, dt * 6);
   } else {
@@ -379,7 +420,7 @@ function animateMonster(mo, dt) {
   const fl = u.flash > 0 ? (u.flash -= dt, 1) : 0;
   const warn = mo.st === 2 ? 0.35 + Math.sin(t * 20) * 0.25 : 0;
   for (const m of u.mats) {
-    if (fl) m.emissive.setRGB(0.9, 0.9, 0.9); else m.emissive.setRGB(warn, 0, 0);
+    if (fl) m.emissive.setRGB(0.9, 0.9, 0.9); else if (mo.slow && !warn) m.emissive.setRGB(0, 0.18, 0.4); else m.emissive.setRGB(warn, 0, 0);
   }
 }
 
@@ -431,7 +472,7 @@ function pop(text, x, y, z, cls) { // 떠오르는 숫자
 
 // ================= 효과 (빨간 경고 원, 칼 휘두르기 등) =================
 const effects = [];
-function addEffect(obj, dur, update) { scene.add(obj); effects.push({ obj, t: 0, dur, update }); }
+function addEffect(obj, dur, update, onEnd) { scene.add(obj); effects.push({ obj, t: 0, dur, update, onEnd }); }
 function flatMat(color, opacity) { return new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide }); }
 function groundTop(x, z, r) { let y = islandH(x, z); for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; y = Math.max(y, groundAt(x + Math.cos(a) * r, z + Math.sin(a) * r)); } return y; }
 function telegraph(x, z, r, ms) {
@@ -444,25 +485,64 @@ function telegraph(x, z, r, ms) {
   fill.scale.setScalar(0.01);
   addEffect(g, ms / 1000 + 0.1, (e, p) => { fill.scale.setScalar(Math.min(1, p * 1.08)); ring.material.opacity = 0.5 + Math.sin(e.t * 25) * 0.3; });
 }
-function slashFx(av, k, range) {
+function projectile(from, to, w, onHit) { // 화살·마법 구슬이 날아가기
+  const col = WEAPONS[w].color;
+  const m = w === 'bow'
+    ? new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.7), new THREE.MeshBasicMaterial({ color: 0x8b5a2b }))
+    : new THREE.Mesh(new THREE.IcosahedronGeometry(0.2, 1), new THREE.MeshBasicMaterial({ color: col }));
+  m.position.copy(from); m.lookAt(to);
+  const d = from.distanceTo(to);
+  addEffect(m, Math.max(0.08, d / 32), (e, p) => { m.position.lerpVectors(from, to, p); }, onHit);
+}
+function burst(x, z, r, color, dur = 0.45) { // 땅에 퍼지는 원
+  const m = new THREE.Mesh(new THREE.CircleGeometry(r, 32), flatMat(color, 0.55));
+  m.rotation.x = -Math.PI / 2; m.position.set(x, groundTop(x, z, r) + 0.12, z);
+  addEffect(m, dur, (e, p) => { m.material.opacity = 0.55 * (1 - p); m.scale.setScalar(0.3 + p * 0.7); });
+}
+function bubble(av, dur, color = 0x74c0fc) { // 방어막
+  const m = new THREE.Mesh(new THREE.SphereGeometry(1.25, 16, 12), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.22, depthWrite: false }));
+  addEffect(m, dur / 1000, (e, p) => { m.position.set(av.position.x, av.position.y + 1.1, av.position.z); m.material.opacity = p > 0.85 ? 0.22 * (1 - p) / 0.15 : 0.22 + Math.sin(e.t * 6) * 0.04; });
+}
+function skillFx(av, w, k, tg) {
+  const sk = WEAPONS[w].skills[k], col = WEAPONS[w].color;
   const x = av.position.x, y = av.position.y, z = av.position.z, ry = av.rotation.y;
-  if (k === 0) {
-    const m = new THREE.Mesh(new THREE.RingGeometry(0.8, range, 24, 1, -1.1, 2.2), flatMat(0xffffff, 0.75));
+  const from = new THREE.Vector3(x + Math.sin(ry) * 0.6, y + 1.35, z + Math.cos(ry) * 0.6);
+  const range = sk.range || 3;
+  if (sk.kind === 'arc') {
+    const m = new THREE.Mesh(new THREE.RingGeometry(0.8, range, 24, 1, -sk.arc * 0.9, sk.arc * 1.8), flatMat(col, 0.75));
     m.rotation.x = -Math.PI / 2; m.rotation.z = ry - Math.PI / 2; // 바라보는 쪽으로 부채꼴
-    const g = new THREE.Group(); g.add(m); g.position.set(x, y + 1.1, z);
-    addEffect(g, 0.22, (e, p) => { m.material.opacity = 0.75 * (1 - p); m.scale.setScalar(0.8 + p * 0.3); });
-  } else if (k === 1) {
-    const m = new THREE.Mesh(new THREE.RingGeometry(range - 0.8, range, 36), flatMat(0xbfe9ff, 0.8));
-    m.rotation.x = -Math.PI / 2; m.position.set(x, y + 0.9, z);
+    m.position.set(x, y + 1.1, z);
+    addEffect(m, 0.22, (e, p) => { m.material.opacity = 0.75 * (1 - p); m.scale.setScalar(0.8 + p * 0.3); });
+  } else if (sk.kind === 'around') {
+    const color = sk.slow ? 0x99e9f2 : w === 'hammer' ? 0xd9a066 : 0xbfe9ff;
+    const m = new THREE.Mesh(new THREE.RingGeometry(range - 0.8, range, 36), flatMat(color, 0.8));
+    m.rotation.x = -Math.PI / 2; m.position.set(x, y + (w === 'hammer' ? 0.2 : 0.9), z);
     addEffect(m, 0.4, (e, p) => { m.material.opacity = 0.8 * (1 - p); m.scale.setScalar(0.4 + p * 0.7); });
-  } else if (k === 2) {
+    if (w !== 'sword') burst(x, z, range, color, 0.5);
+  } else if (sk.kind === 'line') {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(1.2, range), flatMat(0xffffff, 0.55));
     m.rotation.x = -Math.PI / 2; m.rotation.z = ry; m.position.set(x + Math.sin(ry) * range / 2, y + 0.8, z + Math.cos(ry) * range / 2);
     addEffect(m, 0.35, (e, p) => { m.material.opacity = 0.55 * (1 - p); });
-  } else if (k === 3) {
+  } else if (sk.kind === 'shot' || sk.kind === 'multi' || sk.kind === 'blast') {
+    const list = tg && tg.length ? tg : [[x + Math.sin(ry) * range, z + Math.cos(ry) * range]];
+    for (const [tx, tz] of list) {
+      const to = new THREE.Vector3(tx, islandH(tx, tz) + (sk.kind === 'blast' ? 0.3 : 0.9), tz);
+      if (sk.kind === 'blast') {
+        const high = from.clone(); high.y += 2;
+        projectile(high, to, w, () => burst(tx, tz, sk.radius, w === 'bow' ? 0xffe066 : 0xff922b, 0.6));
+      } else if (sk.name === '번개') {
+        const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 14, 5), new THREE.MeshBasicMaterial({ color: 0xfff3bf, transparent: true }));
+        bolt.position.set(tx, to.y + 7, tz);
+        addEffect(bolt, 0.3, (e, p) => { bolt.material.opacity = 1 - p; });
+        burst(tx, tz, 1.4, 0xffe066, 0.4);
+      } else projectile(from, to, w);
+    }
+  } else if (sk.kind === 'heal') {
     const m = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.9, 30), flatMat(0x8ce99a, 0.85));
     m.rotation.x = -Math.PI / 2; m.position.set(x, groundTop(x, z, 1) + 0.15, z);
-    addEffect(m, 0.7, (e, p) => { m.material.opacity = 0.85 * (1 - p); m.scale.setScalar(1 + p * 7); });
+    addEffect(m, 0.7, (e, p) => { m.material.opacity = 0.85 * (1 - p); m.scale.setScalar(1 + p * range); });
+  } else if (sk.kind === 'shield' || sk.kind === 'taunt') {
+    burst(x, z, range, sk.kind === 'taunt' ? 0xff6b6b : 0x74c0fc, 0.6);
   }
 }
 function levelFx(av) {
@@ -475,13 +555,14 @@ function updateEffects(dt) {
     const e = effects[i]; e.t += dt;
     const p = Math.min(1, e.t / e.dur);
     e.update(e, p);
-    if (p >= 1) { scene.remove(e.obj); e.obj.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); effects.splice(i, 1); }
+    if (p >= 1) { if (e.onEnd) e.onEnd(); scene.remove(e.obj); e.obj.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); effects.splice(i, 1); }
   }
 }
 
 // ================= 나와 다른 사람들 =================
 const me = { id: 0, x: SPAWN.x, y: 3, z: SPAWN.z, vy: 0, ry: Math.PI, onGround: false, a: 0, emote: 0, emoteT: 0, av: null, tag: null,
-  hp: 80, maxHp: 80, lv: 1, xp: 0, need: needXp(1), dead: false, deadT: 0, actA: 0, actT: 0, dashT: 0, cds: [0, 0, 0, 0] };
+  hp: 80, maxHp: 80, lv: 1, xp: 0, need: needXp(1), dead: false, deadT: 0, actA: 0, actT: 0, dashT: 0, dashDir: 1, cds: {},
+  inv: { gold: 0, items: {}, weapons: ['sword'], equip: 'sword' } };
 const others = new Map(); // id -> { av, tag, tx, ty, tz, tr, a, name }
 const monsters = new Map(); // id -> { kind, av, tag, tx, tz, tr, hp, st, dying }
 let profile = { name: '', color: COLORS[5], hat: 0 };
@@ -489,6 +570,7 @@ let profile = { name: '', color: COLORS[5], hat: 0 };
 function addOther(p) {
   if (others.has(p.id) || p.id === me.id) return;
   const av = makeAvatar(p.color, p.hat);
+  setWeapon(av, p.w);
   av.position.set(p.x, p.y, p.z); av.rotation.y = p.ry;
   scene.add(av);
   const tag = makeTag(p.name); setTagLv(tag, p.lv || 1);
@@ -517,16 +599,34 @@ function avatarOf(id) { return id === me.id ? me.av : others.get(id)?.av; }
 
 // ================= 체력창 / 기술 칸 =================
 const skillsEl = $('skills');
-const skillSlots = SKILLS.map((sk, k) => {
-  const b = document.createElement('button'); b.className = 'sk'; b.dataset.k = k; b.title = `${sk.name} (${sk.key})`;
-  b.innerHTML = `<span class="ic"></span><span class="key"></span><span class="cdv"></span><span class="cdn"></span>`;
-  b.querySelector('.ic').textContent = sk.icon; b.querySelector('.key').textContent = sk.key;
-  b.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); tryAttack(k); });
+let skillSlots = [], potionSlot = null;
+function weaponSkills() { return WEAPONS[me.inv.equip].skills; }
+function buildSkillSlots() { // 든 무기에 따라 기술 칸이 바뀜
+  skillsEl.textContent = '';
+  skillSlots = weaponSkills().map((sk, k) => {
+    const b = document.createElement('button'); b.className = 'sk'; b.dataset.k = k; b.title = `${sk.name} (${KEYS[k]})`;
+    b.innerHTML = `<span class="ic"></span><span class="key"></span><span class="cdv"></span><span class="cdn"></span>`;
+    b.querySelector('.ic').textContent = sk.icon; b.querySelector('.key').textContent = KEYS[k];
+    b.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); tryAttack(k); });
+    skillsEl.appendChild(b);
+    return { b, cdv: b.querySelector('.cdv'), cdn: b.querySelector('.cdn') };
+  });
+  const b = document.createElement('button'); b.className = 'sk potion'; b.title = '물약 마시기 (H)';
+  b.innerHTML = '<span class="ic">🧪</span><span class="key">H</span><span class="cnt"></span>';
+  b.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); drinkPotion(); });
   skillsEl.appendChild(b);
-  return { b, cdv: b.querySelector('.cdv'), cdn: b.querySelector('.cdn') };
-});
+  potionSlot = b;
+  refreshPotion();
+}
+function refreshPotion() {
+  if (!potionSlot) return;
+  const n = (me.inv.items.potion || 0) + (me.inv.items.bigpotion || 0);
+  potionSlot.querySelector('.cnt').textContent = n ? String(n) : '';
+  potionSlot.classList.toggle('empty', !n);
+}
 function refreshStats() {
   $('lv').textContent = me.lv;
+  $('gold').textContent = me.inv.gold;
   $('hpText').textContent = `${me.hp} / ${me.maxHp}`;
   $('hpFill').style.width = (me.hp / me.maxHp * 100) + '%';
   $('xpFill').style.width = (me.lv >= ARCA.MAX_LV ? 100 : me.xp / me.need * 100) + '%';
@@ -534,11 +634,12 @@ function refreshStats() {
 }
 function updateSkillSlots() {
   const now = performance.now();
-  SKILLS.forEach((sk, k) => {
-    const s = skillSlots[k], locked = me.lv < sk.unlock;
+  weaponSkills().forEach((sk, k) => {
+    const s = skillSlots[k]; if (!s) return;
+    const locked = me.lv < UNLOCK[k];
     s.b.classList.toggle('locked', locked);
-    if (locked) { s.cdv.style.height = '0'; s.cdn.textContent = `Lv${sk.unlock}`; return; }
-    const left = me.cds[k] - now;
+    if (locked) { s.cdv.style.height = '0'; s.cdn.textContent = `Lv${UNLOCK[k]}`; return; }
+    const left = (me.cds[me.inv.equip + k] || 0) - now;
     if (left > 0) { s.cdv.style.height = (left / sk.cd * 100) + '%'; s.cdn.textContent = left > 1000 ? Math.ceil(left / 1000) : ''; }
     else { s.cdv.style.height = '0'; s.cdn.textContent = ''; }
   });
@@ -559,11 +660,12 @@ function toast(text) { const t = $('toast'); t.textContent = text; t.classList.a
 
 // ================= 서버 연결 =================
 let ws = null, joined = false, everJoined = false, statsReady = false;
+function loadInv() { try { return JSON.parse(store.get('arca.inv') || 'null'); } catch (e) { return null; } }
 function connect() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   ws = new WebSocket(`${proto}://${location.host}`);
   ws.onopen = () => ws.send(JSON.stringify({ t: 'join', name: profile.name, color: profile.color, hat: profile.hat,
-    lv: Number(store.get('arca.lv')) || 1, xp: Number(store.get('arca.xp')) || 0 }));
+    lv: Number(store.get('arca.lv')) || 1, xp: Number(store.get('arca.xp')) || 0, inv: loadInv() }));
   ws.onmessage = (ev) => {
     let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
     const h = handlers[m.t]; if (h) h(m);
@@ -589,6 +691,7 @@ const handlers = {
       everJoined = true;
       $('join').hidden = true; $('hud').hidden = false;
       me.av = makeAvatar(profile.color, profile.hat); scene.add(me.av);
+      setWeapon(me.av, me.inv.equip); buildSkillSlots();
       me.tag = makeTag(profile.name || '바람잡이', { me: true });
       camYaw = 0;
       addLog(document.body.classList.contains('touch') ? '포근언덕에 도착했어요! 💬 버튼을 눌러 인사해 보세요' : '포근언덕에 도착했어요! Enter 키를 눌러 인사해 보세요');
@@ -605,12 +708,12 @@ const handlers = {
       setTagLv(o.tag, lv); setTagHp(o.tag, hp, true);
     }
     const seen = new Set();
-    for (const [id, ki, x, z, ry, hp, st] of m.m) {
+    for (const [id, ki, x, z, ry, hp, st, slow] of m.m) {
       seen.add(id);
       let mo = monsters.get(id);
       if (mo && mo.dying) continue;
       if (!mo) mo = addMonster(id, MONSTER_KINDS[ki], x, z, ry);
-      mo.tx = x; mo.tz = z; mo.tr = ry; mo.st = st;
+      mo.tx = x; mo.tz = z; mo.tr = ry; mo.st = st; mo.slow = slow;
       if (mo.hp !== hp) { mo.hp = hp; setTagHp(mo.tag, hp); }
     }
     for (const [id, mo] of monsters) if (!seen.has(id) && !mo.dying) removeMonster(id);
@@ -631,8 +734,11 @@ const handlers = {
     const first = !statsReady; statsReady = true;
     if (first) return;
     if (me.lv > wasLv && statsReady) {
-      const newSk = SKILLS.filter((s) => s.unlock > wasLv && s.unlock <= me.lv);
-      newSk.forEach((s) => { toast(`✨ 새 기술: ${s.name} (${s.key})`); addLog(`새 기술을 배웠어요: ${s.icon} ${s.name} — ${s.key} 키`); });
+      UNLOCK.forEach((u, k) => {
+        if (u <= wasLv || u > me.lv) return;
+        const s = weaponSkills()[k];
+        toast(`✨ 새 기술: ${s.name} (${KEYS[k]})`); addLog(`새 기술을 배웠어요: ${s.icon} ${s.name} — ${KEYS[k]} 키 (다른 무기도 같은 칸이 열려요)`);
+      });
     }
   },
   hit(m) {
@@ -660,7 +766,29 @@ const handlers = {
     const mo = monsters.get(m.id); if (!mo) return;
     mo.dying = 0.4; mo.tag.el.remove();
   },
-  fx(m) { const o = others.get(m.id); if (o) slashFx(o.av, m.k, SKILLS[m.k].range); },
+  fx(m) { const o = others.get(m.id); if (o && WEAPONS[m.w]) { setWeapon(o.av, m.w); skillFx(o.av, m.w, m.k, m.tg); } },
+  inv(m) {
+    const prevEquip = me.inv.equip;
+    me.inv = { gold: m.gold, items: m.items, weapons: m.weapons, equip: m.equip };
+    store.set('arca.inv', JSON.stringify(me.inv));
+    if (me.av) {
+      setWeapon(me.av, me.inv.equip);
+      if (prevEquip !== me.inv.equip || !skillSlots.length) buildSkillSlots();
+    }
+    refreshStats(); refreshPotion(); renderPanels();
+  },
+  equip(m) { const o = others.get(m.id); if (o) setWeapon(o.av, m.w); },
+  loot(m) {
+    const y = islandH(m.x, m.z) + 2.2;
+    pop(`+${m.gold}G`, m.x, y, m.z, 'gold');
+    for (const [id, n] of m.items) {
+      const it = ITEMS[id];
+      if (n > 0) { pop(`${it.icon} +${n}`, m.x, y + 0.6, m.z, 'item'); addLog(`얻었어요: ${it.icon} ${it.name}`); }
+      else addLog(`가방이 꽉 차서 못 주웠어요: ${it.name}`);
+    }
+  },
+  notice(m) { toast(m.text); addLog(m.text); },
+  buff(m) { const av = avatarOf(m.id); if (av) bubble(av, m.dur); },
   pdie(m) {
     if (m.id === me.id) {
       me.dead = true; me.deadT = 4.6; me.actT = 0; me.dashT = 0;
@@ -717,33 +845,166 @@ function doEmote(e) {
   emote(me.tag, e);
   net({ t: 'emote', e });
 }
-// 가까운 몬스터 쪽으로 몸을 돌려 주기 (조준 도우미)
-function autoAim(range) {
-  let best = null, bd = range;
-  const fx = Math.sin(me.ry), fz = Math.cos(me.ry);
+// 가까운 몬스터들 (앞쪽에 있는 걸 더 좋아함)
+function nearMonsters(range) {
+  const fx = Math.sin(me.ry), fz = Math.cos(me.ry), list = [];
   for (const mo of monsters.values()) {
     if (mo.dying) continue;
     const dx = mo.av.position.x - me.x, dz = mo.av.position.z - me.z, d = Math.hypot(dx, dz);
-    const score = d - (dx * fx + dz * fz) / (d || 1) * 1.5; // 앞에 있는 몬스터를 더 좋아함
-    if (d < range && score < bd) { bd = score; best = mo; }
+    if (d > range + MONSTERS[mo.kind].size * 0.7) continue;
+    list.push({ mo, score: d - (d < 1 ? 1 : (dx * fx + dz * fz) / d) * 4 });
   }
+  return list.sort((a, b) => a.score - b.score).map((o) => o.mo);
+}
+// 가까운 몬스터 쪽으로 몸을 돌려 주기 (조준 도우미)
+function autoAim(range) {
+  const best = nearMonsters(range)[0];
   if (best) me.ry = Math.atan2(best.av.position.x - me.x, best.av.position.z - me.z);
+  return best;
 }
 function tryAttack(k) {
   if (!joined || me.dead) return;
-  const sk = SKILLS[k], now = performance.now();
-  if (me.lv < sk.unlock) { toast(`${sk.icon} ${sk.name}은(는) Lv${sk.unlock}에 배워요`); return; }
-  if (now < me.cds[k]) return;
-  me.cds[k] = now + sk.cd;
+  const w = me.inv.equip, sk = WEAPONS[w].skills[k], now = performance.now(), key = w + k;
+  if (me.lv < UNLOCK[k]) { toast(`${sk.icon} ${sk.name}은(는) Lv${UNLOCK[k]}에 배워요`); return; }
+  if (now < (me.cds[key] || 0)) return;
+  me.cds[key] = now + sk.cd;
   me.emote = 0;
-  if (k === 0) autoAim(4.5); else if (k === 2) autoAim(8);
+  let tg = null;
+  if (sk.kind === 'arc') autoAim(4.5);
+  else if (sk.kind === 'line') autoAim(8);
+  else if (sk.kind === 'shot' || sk.kind === 'blast') { const t = autoAim(sk.range); if (t) tg = [[t.av.position.x, t.av.position.z]]; }
+  else if (sk.kind === 'multi') { const list = nearMonsters(sk.range).slice(0, sk.n); if (list[0]) { autoAim(sk.range); tg = list.map((mo) => [mo.av.position.x, mo.av.position.z]); } }
   me.av.rotation.y = me.ry;
-  me.actA = k === 1 ? ANIM.spin : k === 3 ? ANIM.wave : ANIM.attack;
-  me.actT = k === 1 ? 0.45 : k === 3 ? 0.5 : 0.28;
-  if (k === 2) me.dashT = DASH_TIME;
+  const A_ = { arc: ANIM.attack, line: ANIM.attack, around: ANIM.spin, shot: ANIM.cast, multi: ANIM.cast, blast: ANIM.cast, heal: ANIM.wave, shield: ANIM.wave, taunt: ANIM.wave, guard: ANIM.guard };
+  me.actA = A_[sk.kind];
+  if (w === 'hammer' && sk.kind === 'around') me.actA = ANIM.attack;
+  me.actT = sk.kind === 'around' ? 0.45 : sk.kind === 'guard' ? sk.dur / 1000 : sk.kind === 'arc' || sk.kind === 'line' ? 0.28 : 0.4;
+  if (sk.move === 'dash') { me.dashT = DASH_TIME; me.dashDir = 1; }
+  if (sk.move === 'back') { me.dashT = 0.22; me.dashDir = -1; }
   net({ t: 'atk', k, ry: +me.ry.toFixed(3) });
   me.av.position.set(me.x, me.y, me.z);
-  slashFx(me.av, k, sk.range);
+  skillFx(me.av, w, k, tg);
+}
+function drinkPotion() {
+  if (!joined || me.dead) return;
+  const id = me.inv.items.potion ? 'potion' : me.inv.items.bigpotion ? 'bigpotion' : null;
+  if (!id) { toast('물약이 없어요 — 광장의 상인 모모에게 살 수 있어요'); return; }
+  if (me.hp >= me.maxHp) { toast('체력이 이미 가득해요'); return; }
+  net({ t: 'use', item: id });
+}
+
+// ================= 상인 / 가방 / 상점 =================
+let merchantAv = null, merchantTag = null, nearMerchant = false, shopTab = 'buy';
+{
+  const stall = new THREE.Group();
+  const table = mesh(new THREE.BoxGeometry(2.6, 0.9, 1.1), '#a0723a'); table.position.set(0, 0.45, 1.1);
+  const top = mesh(new THREE.BoxGeometry(2.8, 0.1, 1.3), '#7a4b2a'); top.position.set(0, 0.95, 1.1);
+  stall.add(table, top);
+  [[-1.3, 1.6], [1.3, 1.6], [-1.3, -0.7], [1.3, -0.7]].forEach(([x, z]) => { const p = mesh(new THREE.CylinderGeometry(0.07, 0.07, 2.8, 5), '#7a4b2a'); p.position.set(x, 1.4, z); stall.add(p); });
+  for (let i = 0; i < 5; i++) { const st = mesh(new THREE.BoxGeometry(0.6, 0.1, 2.7), i % 2 ? '#fff5f5' : '#fa5252'); st.position.set(-1.2 + i * 0.6, 2.85, 0.45); st.rotation.x = -0.15; stall.add(st); }
+  const p1 = mesh(new THREE.IcosahedronGeometry(0.14, 0), '#ff6b6b', { emissive: '#c92a2a', emissiveIntensity: 0.4 }); p1.position.set(-0.6, 1.12, 1.1);
+  const p2 = mesh(new THREE.IcosahedronGeometry(0.17, 0), '#cc5de8', { emissive: '#862e9c', emissiveIntensity: 0.4 }); p2.position.set(-0.2, 1.14, 1.1);
+  const bowShow = mesh(new THREE.TorusGeometry(0.4, 0.04, 5, 12, Math.PI), '#8b5a2b'); bowShow.position.set(0.6, 1.0, 1.1); bowShow.rotation.x = -Math.PI / 2;
+  stall.add(p1, p2, bowShow);
+  stall.position.set(MERCHANT.x, islandH(MERCHANT.x, MERCHANT.z), MERCHANT.z);
+  stall.rotation.y = MERCHANT.ry;
+  scene.add(stall);
+  merchantAv = makeAvatar('#82c91e', 2);
+  merchantAv.userData.holdR.clear();
+  merchantAv.position.set(MERCHANT.x, islandH(MERCHANT.x, MERCHANT.z), MERCHANT.z);
+  merchantAv.rotation.y = MERCHANT.ry;
+  scene.add(merchantAv);
+  merchantTag = makeTag('🛒 상인 모모');
+}
+function openPanel(id, open) {
+  const el = $(id), show = open === undefined ? el.hidden : open;
+  el.hidden = !show;
+  if (show) { (id === 'bag' ? $('shop') : $('bag')).hidden = true; renderPanels(); }
+}
+function itemCount() { return Object.keys(me.inv.items).length; }
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+function renderPanels() {
+  document.querySelectorAll('.goldN').forEach((b) => { b.textContent = me.inv.gold; });
+  if (!$('bag').hidden) renderBag();
+  if (!$('shop').hidden) renderShop();
+}
+function renderBag() {
+  const wl = $('bagWeapons'); wl.textContent = '';
+  for (const id of me.inv.weapons) {
+    const w = WEAPONS[id], b = el('button', 'wcard' + (id === me.inv.equip ? ' on' : ''));
+    const what = el('span'); what.append(el('b', '', w.name), el('small', '', `${w.desc} · ${w.skills.map((s) => s.icon).join(' ')}`));
+    b.append(el('span', 'ic', w.icon), what, el('span', 'badge', id === me.inv.equip ? '들고 있음' : '바꿔 들기'));
+    b.onclick = () => { if (id !== me.inv.equip) net({ t: 'equip', w: id }); };
+    wl.appendChild(b);
+  }
+  const grid = $('bagItems'); grid.textContent = '';
+  const ids = ITEM_IDS.filter((id) => me.inv.items[id]);
+  $('bagCount').textContent = `${ids.length} / ${BAG_SLOTS}칸`;
+  for (let i = 0; i < BAG_SLOTS; i++) {
+    const id = ids[i], b = el('button', 'cell');
+    if (!id) { b.disabled = true; grid.appendChild(b); continue; }
+    const it = ITEMS[id];
+    b.append(el('span', '', it.icon), el('span', 'n', String(me.inv.items[id])));
+    b.title = `${it.name} — ${it.desc}`;
+    b.onclick = () => {
+      $('bagTip').textContent = `${it.icon} ${it.name}: ${it.desc}`;
+      if (it.type === 'potion') { if (me.hp >= me.maxHp) toast('체력이 이미 가득해요'); else net({ t: 'use', item: id }); }
+    };
+    grid.appendChild(b);
+  }
+}
+function shopRow(icon, title, sub, price, buttons) {
+  const r = el('div', 'row'), what = el('div', 'what');
+  what.append(el('b', '', title), el('small', '', sub));
+  const act = el('div', 'act');
+  for (const [label, ok, fn] of buttons) { const b = el('button', '', label); b.disabled = !ok; b.onclick = fn; act.appendChild(b); }
+  r.append(el('span', 'ic', icon), what, el('span', 'price', price), act);
+  return r;
+}
+function renderShop() {
+  document.querySelectorAll('#shop .tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === shopTab));
+  const list = $('shopList'); list.textContent = '';
+  const g = me.inv.gold;
+  if (shopTab === 'buy') {
+    for (const id of SHOP_ITEMS) {
+      const it = ITEMS[id];
+      list.appendChild(shopRow(it.icon, it.name, it.desc, `${it.buy}G`, [
+        ['1개', g >= it.buy, () => net({ t: 'buy', id, n: 1 })],
+        ['5개', g >= it.buy * 5, () => net({ t: 'buy', id, n: 5 })],
+      ]));
+    }
+    for (const id of ARCA.WEAPON_IDS) {
+      const w = WEAPONS[id]; if (!w.price) continue;
+      const own = me.inv.weapons.includes(id);
+      const r = shopRow(w.icon, w.name, w.desc, own ? '' : `${w.price}G`, [[own ? '가지고 있음' : '사기', !own && g >= w.price, () => net({ t: 'buy', id })]]);
+      r.querySelector('.what').appendChild(el('small', 'sks', w.skills.map((s) => s.icon).join(' ')));
+      list.appendChild(r);
+    }
+  } else {
+    const ids = ITEM_IDS.filter((id) => me.inv.items[id]);
+    if (!ids.length) { list.appendChild(el('div', 'empty', '팔 물건이 없어요. 몬스터를 잡으면 재료가 나와요!')); return; }
+    for (const id of ids) {
+      const it = ITEMS[id], n = me.inv.items[id];
+      list.appendChild(shopRow(it.icon, `${it.name} ×${n}`, `하나에 ${it.sell}G`, `${it.sell * n}G`, [
+        ['1개 팔기', true, () => net({ t: 'sell', id, n: 1 })],
+        ['모두 팔기', true, () => net({ t: 'sell', id, n })],
+      ]));
+    }
+  }
+}
+document.querySelectorAll('.panel .x').forEach((b) => { b.onclick = () => { b.closest('.panel').hidden = true; }; });
+document.querySelectorAll('#shop .tabs button').forEach((b) => { b.onclick = () => { shopTab = b.dataset.tab; renderShop(); }; });
+$('bagBtn').onclick = () => openPanel('bag');
+$('shopHint').querySelector('button').onclick = () => openPanel('shop', true);
+function updateMerchant(dt) {
+  // 상인은 가까이 온 사람을 바라봄
+  const d = Math.hypot(me.x - MERCHANT.x, me.z - MERCHANT.z);
+  const face = d < 9 ? Math.atan2(me.x - MERCHANT.x, me.z - MERCHANT.z) : MERCHANT.ry;
+  merchantAv.rotation.y = lerpAngle(merchantAv.rotation.y, face, Math.min(1, dt * 4));
+  animate(merchantAv, d < 4 && d > 0 && !$('shop').hidden ? ANIM.wave : ANIM.idle, dt);
+  placeTag(merchantTag, merchantAv, dt, 2.6, 40);
+  const near = d < SHOP_RANGE - 1 && !me.dead;
+  if (near !== nearMerchant) { nearMerchant = near; $('shopHint').hidden = !near; if (!near) $('shop').hidden = true; }
 }
 addEventListener('keydown', (e) => {
   if (!everJoined) return;
@@ -767,6 +1028,10 @@ addEventListener('keydown', (e) => {
     if (e.code === 'KeyQ') tryAttack(1);
     if (e.code === 'KeyE') tryAttack(2);
     if (e.code === 'KeyR') tryAttack(3);
+    if (e.code === 'KeyH') drinkPotion();
+    if (e.code === 'KeyI') openPanel('bag');
+    if (e.code === 'KeyB') { if (nearMerchant) openPanel('shop'); else toast('상점은 광장의 상인 모모 가까이에서 열 수 있어요'); }
+    if (e.code === 'Escape') { $('bag').hidden = true; $('shop').hidden = true; }
   }
   keys.add(e.code);
 });
@@ -823,6 +1088,8 @@ if (('ontouchstart' in window) || navigator.maxTouchPoints > 0 && matchMedia('(p
     else if (act === 'attack') tryAttack(0);
     else if (act === 'run') { runToggle = !runToggle; b.classList.toggle('on', runToggle); }
     else if (act === 'chat') sayEl.focus();
+    else if (act === 'bag') openPanel('bag');
+    else if (act === 'potion') drinkPotion();
     else if (act.startsWith('emote')) doEmote(Number(act.slice(5)));
   }));
 }
@@ -842,11 +1109,11 @@ function updateMe(dt) {
   const fx = -Math.sin(camYaw), fz = -Math.cos(camYaw), rx = -fz, rz = fx;
   const running = keys.has('ShiftLeft') || keys.has('ShiftRight') || runToggle;
   let speed = (running ? RUN : WALK) * len;
-  if (me.actT > 0 && me.actA !== ANIM.spin) speed *= 0.35; // 칼 휘두르는 동안은 천천히
+  if (me.actT > 0 && me.actA !== ANIM.spin) speed *= me.actA === ANIM.guard ? 0.5 : 0.35; // 기술 쓰는 동안은 천천히
   let mx = 0, mz = 0;
   if (me.dashT > 0) { // 돌진
     me.dashT -= dt;
-    mx = Math.sin(me.ry); mz = Math.cos(me.ry); speed = DASH_SPEED;
+    mx = Math.sin(me.ry) * me.dashDir; mz = Math.cos(me.ry) * me.dashDir; speed = me.dashDir > 0 ? DASH_SPEED : 22;
   } else if (len > 0.05) {
     mx = (fx * iz + rx * ix) / len; mz = (fz * iz + rz * ix) / len;
     if (me.actT <= 0) me.ry = lerpAngle(me.ry, Math.atan2(mx, mz), Math.min(1, dt * 12));
@@ -971,6 +1238,7 @@ function drawMinimap() {
     const x = o.av.position.x, z = o.av.position.z; if (Math.hypot(x, z) > R + 4) continue;
     mm.beginPath(); mm.arc(c + x * s, c + z * s, 3, 0, Math.PI * 2); mm.fill();
   }
+  mm.fillStyle = '#ffd43b'; mm.strokeStyle = '#7a4b2a'; mm.lineWidth = 1.5; mm.beginPath(); mm.arc(c + MERCHANT.x * s, c + MERCHANT.z * s, 4, 0, Math.PI * 2); mm.fill(); mm.stroke();
   mm.save(); mm.translate(c + me.x * s, c + me.z * s); mm.rotate(-me.ry + Math.PI);
   mm.fillStyle = '#1c7ed6'; mm.strokeStyle = '#fff'; mm.lineWidth = 1.5;
   mm.beginPath(); mm.moveTo(0, -7); mm.lineTo(5, 5); mm.lineTo(0, 2); mm.lineTo(-5, 5); mm.closePath(); mm.fill(); mm.stroke();
@@ -1000,6 +1268,7 @@ function frame(now) {
     sendMove(dt);
     updateOthers(dt);
     updateMonsters(dt);
+    updateMerchant(dt);
     placeTag(me.tag, me.av, dt, me.a === ANIM.sit ? 2.05 : me.a === ANIM.dead ? 1.2 : 2.5);
     updateSkillSlots();
     if ((mmT += dt) > 0.1) { mmT = 0; drawMinimap(); }
@@ -1014,5 +1283,5 @@ requestAnimationFrame(frame);
 refreshStats();
 
 // 자동 확인용
-window.__arca = { me, others: () => others.size, monsters: () => monsters, groundAt, tryAttack };
+window.__arca = { me, others: () => others.size, monsters: () => monsters, groundAt, tryAttack, net: (o) => net(o), openPanel };
 })();
