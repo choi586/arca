@@ -12,7 +12,25 @@ function rng(seed) { // 모두에게 같은 섬이 보이도록 같은 순서의
 }
 const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
+// 섬 목록: 0 포근언덕(처음 섬), 1 버섯숲(글라이더로 건너가는 동쪽 섬)
+const ISLANDS = [
+  { id: 0, name: '포근언덕', icon: '🌿', x: 0, z: 0, R },
+  { id: 1, name: '버섯숲', icon: '🍄', x: 124, z: 0, R: 30 },
+];
+// 바람 기둥: 글라이더를 편 채 들어가면 하늘 높이 올라감
+const UPDRAFTS = [{ x: 56, z: 0, r: 4.5 }, { x: 99, z: 0, r: 4.5 }];
+const UPDRAFT_TOP = 22;
+function islandOf(x, z) { for (const I of ISLANDS) if (Math.hypot(x - I.x, z - I.z) <= I.R) return I; return null; }
+function shroomH(x, z) {
+  const I = ISLANDS[1], dx = x - I.x, dz = z - I.z, r = Math.hypot(dx, dz);
+  const bumps = 1.2 * Math.sin(dx * 0.21 + 0.5) * Math.cos(dz * 0.19) + 0.6 * Math.sin(dx * 0.43 + dz * 0.37);
+  return Math.max(0.6, 2.8 + bumps * smooth(0, 8, I.R - r) - smooth(I.R - 7, I.R, r) * 2);
+}
 function islandH(x, z) {
+  const I = ISLANDS[1];
+  return Math.hypot(x - I.x, z - I.z) <= I.R + 0.5 ? shroomH(x, z) : mainH(x, z);
+}
+function mainH(x, z) {
   const r = Math.hypot(x, z);
   const hills = 2.4 * Math.sin(x * 0.075 + 1.3) * Math.cos(z * 0.062 - 0.4) + 1.3 * Math.sin(x * 0.16 + z * 0.11) + 0.5 * Math.sin(x * 0.31 - z * 0.27);
   const bigHill = 9 * Math.exp(-((x - 20) ** 2 + (z + 30) ** 2) / 240);
@@ -20,7 +38,7 @@ function islandH(x, z) {
   const edge = smooth(R - 10, R, r);
   return Math.max(0.6, 2 + flat * (hills + 1.2 + bigHill) - edge * 2.2);
 }
-function groundAt(x, z) { return Math.hypot(x, z) > R ? -Infinity : islandH(x, z); }
+function groundAt(x, z) { return islandOf(x, z) ? islandH(x, z) : -Infinity; }
 
 // 섬 위 물건 배치 (집, 나무, 바위) — 서버도 똑같이 알아야 몬스터가 나무를 통과하지 않음
 function buildLayout() {
@@ -51,7 +69,18 @@ function buildLayout() {
     obstacles.push({ x, z, r: s * 0.85 });
     made++;
   }
-  return { obstacles, houses, trees, rocks };
+  // 버섯숲 섬: 큰 버섯 나무와 바위
+  const r2 = rng(5150), I = ISLANDS[1], shrooms = [];
+  for (let i = 0, made = 0; i < 300 && made < 24; i++) {
+    const a = r2() * Math.PI * 2, r = 3 + r2() * (I.R - 8), x = I.x + Math.cos(a) * r, z = I.z + Math.sin(a) * r;
+    if (obstacles.some((o) => Math.hypot(o.x - x, o.z - z) < o.r + 3.5)) continue;
+    if (UPDRAFTS.some((u) => Math.hypot(u.x - x, u.z - z) < u.r + 3)) continue;
+    const s = 0.8 + r2() * 1.1;
+    shrooms.push({ x, z, s, c: Math.floor(r2() * 4) });
+    obstacles.push({ x, z, r: 0.55 * s });
+    made++;
+  }
+  return { obstacles, houses, trees, rocks, shrooms };
 }
 
 // ---------- 몬스터 ----------
@@ -62,7 +91,10 @@ const MONSTERS = {
 };
 // 월드 보스 (섬 서북쪽에 가끔 나타남)
 MONSTERS.golem = { name: '폭풍 골렘', lv: 15, hp: 3000, atk: 30, speed: 2.6, xp: 300, aggro: 24, reach: 5, hitR: 5.5, hitAt: 2.5, windup: 1300, cd: 2600, size: 3, respawn: 600000, boss: true };
-const MONSTER_KINDS = ['slime', 'shroom', 'turtle', 'golem'];
+// 버섯숲 섬의 몬스터
+MONSTERS.toad = { name: '독버섯 두꺼비', lv: 10, hp: 340, atk: 30, speed: 3.2, xp: 48, aggro: 9, reach: 2.6, hitR: 3.0, hitAt: 0.0, windup: 850, cd: 2000, size: 1.2, respawn: 20000 };
+MONSTERS.wisp = { name: '숲의 정령', lv: 13, hp: 460, atk: 38, speed: 3.8, xp: 80, aggro: 10, reach: 3.0, hitR: 2.4, hitAt: 2.2, windup: 700, cd: 1700, size: 1.0, respawn: 26000 };
+const MONSTER_KINDS = ['slime', 'shroom', 'turtle', 'golem', 'toad', 'wisp'];
 const BOSS = { x: -30, z: -26 };
 const PARTY_MAX = 4, PARTY_SHARE_RANGE = 30;
 
@@ -83,6 +115,17 @@ function monsterHomes(obstacles) {
   place('slime', 14, 20, 36);
   place('shroom', 10, 37, 54);
   place('turtle', 3, 2, 9, 20, -30);
+  // 버섯숲 섬
+  const I = ISLANDS[1], r2 = rng(4242);
+  const place2 = (kind, n) => {
+    for (let i = 0, made = 0; i < 400 && made < n; i++) {
+      const a = r2() * Math.PI * 2, r = 4 + r2() * (I.R - 10), x = I.x + Math.cos(a) * r, z = I.z + Math.sin(a) * r;
+      if (!free(x, z, 1.5) || Math.abs(z - I.z) < 9) continue; // 가운데 길(착륙하는 곳과 바람 기둥)은 비워 둠
+      homes.push({ kind, x, z, isl: 1 }); made++;
+    }
+  };
+  place2('toad', 8);
+  place2('wisp', 4);
   return homes;
 }
 
@@ -138,6 +181,8 @@ const ITEMS = {
   jelly: { name: '슬라임 젤리', icon: '🟢', type: 'mat', sell: 3, desc: '말랑말랑. 상인에게 팔 수 있어요' },
   spore: { name: '버섯 포자', icon: '🍄', type: 'mat', sell: 8, desc: '반짝이는 가루. 상인에게 팔 수 있어요' },
   shell: { name: '이끼 껍질', icon: '🐚', type: 'mat', sell: 30, desc: '돌거북의 단단한 껍질 조각' },
+  glowcap: { name: '빛나는 갓', icon: '🌟', type: 'mat', sell: 20, desc: '독버섯 두꺼비의 반짝이는 갓 조각' },
+  dust: { name: '정령 가루', icon: '✨', type: 'mat', sell: 38, desc: '숲의 정령이 남긴 가루' },
   shard: { name: '폭풍의 조각', icon: '💎', type: 'mat', sell: 120, desc: '폭풍 골렘을 쓰러뜨린 증표. 비싸게 팔려요' },
 };
 const ITEM_IDS = Object.keys(ITEMS);
@@ -148,6 +193,8 @@ const LOOT = {
   slime: { gold: [2, 5], drops: [['jelly', 0.6], ['potion', 0.06]] },
   shroom: { gold: [6, 12], drops: [['spore', 0.55], ['potion', 0.12]] },
   turtle: { gold: [25, 40], drops: [['shell', 1], ['bigpotion', 0.3]] },
+  toad: { gold: [15, 25], drops: [['glowcap', 0.6], ['potion', 0.15]] },
+  wisp: { gold: [22, 36], drops: [['dust', 0.55], ['bigpotion', 0.1]] },
 };
 function cleanInv(raw) { // 저장된 가방을 안전하게 정리
   const inv = { gold: 0, items: {}, weapons: ['sword'], equip: 'sword' };
@@ -163,11 +210,30 @@ function cleanInv(raw) { // 저장된 가방을 안전하게 정리
   return inv;
 }
 
+// ---------- 낮과 밤 ----------
+// phase 0~1 이 하루. 0 해 뜸 · 0.62 노을 · 0.7~0.93 밤(몬스터가 세지고 보상이 많아짐)
+const DAY_MS = 24 * 60000;
+const isNightPhase = (ph) => ph >= 0.7 && ph < 0.93;
+const NIGHT_ATK = 1.25, NIGHT_REWARD = 1.5;
+
+// ---------- 꾸미기 ----------
+const DECOS = {
+  campfire: { name: '모닥불', icon: '🔥', price: 40 },
+  tent: { name: '천막', icon: '⛺', price: 80 },
+  bench: { name: '나무 의자', icon: '🪑', price: 30 },
+  lamp: { name: '등불 기둥', icon: '🏮', price: 35 },
+  flag: { name: '깃발', icon: '🚩', price: 25 },
+  flower: { name: '꽃 화분', icon: '🌷', price: 15 },
+  sign: { name: '팻말', icon: '🪧', price: 20, text: true },
+};
+const DECO_MAX = 8, DECO_TEXT = 16;
+function decoAllowed(x, z) { return groundAt(x, z) > -Infinity && Math.hypot(x, z) > 15 && !UPDRAFTS.some((u) => Math.hypot(u.x - x, u.z - z) < u.r + 1); }
+
 const MAX_LV = 30;
 const needXp = (lv) => 10 * lv * lv + 10;
 const statsFor = (lv) => ({ maxHp: 80 + (lv - 1) * 15, atk: 10 + (lv - 1) * 3 });
 
-const api = { R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
+const api = { ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
   UNLOCK, KEYS, WEAPONS, WEAPON_IDS, ITEMS, ITEM_IDS, SHOP_ITEMS, MAX_STACK, BAG_SLOTS, LOOT, cleanInv, MAX_LV, needXp, statsFor };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ARCA = api;
 })(this);

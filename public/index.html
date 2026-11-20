@@ -36,7 +36,7 @@
 
 <!-- 게임 화면 -->
 <div id="hud" hidden>
-  <div id="info"><b>🌿 포근언덕</b> · <span id="chan">채널 1</span> · 접속 <span id="count">1</span>명</div>
+  <div id="info"><b id="isle">🌿 포근언덕</b> · <span id="clock">☀️</span> · <span id="chan">채널 1</span> · 접속 <span id="count">1</span>명</div>
   <canvas id="minimap" width="150" height="150"></canvas>
   <div id="stat">
     <div class="lvrow"><span class="lv">Lv <b id="lv">1</b></span><span class="gold">💰 <b id="gold">0</b>G</span><span id="hpText">80 / 80</span></div>
@@ -51,6 +51,16 @@
   <div id="bossBar" hidden><div class="bn">⚡ 폭풍 골렘 <span id="bossPct"></span></div><div class="bar"><i id="bossFill"></i></div></div>
   <div id="bossTimer"></div>
   <div id="ask" hidden><span id="askText"></span><button id="askYes">수락</button><button id="askNo">거절</button></div>
+
+  <div id="deco" class="panel" hidden>
+    <div class="phead"><b>🏕️ 꾸미기</b><span class="gold">💰 <b class="goldN">0</b>G</span><button class="x" aria-label="닫기">✕</button></div>
+    <div class="tip">내 앞 두 걸음 자리에 놓여요. 광장 안에는 놓을 수 없어요. 내가 접속해 있는 동안 모두에게 보이고, 다음에 들어오면 같은 자리에 다시 놓여요.</div>
+    <div class="ptitle">내가 놓은 것 <small id="decoCount"></small></div>
+    <div id="decoMine"></div>
+    <div class="ptitle">새로 놓기</div>
+    <label class="signText">🪧 팻말에 쓸 말 <input id="signText" maxlength="16" placeholder="예: 여기 보물 있음!" autocomplete="off"></label>
+    <div id="decoList"></div>
+  </div>
 
   <div id="people" class="panel" hidden>
     <div class="phead"><b>👥 사람들</b><button class="x" aria-label="닫기">✕</button></div>
@@ -88,6 +98,7 @@
     <div class="ptitle">물건 <small id="bagCount"></small></div>
     <div id="bagItems" class="grid"></div>
     <div id="bagTip" class="tip">물약은 눌러서 마셔요. 재료는 상인 모모에게 팔 수 있어요.</div>
+    <button id="decoOpen" class="wide-btn">🏕️ 꾸미기 물건 놓기 <small>(K)</small></button>
   </div>
 
   <div id="shop" class="panel" hidden>
@@ -99,7 +110,7 @@
     <div id="log"></div>
     <input id="say" maxlength="80" placeholder="Enter 키로 말하기" autocomplete="off">
   </div>
-  <div id="help">WASD 이동 · 마우스 끌기 시점 · 클릭/F 공격 · Q·E·R 기술 · H 물약 · I 가방 · B 상점 · P 사람들 · Shift 달리기 · Space 점프 · 1·2·3 감정표현 · Enter 채팅</div>
+  <div id="help">WASD 이동 · 마우스 끌기 시점 · 클릭/F 공격 · Q·E·R 기술 · H 물약 · I 가방 · B 상점 · P 사람들 · K 꾸미기 · 공중에서 Space 글라이더 · Shift 달리기 · Space 점프 · 1·2·3 감정표현 · Enter 채팅</div>
   <div id="toast"></div>
   <div id="deadView" hidden>💫 쓰러졌어요…<br><small><b id="deadCount">5</b>초 뒤 광장에서 다시 일어나요</small></div>
   <div id="touch">

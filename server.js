@@ -1,4 +1,4 @@
-// 구름섬 아르카 — 4단계: 걷기 + 싸우기 + 모으기 + 함께하기(파티·거래·월드 보스) (정적 파일 서버 + WebSocket 멀티플레이)
+// 구름섬 아르카 — 5단계: 걷기 + 싸우기 + 모으기 + 함께하기 + 넓히기(새 섬·글라이더·낮과 밤·꾸미기) (정적 파일 서버 + WebSocket 멀티플레이)
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -16,6 +16,10 @@ const RESPAWN_MS = 4500;        // 쓰러지고 다시 일어나기까지
 const BOSS_FIRST_MS = Number(process.env.BOSS_FIRST_MS) || 90000;    // 채널이 열리고 첫 보스까지
 const BOSS_RESPAWN_MS = Number(process.env.BOSS_RESPAWN_MS) || A.MONSTERS.golem.respawn;
 const BOSS_STAY_MS = 8 * 60000;  // 이 시간 안에 못 잡으면 보스가 떠남
+const DAY_MS = Number(process.env.DAY_MS) || A.DAY_MS;   // 게임 속 하루 길이
+const dayStart = Date.now() - DAY_MS * 0.1;              // 서버가 켜질 때는 아침
+const phaseNow = () => ((Date.now() - dayStart) % DAY_MS) / DAY_MS;
+const isNight = () => A.isNightPhase(phaseNow());
 const ASK_MS = 30000;            // 초대·거래 요청이 살아 있는 시간
 const LEASH = 18;               // 몬스터가 집에서 이만큼 멀어지면 돌아감
 const COLORS = ['#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#38d9a9', '#4dabf7', '#748ffc', '#da77f2', '#f783ac', '#f8f9fa'];
@@ -51,7 +55,7 @@ let nextMonsterId = 1;
 function makeChannel() {
   const make = (h) => {
     const def = A.MONSTERS[h.kind];
-    return { id: nextMonsterId++, kind: h.kind, def, hx: h.x, hz: h.z, x: h.x, z: h.z, ry: Math.random() * 6, hp: def.hp, maxHp: def.hp, alive: true,
+    return { id: nextMonsterId++, kind: h.kind, def, isl: h.isl || 0, hx: h.x, hz: h.z, x: h.x, z: h.z, ry: Math.random() * 6, hp: def.hp, maxHp: def.hp, alive: true,
       st: 0, target: 0, wanderX: h.x, wanderZ: h.z, nextWander: 0, nextAtk: 0, windEnd: 0, circles: [], deadUntil: 0, hitters: new Set(), returning: false, slowUntil: 0,
       dmgBy: new Map(), pat: 0, despawnAt: 0, warned: false };
   };
@@ -59,7 +63,7 @@ function makeChannel() {
   const boss = make({ kind: 'golem', x: A.BOSS.x, z: A.BOSS.z });
   boss.alive = false; boss.deadUntil = Date.now() + BOSS_FIRST_MS;
   monsters.push(boss);
-  return { players: new Map(), monsters, boss };
+  return { players: new Map(), monsters, boss, decos: new Map() };
 }
 function pickChannel() {
   for (let n = 1; ; n++) {
@@ -114,11 +118,11 @@ function killMonster(ch, m) {
     const p = list.get(pid), party = p && parties.get(p.party);
     if (party) for (const q of party) if (!q.dead && Math.hypot(q.x - m.x, q.z - m.z) < A.PARTY_SHARE_RANGE) m.hitters.add(q.id);
   }
-  const loot = A.LOOT[m.kind];
+  const loot = A.LOOT[m.kind], bonus = isNight() ? A.NIGHT_REWARD : 1; // 밤에는 보상이 더 많음
   for (const pid of m.hitters) {
     const p = list.get(pid); if (!p) continue;
-    giveXp(ch, p, m.def.xp);
-    const gold = loot.gold[0] + Math.floor(Math.random() * (loot.gold[1] - loot.gold[0] + 1));
+    giveXp(ch, p, Math.round(m.def.xp * bonus));
+    const gold = Math.round((loot.gold[0] + Math.floor(Math.random() * (loot.gold[1] - loot.gold[0] + 1))) * bonus);
     p.inv.gold = Math.min(999999, p.inv.gold + gold);
     const got = [];
     for (const [id, chance] of loot.drops) if (Math.random() < chance) { const n = addItem(p.inv, id, 1); got.push([id, n]); }
@@ -271,8 +275,8 @@ function pushOut(m) {
     const dx = m.x - o.x, dz = m.z - o.z, d = Math.hypot(dx, dz), min = o.r + m.def.size * 0.6;
     if (d < min && d > 0.0001) { m.x = o.x + dx / d * min; m.z = o.z + dz / d * min; }
   }
-  const r = Math.hypot(m.x, m.z), lim = A.R - 3;
-  if (r > lim) { m.x *= lim / r; m.z *= lim / r; }
+  const I = A.ISLANDS[m.isl], dx = m.x - I.x, dz = m.z - I.z, r = Math.hypot(dx, dz), lim = I.R - 3;
+  if (r > lim) { m.x = I.x + dx * lim / r; m.z = I.z + dz * lim / r; }
 }
 function stepToward(m, tx, tz, speed, dt) {
   const dx = tx - m.x, dz = tz - m.z, d = Math.hypot(dx, dz);
@@ -349,7 +353,7 @@ function updateMonsters(ch, dt) {
       if (now >= m.windEnd) {
         for (const p of players.values()) { // 원이 여러 개여도 한 번만 다침
           if (p.dead) continue;
-          if (m.circles.some((c) => Math.hypot(p.x - c.x, p.z - c.z) < c.r + 0.45 && Math.abs(p.y - A.islandH(c.x, c.z)) < 3)) hurtPlayer(ch, p, def.atk);
+          if (m.circles.some((c) => Math.hypot(p.x - c.x, p.z - c.z) < c.r + 0.45 && Math.abs(p.y - A.islandH(c.x, c.z)) < 3)) hurtPlayer(ch, p, def.atk * (isNight() ? A.NIGHT_ATK : 1));
         }
         m.st = 0; m.nextAtk = now + def.cd;
       }
@@ -387,6 +391,30 @@ function updateMonsters(ch, dt) {
     }
     pushOut(m);
   }
+}
+
+// ---------- 꾸미기 (접속해 있는 동안 섬에 놓이는 내 물건) ----------
+let nextDecoId = 1;
+function cleanDeco(p, d, x, z, ry) {
+  if (!d || !A.DECOS[d.k] || !A.decoAllowed(x, z)) return null;
+  return { id: nextDecoId++, o: p.id, k: d.k, x: r2(x), z: r2(z), ry: r2(num(ry)), text: A.DECOS[d.k].text ? cleanText(d.text, A.DECO_TEXT) : '', color: p.color, name: p.name };
+}
+function myDecos(p) { return [...channels.get(p.ch).decos.values()].filter((d) => d.o === p.id); }
+function handleDeco(p, m) {
+  const c = channels.get(p.ch);
+  if (m.t === 'decodel') {
+    const d = c.decos.get(m.id);
+    if (!d || d.o !== p.id) return;
+    c.decos.delete(d.id); broadcast(p.ch, { t: 'decodel', id: d.id });
+    return;
+  }
+  const def = A.DECOS[m.k]; if (!def || p.dead) return;
+  if (myDecos(p).length >= A.DECO_MAX) return notice(p, `꾸미기 물건은 ${A.DECO_MAX}개까지 놓을 수 있어요`);
+  if (p.inv.gold < def.price) return notice(p, '골드가 모자라요');
+  const d = cleanDeco(p, m, p.x + Math.sin(p.ry) * 2, p.z + Math.cos(p.ry) * 2, p.ry + Math.PI);
+  if (!d) return notice(p, '여기에는 놓을 수 없어요 (광장 안, 바람 기둥, 섬 밖은 안 돼요)');
+  p.inv.gold -= def.price; sendInv(p);
+  c.decos.set(d.id, d); broadcast(p.ch, { t: 'decoadd', d });
 }
 
 // ---------- 파티 ----------
@@ -533,8 +561,13 @@ wss.on('connection', (ws) => {
       };
       applyLevel(me); me.hp = me.maxHp;
       const c = channels.get(ch);
-      send(ws, { t: 'welcome', id: me.id, ch, players: [...c.players.values()].map(publicInfo), me: publicInfo(me) });
       c.players.set(me.id, me);
+      // 전에 놓아 둔 꾸미기 물건을 다시 놓음 (브라우저에 저장된 목록)
+      if (Array.isArray(m.deco)) for (const raw of m.deco.slice(0, A.DECO_MAX)) {
+        const d = raw && cleanDeco(me, raw, num(raw.x, 999), num(raw.z, 999), raw.ry);
+        if (d) { c.decos.set(d.id, d); broadcast(ch, { t: 'decoadd', d }, me.id); }
+      }
+      send(ws, { t: 'welcome', id: me.id, ch, players: [...c.players.values()].filter((q) => q !== me).map(publicInfo), me: publicInfo(me), decos: [...c.decos.values()], phase: phaseNow(), dayMs: DAY_MS });
       sendStats(me); sendInv(me);
       send(ws, { t: 'bossinfo', alive: c.boss.alive, in: c.boss.alive ? 0 : Math.max(0, c.boss.deadUntil - Date.now()) });
       broadcast(ch, { t: 'join', p: publicInfo(me) }, me.id);
@@ -553,13 +586,15 @@ wss.on('connection', (ws) => {
       me.y = Math.max(-80, Math.min(80, y));
       me.z = Math.max(-200, Math.min(200, z));
       me.ry = ry;
-      me.a = Math.max(0, Math.min(12, Math.floor(num(m.a))));
+      me.a = Math.max(0, Math.min(15, Math.floor(num(m.a))));
     } else if (m.t === 'atk') {
       playerAttack(me.ch, me, Math.floor(num(m.k, -1)), num(m.ry, me.ry));
     } else if (m.t === 'use' || m.t === 'equip' || m.t === 'buy' || m.t === 'sell') {
       handleShop(me, m);
     } else if (['pinvite', 'pleave', 'treq', 'answer', 'toffer', 'tok', 'tcancel'].includes(m.t)) {
       handleSocial(me, m);
+    } else if (m.t === 'deco' || m.t === 'decodel') {
+      handleDeco(me, m);
     } else if (m.t === 'respawn') {
       if (!me.dead || Date.now() - me.deadAt < RESPAWN_MS - 300) return;
       me.dead = false; me.hp = me.maxHp; me.a = 0;
@@ -586,6 +621,7 @@ wss.on('connection', (ws) => {
     c.players.delete(me.id);
     if (me.trade) cancelTrade(me.trade, `${me.name} 님이 나가서 거래가 취소됐어요`);
     leaveParty(me, true);
+    for (const d of myDecos(me)) { c.decos.delete(d.id); broadcast(me.ch, { t: 'decodel', id: d.id }); }
     for (const mo of c.monsters) { if (mo.target === me.id) mo.target = 0; mo.hitters.delete(me.id); mo.dmgBy.delete(me.id); }
     broadcast(me.ch, { t: 'leave', id: me.id, name: me.name });
   });
@@ -613,6 +649,18 @@ setInterval(() => {
     if (p.dead || p.hp >= p.maxHp || now - p.lastHurt < 6000) continue;
     p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.04);
     sendStats(p);
+  }
+}, 1000);
+
+// 낮과 밤: 시간을 가끔 알려 주고, 밤이 되거나 아침이 되면 알림
+let wasNight = isNight(), timeTick = 0;
+setInterval(() => {
+  const night = isNight(), changed = night !== wasNight; wasNight = night;
+  if (!changed && ++timeTick % 20) return;
+  for (const [ch, c] of channels) {
+    if (!c.players.size) continue;
+    broadcast(ch, { t: 'time', phase: phaseNow() });
+    if (changed) broadcast(ch, { t: 'notice', text: night ? '🌙 밤이 됐어요. 몬스터가 세지지만 경험치와 골드를 1.5배로 줘요!' : '🌅 아침이 밝았어요. 몬스터가 다시 순해졌어요' });
   }
 }, 1000);
 

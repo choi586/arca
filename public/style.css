@@ -192,3 +192,12 @@ body.touch #bossTimer { top: 126px; width: 110px; }
 body.touch #ask { top: 230px; }
 .phead .x { margin-left: auto; }
 .phead .gold + .x { margin-left: 0; }
+
+/* ---------- 5단계: 새 섬·글라이더·낮과 밤·꾸미기 ---------- */
+.wide-btn { width: 100%; margin-top: 10px; padding: 10px; border: 0; border-radius: 12px; background: #e6fcf5; color: #087f5b; font-size: 14px; font-weight: 800; cursor: pointer; }
+.wide-btn small { font-weight: 400; }
+.signText { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #4a5b70; margin-bottom: 4px; }
+.signText input { flex: 1; min-width: 0; font-size: 14px; padding: 6px 8px; border: 2px solid #d5e3f3; border-radius: 8px; }
+.tag.sign .nm { background: rgba(122,75,42,.85); font-size: 12px; }
+body.night #info, body.night #stat { background: rgba(225,232,255,.88); }
+#help { text-shadow: 0 0 4px rgba(255,255,255,.9); }
