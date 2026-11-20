@@ -93,24 +93,65 @@ sup a { font-size: 12px; }
   .topbar nav { display: none; }
   .toc { display: block; }
 }
+
+/* ===== 더 위키답게 ===== */
+.topbar .search { margin-left: auto; display: flex; background: rgba(255,255,255,.18); border-radius: 4px; overflow: hidden; }
+.topbar .search input { width: 170px; border: 0; background: transparent; color: #fff; padding: 5px 10px; font-size: 13px; outline: none; }
+.topbar .search input::placeholder { color: rgba(255,255,255,.75); }
+.topbar .search span { padding: 5px 9px; font-size: 13px; background: rgba(0,0,0,.12); }
+.topbar .play { margin-left: 0; }
+.wrap { max-width: 1220px; margin: 16px auto 40px; padding: 0 12px; display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 16px; align-items: start; }
+.wrap main { max-width: none; margin: 0; }
+aside { position: sticky; top: 60px; display: grid; gap: 12px; font-size: 13px; }
+aside .card { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+aside h5 { margin: 0; padding: 8px 12px; font-size: 14px; border-bottom: 1px solid var(--line); background: var(--box); }
+aside ul { list-style: none; margin: 0; padding: 0; }
+aside li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--soft); margin: 0; }
+aside li:last-child { border-bottom: 0; }
+aside li span { color: var(--sub); white-space: nowrap; font-size: 12px; }
+aside .cap { padding: 6px 12px; color: var(--sub); font-size: 11px; border-top: 1px solid var(--soft); }
+h2::after, h3::after { content: "[편집]"; float: right; font-size: 13px; font-weight: 400; color: var(--link); opacity: .75; }
+.tools a { padding: 5px 10px; border-left: 1px solid var(--line); color: var(--text); }
+.tools a:first-child { border-left: 0; }
+.tmpl { display: flex; gap: 12px; align-items: center; border: 1px solid var(--line); border-left: 6px solid var(--bar); background: var(--box); border-radius: 4px; padding: 9px 14px; margin: 8px 0; font-size: 14px; }
+.tmpl .em { font-size: 28px; line-height: 1; }
+.tmpl.warn { border-left-color: #f08c00; }
+.tmpl.sleep { border-left-color: #7048e8; }
+.hat { font-size: 14px; margin: 6px 0; padding-left: 4px; }
+.hat::before { content: "🔗 "; }
+.q { margin: 10px 0; padding: 10px 14px; border: 1px solid var(--line); border-left: 5px solid var(--quote); background: var(--box); border-radius: 0 4px 4px 0; font-size: 14.5px; }
+.q footer { text-align: right; font-size: 13px; color: var(--sub); margin-top: 2px; }
+table.navbox { width: 100%; border-collapse: collapse; margin-top: 30px; font-size: 14px; border: 2px solid var(--bar); }
+table.navbox caption { background: var(--bar); color: #fff; font-weight: 800; padding: 7px; caption-side: top; }
+table.navbox th { background: var(--th); width: 90px; border: 1px solid var(--line); padding: 6px; white-space: nowrap; }
+table.navbox td { border: 1px solid var(--line); padding: 6px 10px; }
+table.navbox td a + a::before { content: " · "; color: var(--sub); }
+sup a[title] { cursor: help; }
+@media (max-width: 980px) { .wrap { display: block; padding: 0; margin: 0; } aside { position: static; margin: 12px; } .topbar .search { display: none; } .topbar .play { margin-left: auto; } }
+code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size: 13px; }
 </style>
 </head>
 <body>
 <header class="topbar">
   <a class="logo" href="#top">☁️ 아르카위키</a>
-  <nav><a href="#s-2">시작하기</a><a href="#s-5">몬스터</a><a href="#s-8">무기</a><a href="#s-10">공략</a></nav>
+  <nav><a href="#side">최근 변경</a><a href="#s-14">사건 사고</a><a href="#s-10">공략</a><a href="#s-5">몬스터</a><a href="#s-8">무기</a></nav>
+  <div class="search"><input placeholder="여기서 검색" aria-label="검색 (장식)" onkeydown="if(event.key==='Enter'){var q=this.value.trim();if(q)window.find(q);}"><span>🔍</span></div>
   <a class="play" href="/">▶ 게임 하러 가기</a>
 </header>
 
+<div class="wrap">
 <main id="top">
   <div class="doc-head">
     <h1>구름섬 아르카</h1>
-    <div class="tools"><span>★ 즐겨찾기</span><span>편집 불가<sup><a href="#fn-1" id="rfn-1">[1]</a></sup></span><span>토론 0</span></div>
+    <div class="tools"><a href="#fn-1" title="즐겨찾기는 브라우저의 것을 쓰자">★ 13</a><a href="#fn-1" id="rfn-1" title="진짜 위키가 아니라서 아무도 고칠 수 없다.">편집</a><a href="#s-14">토론</a><a href="#s-12">역사</a></div>
   </div>
-  <div class="modified">최근 수정 시각: 2026-11-20 (3단계 "모으기" 기준)</div>
-  <div class="cat">분류: <a href="#top">브라우저 게임</a><a href="#top">멀티플레이 RPG</a><a href="#top">3D 게임</a><a href="#top">친구랑 하면 더 재밌는 게임</a></div>
+  <div class="modified">최근 수정 시각: 2026-11-20 (5단계 "넓히기" 기준) · 기여자 2명<sup><a href="#fn-5" id="rfn-5" title="사람 한 명과 인공지능 하나.">[5]</a></sup></div>
+  <div class="cat">분류: <a href="#top">브라우저 게임</a><a href="#top">멀티플레이 RPG</a><a href="#top">2026년 게임</a><a href="#top">하루 만에 만들어진 것</a><a href="#top">울타리가 없는 곳</a><a href="#top">서버가 자는 게임</a></div>
 
-  <div class="notice">📖 이 문서는 <b>구름섬 아르카의 설명서이자 공략집</b>입니다. 처음이라면 <a href="#s-2">2. 시작하기</a>와 <a href="#s-3">3. 조작법</a>만 읽고 바로 들어가도 됩니다. 숫자가 궁금한 사람은 <a href="#s-5">5. 몬스터</a>와 <a href="#s-8">8. 무기와 기술</a>로.</div>
+  <div class="tmpl sleep"><span class="em">🛌</span><div><b>이 게임의 서버는 잠꾸러기입니다.</b><br>한동안 아무도 안 오면 잠들고, 깨우는 데 50초쯤 걸립니다. 고장이 아니라 무료 요금제입니다.</div></div>
+  <div class="tmpl warn"><span class="em">☁️</span><div><b>이 문서는 추락 사고를 다루고 있습니다.</b><br>문서에 나오는 모든 섬에는 울타리가 없습니다. 읽는 사람이 떨어져도 문서는 책임지지 않습니다. <del>어차피 잃는 것도 없다.</del></div></div>
+  <div class="hat">처음 온 사람은 <a href="#s-2">2. 시작하기</a>와 <a href="#s-3">3. 조작법</a>만 읽고 바로 들어가도 된다. 숫자가 궁금하면 <a href="#s-5">5. 몬스터</a>와 <a href="#s-8">8. 무기와 기술</a>로.</div>
+  <div class="hat">이 섬에서 실제로 벌어진 일은 <a href="#s-14">14. 사건 사고</a> 문단 참고.</div>
 
   <table class="infobox">
     <caption>구름섬 아르카</caption>
@@ -118,9 +159,14 @@ sup a { font-size: 12px; }
     <tr><th>장르</th><td>멀티플레이 3D 액션 RPG</td></tr>
     <tr><th>플랫폼</th><td>웹 브라우저 (PC · 휴대폰)<br>설치 필요 없음</td></tr>
     <tr><th>인원</th><td>섬 하나에 최대 40명<br>넘치면 채널이 새로 열림</td></tr>
-    <tr><th>가격</th><td>무료 <del>(서버도 무료라 가끔 잠듦)</del></td></tr>
+    <tr><th>가격</th><td>무료. 현금 결제 없음<br><del>결제 기능을 만들 줄 몰라서가 아니다</del></td></tr>
     <tr><th>최대 레벨</th><td>Lv 30</td></tr>
-    <tr><th>현재 버전</th><td>3단계 "모으기"</td></tr>
+    <tr><th>현재 버전</th><td>5단계 "넓히기"</td></tr>
+    <tr><th>출시</th><td>2026년 11월 20일<br><small>(1단계부터 5단계까지 전부 같은 날)</small></td></tr>
+    <tr><th>개발</th><td>사람 1명 + Claude<br><del>말로 시키는 쪽과 만드는 쪽</del></td></tr>
+    <tr><th>엔진</th><td>Three.js · WebSocket</td></tr>
+    <tr><th>서버</th><td>Render 무료 요금제<br><small>(취침 가능)</small></td></tr>
+    <tr><th>이용 등급</th><td>전체 이용가<br><del>슬라임에게는 가혹함</del></td></tr>
     <tr><th>주소</th><td><a href="/">arca-hy58.onrender.com</a></td></tr>
   </table>
 
@@ -150,18 +196,21 @@ sup a { font-size: 12px; }
       <li><a href="#s-11">11.</a> 자주 묻는 질문</li>
       <li><a href="#s-12">12.</a> 업데이트 내역과 예정</li>
       <li><a href="#s-13">13.</a> 여담</li>
+      <li><a href="#s-14">14.</a> 사건 사고
+        <ol><li><a href="#s-14-1">14.1.</a> 하얀 광장 사건</li><li><a href="#s-14-2">14.2.</a> 이름을 뺏긴 사건</li><li><a href="#s-14-3">14.3.</a> '테스트' 님 미스터리</li><li><a href="#s-14-4">14.4.</a> 매번 축하해 주는 버그</li><li><a href="#s-14-5">14.5.</a> 5단계를 두 번 만들 뻔한 사건</li><li><a href="#s-14-6">14.6.</a> 뒤구르기 추락</li></ol></li>
+      <li><a href="#s-15">15.</a> 은어</li>
     </ol>
   </div>
 
   <h2 id="s-1"><a href="#top">1.</a> 개요</h2>
-  <p><b>구름섬 아르카</b>는 하늘에 떠 있는 섬에 여러 사람이 동시에 접속해서 탐험하고, 싸우고, 모으는 웹 브라우저 3D RPG다. 주소만 누르면 바로 시작할 수 있고, 정해진 줄거리를 따라갈 필요가 없다. 광장에서 춤만 추고 있어도 아무도 뭐라 하지 않는다.<sup><a href="#fn-2" id="rfn-2">[2]</a></sup></p>
-  <p>세계관은 이렇다. 옛날에 하나였던 대지가 '대균열'로 부서져 하늘에 떠다니는 섬이 되었고, 플레이어는 섬을 다시 이어 줄 '바람의 돌'을 찾는 탐험가 <b>바람잡이</b>다. <del>아직 바람의 돌은 게임에 안 나온다.</del></p>
+  <p><b>구름섬 아르카</b>는 하늘에 떠 있는 섬에 여러 사람이 동시에 접속해서 탐험하고, 싸우고, 모으는 웹 브라우저 3D RPG다. 주소만 누르면 바로 시작할 수 있고, 정해진 줄거리를 따라갈 필요가 없다. 광장에서 춤만 추고 있어도 아무도 뭐라 하지 않는다. 실제로 그러라고 춤 버튼이 공격 버튼보다 먼저 만들어졌다.<sup><a href="#fn-2" id="rfn-2" title="2 키를 누르면 된다.">[2]</a></sup></p>
+  <p>세계관은 이렇다. 옛날에 하나였던 대지가 '대균열'로 부서져 하늘에 떠다니는 섬이 되었고, 플레이어는 섬을 다시 이어 줄 '바람의 돌'을 찾는 탐험가 <b>바람잡이</b>다. 5단계까지 왔지만 바람의 돌은 아직 한 번도 나오지 않았다. <del>주인공이 본업을 잊었다.</del></p>
 
   <h2 id="s-2"><a href="#top">2.</a> 시작하기</h2>
   <ul>
     <li><b>접속</b>: 주소에 들어가서 이름(최대 12자), 옷 색깔 10가지 중 하나, 모자(없음 · 고깔 · 밀짚 · 왕관)를 고르고 <b>섬에 들어가기</b>를 누른다.</li>
     <li><b>처음 접속이 느릴 때</b>: 한동안 아무도 안 들어오면 서버가 잠든다. 이때 첫 접속은 50초쯤 걸릴 수 있다. 고장이 아니니 기다리면 된다.</li>
-    <li><b>시작 위치</b>: 포근언덕 광장의 분수 앞. 광장에는 몬스터가 오지 않는다.<sup><a href="#fn-3" id="rfn-3">[3]</a></sup></li>
+    <li><b>시작 위치</b>: 포근언덕 광장의 분수 앞. 광장에는 몬스터가 오지 않는다.<sup><a href="#fn-3" id="rfn-3" title="몬스터는 집에서 18걸음 넘게 벗어나면 돌아간다.">[3]</a></sup></li>
     <li><b>첫 목표</b>: 광장 밖 풀밭의 슬라임 4마리를 잡으면 Lv 2가 되고 첫 기술이 열린다.</li>
   </ul>
   <div class="notice">💾 <b>저장에 대해</b>: 레벨, 골드, 가방, 무기는 <b>각자의 브라우저</b>에 저장된다. 같은 기기 · 같은 브라우저로 들어오면 이어서 할 수 있지만, 다른 기기에서는 Lv 1부터다. 브라우저의 사이트 데이터를 지우면 같이 사라지니 주의.</div>
@@ -224,7 +273,7 @@ sup a { font-size: 12px; }
   <ul>
     <li>섬 가운데를 동서로 가르는 길에는 몬스터가 살지 않는다. 글라이더로 내리는 곳이 바로 그 길이라 도착하자마자 맞을 일은 없다.</li>
     <li>몬스터는 길의 남쪽과 북쪽 숲에 산다. 한 마리씩 길 쪽으로 끌어내서 잡는 것이 안전하다.</li>
-    <li>이 섬에는 상인이 없다. 물약을 넉넉히 사서 올 것.</li>
+    <li>이 섬에는 상인이 없다. 물약을 넉넉히 사서 올 것. 모모는 날 줄 모른다.</li>
     <li>쓰러지면 포근언덕 광장에서 일어난다. 다시 오려면 또 날아와야 한다.</li>
   </ul>
 
@@ -238,7 +287,7 @@ sup a { font-size: 12px; }
   <ul>
     <li>밤이 되거나 아침이 되면 모두에게 알림이 뜬다.</li>
     <li>월드 보스 보상은 밤에도 늘지 않는다. 대신 보스의 공격은 밤에 더 아프다.</li>
-    <li>편하게 잡을 수 있는 몬스터라면 밤에 잡는 것이 무조건 이득이다.</li>
+    <li>편하게 잡을 수 있는 몬스터라면 밤에 잡는 것이 무조건 이득이다. 게임 속 밤은 5분 반이니 현실의 잠을 줄일 필요는 없다.</li>
   </ul>
 
   <h3 id="s-4-4"><a href="#s-4">4.4.</a> 꾸미기</h3>
@@ -257,7 +306,7 @@ sup a { font-size: 12px; }
     <li>광장 안과 바람 기둥 자리에는 놓을 수 없다. 버섯숲 섬에는 놓을 수 있다.</li>
     <li>물건은 <b>내가 접속해 있는 동안만</b> 섬에 보인다. 나가면 사라지고, 같은 기기로 다시 들어오면 같은 자리에 저절로 다시 놓인다.</li>
     <li>치우는 것은 공짜지만 <b>골드는 돌려받지 못한다.</b></li>
-    <li>물건은 길을 막지 않는다. 사람도 몬스터도 그냥 지나간다.</li>
+    <li>물건은 길을 막지 않는다. 사람도 몬스터도 그냥 지나간다. 천막 안에 숨어도 슬라임은 들어온다.</li>
   </ul>
 
 
@@ -272,10 +321,12 @@ sup a { font-size: 12px; }
   </table></div>
 
   <h3 id="s-5-1"><a href="#s-5">5.1.</a> 말랑 슬라임</h3>
+  <div class="q">……(통통)<footer>— 말랑 슬라임, 이 게임에서 가장 많이 잡힌 존재</footer></div>
   <p>통통 튀어 와서 몸으로 덮친다. 빨간 원이 작고(반지름 1.7) 바로 앞에 생기므로, 원이 보이면 <b>옆이나 뒤로 두세 걸음</b>만 가면 된다. Lv 1 바람검으로 네 번 때리면 잡힌다. 가까이 가면 먼저 덤비니 광장 밖으로 나갈 때 방심하지 말 것.</p>
   <h3 id="s-5-2"><a href="#s-5">5.2.</a> 버섯돌이</h3>
   <p>제자리에서 부풀어 오른 뒤 <b>자기 주변 전체</b>에 포자를 뿌린다(반지름 2.8). 옆으로 돌아도 맞으니 무조건 <b>멀어져야</b> 한다. 근접 무기라면 "두세 번 때리고 → 원이 보이면 뒤로 빠지고 → 다시 붙기"를 되풀이한다. 활이나 지팡이를 들면 훨씬 편하다.</p>
   <h3 id="s-5-3"><a href="#s-5">5.3.</a> 이끼 돌거북</h3>
+  <div class="q">느리다고 얕보다가 광장에서 눈을 뜬 사람이 한둘이 아니다.<footer>— 이 문서</footer></div>
   <p>보스를 빼면 섬에서 가장 센 몬스터. 느리지만 한 방이 아프고(26), 빨간 원이 크다(반지름 4). 대신 원이 차는 데 1.2초나 걸리므로 <b>달려서</b> 벗어나면 된다. 체력이 480이라 혼자 잡으려면 꽤 오래 걸린다. Lv 6 이상이거나 친구와 함께 가는 것을 추천.</p>
   <ul>
     <li>느린 걸음을 이용해 활로 뒤로 물러나며 쏘면 한 대도 안 맞고 잡을 수 있다.</li>
@@ -283,7 +334,8 @@ sup a { font-size: 12px; }
   </ul>
 
   <h3 id="s-5-4"><a href="#s-5">5.4.</a> 폭풍 골렘(월드 보스)</h3>
-  <p>섬 <b>서북쪽</b>에 가끔 나타나는 큰 바위 거인. 작은 지도에 <b>보라색 큰 점</b>으로 보이고, 나타나 있는 동안 화면 위에 체력 막대가 뜬다. 혼자 잡으라고 만든 몬스터가 아니다.</p>
+  <p>섬 <b>서북쪽</b>에 가끔 나타나는 큰 바위 거인. 작은 지도에 <b>보라색 큰 점</b>으로 보이고, 나타나 있는 동안 화면 위에 체력 막대가 뜬다. 혼자 잡으라고 만든 몬스터가 아니다. <del>그런데 꼭 혼자 가 보는 사람이 있다.</del></p>
+  <div class="q">쿠구구구구.<footer>— 폭풍 골렘, 등장 30초 전 알림을 무시한 사람들에게</footer></div>
   <div class="tw"><table class="wiki">
     <tr><th>항목</th><th>내용</th></tr>
     <tr><td>레벨 · 공격력</td><td>Lv 15 · 30</td></tr>
@@ -301,7 +353,7 @@ sup a { font-size: 12px; }
   <ul>
     <li>골렘은 집으로 돌아가지 않는다. 멀리 끌고 가도 체력이 다시 차지 않는다.</li>
     <li>망치의 도발 함성으로 한 사람이 붙잡고, 나머지는 옆과 뒤에서 때리는 것이 정석이다.</li>
-    <li>폭풍의 조각은 하나에 120G에 팔린다. 무기 값이 금방 모인다.</li>
+    <li>폭풍의 조각은 하나에 120G에 팔린다. 무기 값이 금방 모인다. 기념으로 간직해도 되지만 쓸 곳은 없다. <del>모모만 좋은 일</del></li>
   </ul>
 
   <h3 id="s-5-5"><a href="#s-5">5.5.</a> 버섯숲 섬의 몬스터</h3>
@@ -324,7 +376,7 @@ sup a { font-size: 12px; }
     <li><b>몬스터의 고집</b>: 몬스터는 처음 자기를 건드린 사람을 쫓는다. 집에서 18걸음 넘게 끌려가면 포기하고 돌아가며, <b>돌아가면 체력이 다시 가득 찬다.</b> 너무 멀리 끌고 다니면 손해.</li>
     <li><b>체력 회복</b>: 6초 동안 맞지 않으면 1초마다 최대 체력의 4%씩 찬다.</li>
     <li><b>쓰러짐</b>: 체력이 0이 되면 5초쯤 뒤 광장에서 체력이 가득 찬 채로 다시 일어난다. <b>잃는 것은 없다.</b> 겁내지 말고 덤벼도 된다.</li>
-    <li><b>같이 잡기</b>: 한 번이라도 때린 사람은 모두 경험치와 골드, 전리품을 <b>온전히 따로</b> 받는다. 남이 싸우는 몬스터를 도와줘도 서로 손해가 없다.<sup><a href="#fn-4" id="rfn-4">[4]</a></sup></li>
+    <li><b>같이 잡기</b>: 한 번이라도 때린 사람은 모두 경험치와 골드, 전리품을 <b>온전히 따로</b> 받는다. 남이 싸우는 몬스터를 도와줘도 서로 손해가 없다.<sup><a href="#fn-4" id="rfn-4" title="나눠 갖는 게 아니라 각자 전부 받는다.">[4]</a></sup></li>
   </ul>
 
   <h2 id="s-7"><a href="#top">7.</a> 성장</h2>
@@ -412,7 +464,7 @@ sup a { font-size: 12px; }
   <ul>
     <li>물약은 사는 값의 4분의 1에만 되팔 수 있다. 필요한 만큼만 사자.</li>
     <li><kbd>H</kbd>는 빨간 물약을 먼저 쓰고, 다 떨어지면 큰 물약을 쓴다. 체력이 가득하면 마셔지지 않으니 낭비 걱정은 없다.</li>
-    <li>재료는 지금은 파는 것 말고 쓸 곳이 없다. 아끼지 말고 팔아도 된다.</li>
+    <li>재료는 지금은 파는 것 말고 쓸 곳이 없다. 아끼지 말고 팔아도 된다. 모모가 그 많은 젤리를 어디에 쓰는지는 아무도 모른다.</li>
   </ul>
 
   <h2 id="s-10"><a href="#top">10.</a> 공략</h2>
@@ -474,7 +526,7 @@ sup a { font-size: 12px; }
     <li>단, <b>월드 보스는 예외</b>다. 골렘 보상은 직접 한 대라도 때린 사람만 받는다.</li>
     <li>두 명 중 한 명이 나가서 혼자 남으면 파티는 저절로 없어진다.</li>
     <li><b>거래</b>는 서로 10걸음 안에 있어야 신청할 수 있다. 골드와 가방 속 물건을 올리고, <b>둘 다 확인</b>을 눌러야 바뀐다. 한쪽이 내용을 바꾸면 양쪽 확인이 풀리니 바꿔치기 걱정은 없다.</li>
-    <li>무기는 거래할 수 없다. 받는 쪽 가방이 꽉 차 있으면 거래가 되지 않는다.</li>
+    <li>무기는 거래할 수 없다. <del>활 하나 사서 넷이 돌려 쓰려던 계획은 여기서 끝난다.</del> 받는 쪽 가방이 꽉 차 있으면 거래가 되지 않는다.</li>
     <li>레벨 높은 친구가 물약이나 골드를 나눠 주면 새로 온 친구가 훨씬 빨리 자리를 잡는다.</li>
   </ul>
 
@@ -487,7 +539,9 @@ sup a { font-size: 12px; }
     <tr><td>클릭했는데 공격이 안 나가요</td><td>마우스를 누른 채 움직이면 시점 회전으로 친다. 짧게 눌렀다 떼거나 <kbd>F</kbd>를 쓰자</td></tr>
     <tr><td><kbd>B</kbd>를 눌러도 상점이 안 열려요</td><td>상인 모모 가까이에 있어야 한다. 지도의 노란 점으로 가자</td></tr>
     <tr><td>몬스터 체력이 갑자기 다시 찼어요</td><td>집에서 너무 멀리 끌고 온 것이다. 몬스터가 돌아가면 체력이 가득 찬다</td></tr>
-    <tr><td>다른 사람을 때릴 수 있나요</td><td>없다. 사람끼리 싸우는 기능은 아직 없다</td></tr>
+    <tr><td>다른 사람을 때릴 수 있나요</td><td>없다. 사람끼리 싸우는 기능은 없다. 대신 친구 발밑으로 골렘을 끌고 갈 수는 있다. <del>권장하지 않는다</del></td></tr>
+    <tr><td>상인 모모를 때릴 수 있나요</td><td>없다. 물약 값이 비싸도 참자</td></tr>
+    <tr><td>글라이더가 안 접혀요</td><td>공중에서 <kbd>Space</kbd>나 <kbd>G</kbd>를 한 번 더 누른다. 이 질문은 보통 구름 속에서 올라온다</td></tr>
   </table></div>
 
   <h2 id="s-12"><a href="#top">12.</a> 업데이트 내역과 예정</h2>
@@ -505,17 +559,74 @@ sup a { font-size: 12px; }
     <li>섬의 나무 95그루와 바위 28개는 모든 사람에게 똑같은 자리에 있다. "분수 북쪽 큰 소나무 앞에서 만나" 같은 약속이 통한다.</li>
     <li>분수 위의 빛나는 수정은 아직 아무 기능이 없다. <del>만지면 뭔가 일어날 것 같지만 아무 일도 없다.</del></li>
     <li>상인 모모는 가까이 가면 손님 쪽으로 고개를 돌린다. 가게를 열면 손도 흔들어 준다.</li>
-    <li>앉은 채로는 체력이 더 빨리 차지 않는다. 그냥 앉아 있는 것이다.</li>
+    <li>앉은 채로는 체력이 더 빨리 차지 않는다. 그냥 앉아 있는 것이다. 모닥불 옆에 앉아도 마찬가지다. 그래도 다들 앉는다.</li>
     <li>섬 밖으로 떨어지는 것은 잃는 게 없어서, 숲 끝에서 광장으로 빨리 돌아가는 방법으로 쓰는 사람도 있다. <del>공식 귀환 주문</del></li>
   </ul>
+
+  <h2 id="s-14"><a href="#top">14.</a> 사건 사고</h2>
+  <p>이 문단의 내용은 모두 <b>실제로 있었던 일</b>이다. 이 게임은 기획부터 5단계까지 2026년 11월 20일 하루에 만들어졌고, 그만큼 일도 많았다.</p>
+  <h3 id="s-14-1"><a href="#s-14">14.1.</a> 하얀 광장 사건</h3>
+  <p>1단계 첫 화면에서 광장 바닥이 햇빛을 받아 거의 흰색으로 빛났다. 눈이 부신 것은 둘째 치고, 휴대폰에서는 흰 바닥 위의 흰 조이스틱이 보이지 않아 <b>움직일 방법이 없는 게임</b>이 될 뻔했다. 바닥 색을 진하게 고쳤는데, 브라우저가 예전 파일을 기억하고 있어서 한동안 "고쳤는데 왜 그대로지"가 이어졌다.</p>
+  <h3 id="s-14-2"><a href="#s-14">14.2.</a> 이름을 뺏긴 사건</h3>
+  <p>원래 주소는 <code>arca.onrender.com</code>이 될 예정이었다. 배포를 걸어 놓고 그 주소가 열리기를 5분 동안 기다렸는데 계속 "없는 페이지"만 나왔다. 그 이름은 이미 다른 사람 것이었고, 게임은 <code>arca-hy58</code>이라는 이름으로 멀쩡히 켜져 있었다. hy58이 무슨 뜻인지는 아무도 모른다. <del>Render가 아무렇게나 붙였다.</del></p>
+  <h3 id="s-14-3"><a href="#s-14">14.3.</a> '테스트' 님 미스터리</h3>
+  <p>2단계를 배포하고 확인하러 들어갔더니 분수 앞에 <b>'테스트'</b>라는 사람이 가만히 서 있었다. 주소를 만든 지 한 시간도 안 됐을 때의 일이다. 유력한 설명은, 1단계 배포를 확인하느라 열어 둔 창이 닫히지 않고 그대로 접속해 있었다는 것이다. 즉 '테스트' 님은 <b>확인하던 쪽 자신</b>이었을 가능성이 높다. 이 섬의 첫 번째 주민이자 첫 번째 잠수.</p>
+  <h3 id="s-14-4"><a href="#s-14">14.4.</a> 매번 축하해 주는 버그</h3>
+  <p>2단계 초기에는 다시 접속할 때마다 "✨ 새 기술: 회전베기"라는 축하가 떴다. 이미 배운 기술인데도 들어올 때마다 새로 배운 것처럼 기뻐해 준 것이다. 기분은 좋지만 틀린 말이라 고쳐졌다.</p>
+  <h3 id="s-14-5"><a href="#s-14">14.5.</a> 5단계를 두 번 만들 뻔한 사건</h3>
+  <p>작업 창 두 개가 서로 모르는 채로 5단계를 동시에 시작하려 했다. 한쪽이 파일을 열어 보다가 "아직 안 만든 버섯숲 섬이 왜 벌써 들어 있지"를 발견하고 손을 뗐다. 그대로 갔으면 버섯숲 섬이 두 개가 되거나 하나도 없게 될 뻔했다. 이 문서의 4·5단계 내용도 그 덕에 두 작업 창이 나눠 썼다.</p>
+  <h3 id="s-14-6"><a href="#s-14">14.6.</a> 뒤구르기 추락</h3>
+  <p><a href="#s-8-2">참나무 활</a>의 뒤구르기 사격은 뒤를 보지 않고 구른다. 섬 끝에서 쓰면 화살은 맞고 본인은 구름 아래로 내려간다. 고쳐지지 않았다. <del>버그가 아니라 교훈이라서.</del></p>
+
+  <h2 id="s-15"><a href="#top">15.</a> 은어</h2>
+  <p>아래 말들은 아직 <b>아무도 쓰지 않는다.</b> 이 문서가 처음 써 보는 것이며, 퍼지기를 바라고 적어 둔다.</p>
+  <div class="tw"><table class="wiki">
+    <tr><th>말</th><th>뜻</th></tr>
+    <tr><td><b>귀환 주문</b></td><td>섬 밖으로 뛰어내려 광장으로 돌아가는 것. 잃는 게 없어서 실제로 가장 빠른 귀가 방법이다</td></tr>
+    <tr><td><b>한 대 계</b></td><td>남이 잡는 몬스터를 한 대만 치고 보상을 다 받는 것. 규칙상 아무도 손해 보지 않으므로 욕이 아니라 인사에 가깝다</td></tr>
+    <tr><td><b>원 구경</b></td><td>빨간 원 안에 서서 원이 차는 것을 끝까지 지켜보는 행동. 대개 광장에서 끝난다</td></tr>
+    <tr><td><b>모모 은행</b></td><td>재료를 전부 상인 모모에게 맡기고(팔고) 물약으로 찾아가는(사는) 것. 이자는 없고 손해만 있다</td></tr>
+    <tr><td><b>알람</b></td><td>놀기 전에 먼저 접속해서 자는 서버를 깨워 두는 사람. 모임마다 한 명은 꼭 필요하다</td></tr>
+    <tr><td><b>구름 다이빙</b></td><td>글라이더 접는 것을 잊고 옆 섬을 지나쳐 그대로 내려가는 것</td></tr>
+  </table></div>
+
+  <table class="navbox">
+    <caption>구름섬 아르카</caption>
+    <tr><th>섬</th><td><a href="#s-4">포근언덕</a><a href="#s-4-2">버섯숲</a><a href="#s-4-1">바람 기둥</a></td></tr>
+    <tr><th>몬스터</th><td><a href="#s-5-1">말랑 슬라임</a><a href="#s-5-2">버섯돌이</a><a href="#s-5-3">이끼 돌거북</a><a href="#s-5-5">독버섯 두꺼비</a><a href="#s-5-5">숲의 정령</a><a href="#s-5-4">폭풍 골렘</a></td></tr>
+    <tr><th>무기</th><td><a href="#s-8-1">바람검</a><a href="#s-8-2">참나무 활</a><a href="#s-8-3">별빛 지팡이</a><a href="#s-8-4">바위 망치와 방패</a><a href="#s-8-5">반딧불 등불</a></td></tr>
+    <tr><th>시스템</th><td><a href="#s-6">전투</a><a href="#s-7">성장</a><a href="#s-9">가방과 상점</a><a href="#s-10-5">파티와 거래</a><a href="#s-4-3">낮과 밤</a><a href="#s-4-4">꾸미기</a></td></tr>
+    <tr><th>인물</th><td><a href="#s-9">상인 모모</a><a href="#s-14-3">'테스트' 님</a></td></tr>
+  </table>
 
   <div class="fn">
     <div><a href="#rfn-1" id="fn-1">[1]</a> 진짜 위키가 아니라 위키처럼 생긴 설명서라서 누구도 고칠 수 없다. 틀린 곳을 찾으면 게임을 만든 사람에게 알려 주자.</div>
     <div><a href="#rfn-2" id="fn-2">[2]</a> <kbd>2</kbd> 키를 누르면 된다.</div>
     <div><a href="#rfn-3" id="fn-3">[3]</a> 정확히는 몬스터가 사는 곳이 광장에서 떨어져 있고, 집에서 18걸음 넘게 벗어나면 돌아가기 때문이다. 광장 끝자락까지 쫓아오는 일은 있을 수 있다.</div>
     <div><a href="#rfn-4" id="fn-4">[4]</a> 나눠 갖는 게 아니라 각자 전부 받는다. 그래서 이 게임에는 "스틸"이라는 말이 없다.</div>
+    <div><a href="#rfn-5" id="fn-5">[5]</a> 사람 한 명과 인공지능(Claude) 하나. 사람은 "만들어 줘"를 맡았고 나머지는 나머지가 맡았다.</div>
   </div>
-  <div class="license">이 문서는 구름섬 아르카 3단계 기준으로 쓰였습니다. 게임이 업데이트되면 숫자가 달라질 수 있습니다. 아르카위키는 게임 안내를 위한 설명서이며 실제 위키 사이트가 아닙니다.</div>
+  <div class="license">이 문서는 구름섬 아르카 5단계 기준으로 쓰였습니다. 게임이 업데이트되면 숫자가 달라질 수 있습니다. 아르카위키는 게임 안내를 위한 설명서이며 실제 위키 사이트가 아닙니다. 옆 칸의 "최근 변경"과 "실시간 검색어"는 꾸며 낸 장식이고, 본문의 숫자와 "사건 사고"는 사실입니다.</div>
 </main>
+<aside id="side">
+  <div class="card"><h5>최근 변경</h5><ul>
+    <li><a href="#s-5-4">폭풍 골렘</a><span>3분 전</span></li>
+    <li><a href="#s-8-2">뒤구르기 사격/추락 목록</a><span>5분 전</span></li>
+    <li><a href="#s-4-4">팻말/아무 말 대잔치</a><span>12분 전</span></li>
+    <li><a href="#s-9">상인 모모/재산 의혹</a><span>31분 전</span></li>
+    <li><a href="#s-5-1">말랑 슬라임/인권</a><span>1시간 전</span></li>
+    <li><a href="#s-13">분수 수정/떡밥</a><span>2시간 전</span></li>
+    <li><a href="#s-14">'테스트' 님</a><span>어제</span></li>
+  </ul><div class="cap">※ 장식이다. 이 위키에 문서는 이것 하나뿐이다.</div></div>
+  <div class="card"><h5>오늘의 한마디</h5><div style="padding:10px 12px">빨간 원 안에 서서 "이거 뭐예요?"라고 묻지 말자. 물어보는 동안 원이 다 찬다.</div></div>
+  <div class="card"><h5>실시간 검색어</h5><ul>
+    <li>1. 글라이더 접는 법<span>▲</span></li>
+    <li>2. 골렘 혼자 잡기<span>▲</span></li>
+    <li>3. 서버 깨우는 법<span>—</span></li>
+    <li>4. 모모 어디<span>▼</span></li>
+    <li>5. 레벨 왜 1<span>▲</span></li>
+  </ul><div class="cap">※ 역시 장식이다.</div></div>
+</aside>
+</div>
 </body>
 </html>
