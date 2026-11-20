@@ -597,11 +597,7 @@ wss.on('connection', (ws) => {
       handleDeco(me, m);
     } else if (m.t === 'respawn') {
       if (!me.dead || Date.now() - me.deadAt < RESPAWN_MS - 300) return;
-      me.dead = false; me.hp = me.maxHp; me.a = 0;
-      me.x = (Math.random() - 0.5) * 4; me.z = A.SPAWN.z + Math.random() * 2; me.y = A.islandH(me.x, me.z);
-      send(ws, { t: 'revive', x: me.x, y: me.y, z: me.z });
-      broadcast(me.ch, { t: 'revived', id: me.id }, me.id);
-      sendStats(me);
+      revive(me);
     } else if (m.t === 'chat') {
       const text = cleanText(m.text, 80);
       const now = Date.now();
@@ -641,11 +637,22 @@ setInterval(() => {
   }
 }, TICK_MS);
 
+// 쓰러진 사람을 광장에서 다시 일으킴
+function revive(p) {
+  p.dead = false; p.hp = p.maxHp; p.a = 0;
+  p.x = (Math.random() - 0.5) * 4; p.z = A.SPAWN.z + Math.random() * 2; p.y = A.islandH(p.x, p.z);
+  send(p.ws, { t: 'revive', x: p.x, y: p.y, z: p.z });
+  broadcast(p.ch, { t: 'revived', id: p.id }, p.id);
+  sendStats(p);
+}
+
 // 싸우지 않을 때 체력이 조금씩 차오름 (+ 너무 멀어진 거래는 취소)
 setInterval(() => {
   const now = Date.now();
   for (const c of channels.values()) for (const p of c.players.values()) {
     if (p.trade && Math.hypot(p.trade.a.x - p.trade.b.x, p.trade.a.z - p.trade.b.z) > 14) cancelTrade(p.trade, '서로 너무 멀어져서 거래가 취소됐어요');
+    // 화면을 안 보고 있어서(다른 창, 꺼진 화면) 부활 요청을 못 보낸 사람은 서버가 대신 일으킴
+    if (p.dead && now - p.deadAt > RESPAWN_MS + 4000) revive(p);
     if (p.dead || p.hp >= p.maxHp || now - p.lastHurt < 6000) continue;
     p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.04);
     sendStats(p);
