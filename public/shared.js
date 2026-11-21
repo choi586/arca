@@ -404,20 +404,20 @@ const UPGRADES = [
 // ---------- 의뢰(퀘스트) ----------
 // type: kill 몬스터 잡기 · collect 재료 가져오기(완료할 때 가져감) · visit 섬에 가 보기
 const QUESTS = {
-  q1: { name: '말랑말랑 대청소', type: 'kill', key: 'slime', n: 5, gold: 30, xp: 20, stones: 0, lv: 1, desc: '광장 밖 풀밭의 말랑 슬라임을 5마리 잡아 줘요.' },
-  q2: { name: '포자 수집', type: 'collect', key: 'spore', n: 3, gold: 70, xp: 50, stones: 0, lv: 3, desc: '버섯돌이가 떨어뜨리는 버섯 포자 3개를 가져다줘요.' },
-  q3: { name: '언덕 위의 돌덩이', type: 'kill', key: 'turtle', n: 2, gold: 150, xp: 120, stones: 1, lv: 6, desc: '큰 언덕의 이끼 돌거북을 2마리 잡아 줘요.' },
-  q4: { name: '하늘을 건너', type: 'visit', key: '1', n: 1, gold: 100, xp: 80, stones: 1, lv: 5, desc: '글라이더를 타고 동쪽의 버섯숲 섬에 발을 디뎌 봐요.' },
-  q5: { name: '두꺼비 소동', type: 'kill', key: 'toad', n: 4, gold: 220, xp: 220, stones: 1, lv: 9, desc: '버섯숲 섬의 독버섯 두꺼비를 4마리 잡아 줘요.' },
-  q6: { name: '정령의 흔적', type: 'collect', key: 'dust', n: 2, gold: 260, xp: 200, stones: 2, lv: 12, desc: '숲의 정령이 남기는 정령 가루 2개를 가져다줘요.' },
-  q8: { name: '설산 정찰', type: 'visit', key: '2', n: 1, gold: 300, xp: 400, stones: 2, lv: 15, desc: '포근언덕 북쪽 끝의 바람 기둥을 타고 서리봉우리에 발을 디뎌 봐요.' },
-  q9: { name: '늑대 무리', type: 'kill', key: 'wolf', n: 5, gold: 500, xp: 700, stones: 2, lv: 18, desc: '서리봉우리의 서리 늑대를 5마리 잡아 줘요.' },
-  q10: { name: '산꼭대기의 주인', type: 'kill', key: 'giant', n: 1, gold: 800, xp: 1000, stones: 3, lv: 22, desc: '서리봉우리 꼭대기의 서리 거인을 쓰러뜨려요.' },
-  q11: { name: '꿀단지 채우기', type: 'collect', key: 'honey', n: 4, gold: 45, xp: 35, stones: 0, lv: 2, desc: '붕붕 꿀벌이 떨어뜨리는 달콤한 꿀 4개를 가져다줘요.' },
-  q12: { name: '박쥐 소탕', type: 'kill', key: 'bat', n: 5, gold: 260, xp: 260, stones: 1, lv: 11, desc: '버섯숲 섬의 포자 박쥐를 5마리 잡아 줘요.' },
-  q13: { name: '펭귄 부대 해산', type: 'kill', key: 'penguin', n: 5, gold: 450, xp: 600, stones: 2, lv: 17, desc: '서리봉우리의 펭귄 병사를 5마리 잡아 줘요.' },
-  q14: { name: '버섯 여왕 알현', type: 'kill', key: 'queen', n: 1, gold: 500, xp: 600, stones: 2, lv: 14, desc: '버섯숲 섬 북쪽 깊은 곳의 버섯 여왕을 쓰러뜨려요.' },
-  q7: { name: '폭풍을 잠재워라', type: 'kill', key: 'golem', n: 1, gold: 300, xp: 300, stones: 3, lv: 10, desc: '월드 보스 폭풍 골렘을 함께 쓰러뜨려요. 한 대라도 때리면 돼요.' },
+  q1: { name: '말랑말랑 대청소', type: 'kill', key: 'slime', n: 5, gold: 60, xp: 20, stones: 0, lv: 1, desc: '광장 밖 풀밭의 말랑 슬라임을 5마리 잡아 줘요.' },
+  q2: { name: '포자 수집', type: 'collect', key: 'spore', n: 3, gold: 120, xp: 50, stones: 0, lv: 3, desc: '버섯돌이가 떨어뜨리는 버섯 포자 3개를 가져다줘요.' },
+  q3: { name: '언덕 위의 돌덩이', type: 'kill', key: 'turtle', n: 2, gold: 250, xp: 120, stones: 1, lv: 6, desc: '큰 언덕의 이끼 돌거북을 2마리 잡아 줘요.' },
+  q4: { name: '하늘을 건너', type: 'visit', key: '1', n: 1, gold: 200, xp: 80, stones: 1, lv: 5, desc: '글라이더를 타고 동쪽의 버섯숲 섬에 발을 디뎌 봐요.' },
+  q5: { name: '두꺼비 소동', type: 'kill', key: 'toad', n: 4, gold: 320, xp: 220, stones: 1, lv: 9, desc: '버섯숲 섬의 독버섯 두꺼비를 4마리 잡아 줘요.' },
+  q6: { name: '정령의 흔적', type: 'collect', key: 'dust', n: 2, gold: 380, xp: 200, stones: 2, lv: 12, desc: '숲의 정령이 남기는 정령 가루 2개를 가져다줘요.' },
+  q8: { name: '설산 정찰', type: 'visit', key: '2', n: 1, gold: 250, xp: 400, stones: 2, lv: 15, desc: '포근언덕 북쪽 끝의 바람 기둥을 타고 서리봉우리에 발을 디뎌 봐요.' },
+  q9: { name: '늑대 무리', type: 'kill', key: 'wolf', n: 5, gold: 450, xp: 700, stones: 2, lv: 18, desc: '서리봉우리의 서리 늑대를 5마리 잡아 줘요.' },
+  q10: { name: '산꼭대기의 주인', type: 'kill', key: 'giant', n: 1, gold: 650, xp: 1000, stones: 3, lv: 22, desc: '서리봉우리 꼭대기의 서리 거인을 쓰러뜨려요.' },
+  q11: { name: '꿀단지 채우기', type: 'collect', key: 'honey', n: 4, gold: 80, xp: 35, stones: 0, lv: 2, desc: '붕붕 꿀벌이 떨어뜨리는 달콤한 꿀 4개를 가져다줘요.' },
+  q12: { name: '박쥐 소탕', type: 'kill', key: 'bat', n: 5, gold: 340, xp: 260, stones: 1, lv: 11, desc: '버섯숲 섬의 포자 박쥐를 5마리 잡아 줘요.' },
+  q13: { name: '펭귄 부대 해산', type: 'kill', key: 'penguin', n: 5, gold: 400, xp: 600, stones: 2, lv: 17, desc: '서리봉우리의 펭귄 병사를 5마리 잡아 줘요.' },
+  q14: { name: '버섯 여왕 알현', type: 'kill', key: 'queen', n: 1, gold: 550, xp: 600, stones: 2, lv: 14, desc: '버섯숲 섬 북쪽 깊은 곳의 버섯 여왕을 쓰러뜨려요.' },
+  q7: { name: '폭풍을 잠재워라', type: 'kill', key: 'golem', n: 1, gold: 450, xp: 300, stones: 3, lv: 10, desc: '월드 보스 폭풍 골렘을 함께 쓰러뜨려요. 한 대라도 때리면 돼요.' },
 };
 const QUEST_IDS = Object.keys(QUESTS), QUEST_ACTIVE_MAX = 3;
 function cleanQuests(raw) {
