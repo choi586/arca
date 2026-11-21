@@ -168,7 +168,7 @@ sup a { cursor: pointer; }
     <tr><th>플랫폼</th><td>웹 브라우저 (PC · 휴대폰 · 태블릿)<br>설치 필요 없음</td></tr>
     <tr><th>인원</th><td>채널 하나에 최대 40명<br>넘치면 채널이 새로 열림</td></tr>
     <tr><th>가격</th><td>무료. 현금 결제 없음<br><del>결제 기능을 만들 줄 몰라서가 아니다</del></td></tr>
-    <tr><th>섬</th><td>3개 (포근언덕 · 버섯숲 · 서리봉우리)</td></tr>
+    <tr><th>섬</th><td>4개 (포근언덕 · 버섯숲 · 서리봉우리 · 불꽃마루)<br><small>(불꽃마루는 Lv 30부터 보인다)</small></td></tr>
     <tr><th>최대 레벨</th><td>Lv <span data-val="MAX_LV">60</span><br><small>(처음에는 30이었다)</small></td></tr>
     <tr><th>몬스터</th><td><span data-val="monsterKinds"></span>종 <span data-val="monsterCount"></span>마리 + 월드 보스</td></tr>
     <tr><th>출시</th><td>2026년 11월 20일</td></tr>
@@ -244,12 +244,13 @@ sup a { cursor: pointer; }
   </ul>
 
   <h2 id="world">세계</h2>
-  <p>섬은 세 개다. 화면 오른쪽 위 <b>작은 지도</b>는 지금 서 있는 섬을 보여 주고, 위쪽이 북쪽이다. 빨간 점은 몬스터, 갈색 큰 점은 우두머리, 흰 점은 다른 사람, 초록 점은 파티원이다.</p>
+  <p>섬은 네 개다. 그 가운데 하나는 <b>Lv 30이 되어야 나타난다.</b> 화면 오른쪽 위 <b>작은 지도</b>는 지금 서 있는 섬을 보여 주고, 위쪽이 북쪽이다. 빨간 점은 몬스터, 갈색 큰 점은 우두머리, 흰 점은 다른 사람, 초록 점은 파티원이다.</p>
   <div class="tw"><table class="wiki">
     <tr><th>섬</th><th>위치</th><th>추천 레벨</th><th>가는 법</th><th>특징</th></tr>
     <tr><td>🌿 <a href="#isle-main">포근언덕</a></td><td class="c">가운데</td><td class="c">1~9</td><td>여기서 시작한다</td><td>광장, 상인, 촌장. 월드 보스가 나타난다</td></tr>
     <tr><td>🍄 <a href="#isle-shroom">버섯숲</a></td><td class="c">동쪽</td><td class="c">10~16</td><td>글라이더, 또는 <a href="#windstone">바람의 다리</a></td><td>빛나는 버섯 나무. 버섯 여왕</td></tr>
     <tr><td>❄️ <a href="#isle-frost">서리봉우리</a></td><td class="c">북쪽</td><td class="c">16 이상</td><td>글라이더만</td><td>미끄러운 바닥, 눈. 서리 거인</td></tr>
+    <tr><td>🌋 <a href="#isle-fire">불꽃마루</a></td><td class="c">남쪽</td><td class="c">30 이상</td><td>글라이더만. <b>Lv 30부터 나타난다</b></td><td>화산섬. 분화구의 용</td></tr>
   </table></div>
 
   <h3 id="isle-main">포근언덕</h3>
@@ -294,6 +295,18 @@ sup a { cursor: pointer; }
     <li>여기서 낚시하면 구름붕어 대신 <b>얼음새우</b>가 낚인다.</li>
   </ul>
 
+  <h3 id="isle-fire">불꽃마루</h3>
+  <div class="tmpl warn"><span class="em">🌋</span><div><b>이 섬은 Lv 30이 되기 전에는 존재하지 않습니다.</b><br>보이지 않는 것이 아니라 정말로 없습니다. 남쪽으로 날아가도 구름뿐입니다.</div></div>
+  <p>포근언덕 <b>남쪽</b>에 떠 있는 화산섬. 검은 화산재 땅에 갈라진 틈마다 불빛이 새어 나오고, 불티가 위로 올라간다. 가운데에 분화구가 있고 그 안에 <a href="#dragon">용</a>이 산다.</p>
+  <ul>
+    <li><b>Lv 30이 되는 순간</b> "남쪽 하늘에 새로운 섬이 나타났어요!"라는 알림과 함께 섬이 나타난다. 포근언덕 남쪽 끝에 새 바람 기둥도 같이 생긴다.</li>
+    <li>Lv 29 이하에게는 섬도, 바람 기둥도, 이 섬의 몬스터도 보이지 않는다. 땅도 없어서 올라설 수 없다.</li>
+    <li>그래서 Lv 30이 안 된 친구 눈에는, 이 섬에 간 사람이 <b>남쪽 하늘 허공에 떠서 혼자 칼을 휘두르는 것</b>으로 보인다. <del>정상이다. 병원에 데려가지 말자.</del></li>
+    <li>분화구는 둘레가 높이 솟아 있어서 테두리를 넘어 들어가야 한다. 용에게 덤빌 게 아니라면 테두리 밖에서 사냥하자.</li>
+    <li>상인도 다리도 없다. 물약을 넉넉히 챙길 것. 쓰러지면 포근언덕 광장에서 일어난다.</li>
+    <li>여기 몬스터는 경험치가 많다. Lv 30 이후의 느린 레벨 올리기가 여기서 풀린다.</li>
+  </ul>
+
   <h3 id="travel">섬 사이 이동</h3>
   <h4>글라이더와 바람 기둥</h4>
   <ul>
@@ -301,7 +314,7 @@ sup a { cursor: pointer; }
     <li>글라이더를 펴면 <b>바라보는 쪽으로 계속 나아가면서</b> 천천히 내려온다. 방향만 바꿀 수 있고 멈출 수는 없다. 내리고 싶으면 접으면 된다. 떨어져도 다치지 않는다.</li>
     <li>13걸음 나아갈 때 4걸음쯤 내려온다. 그냥 섬 끝에서 뛰어내리면 옆 섬까지 닿지 않는다.</li>
     <li><b>바람 기둥</b>(하얗게 솟는 고리) 안에서 점프하고 글라이더를 펴면 하늘 높이 떠오른다. 꼭대기에서 그대로 앞으로 날아가면 옆 섬에 닿는다.</li>
-    <li>바람 기둥은 네 개다. 작은 지도에 하늘색 고리로 보인다.</li>
+    <li>바람 기둥은 여섯 개다(둘은 Lv 30부터 보인다). 작은 지도에 하늘색 고리로 보인다.</li>
   </ul>
   <div class="tw"><table class="wiki">
     <tr><th>가는 길</th><th>탈 바람 기둥</th><th>날아갈 방향</th></tr>
@@ -309,6 +322,8 @@ sup a { cursor: pointer; }
     <tr><td>버섯숲 → 포근언덕</td><td>버섯숲 <b>서쪽 끝</b></td><td class="c">서쪽</td></tr>
     <tr><td>포근언덕 → 서리봉우리</td><td>포근언덕 <b>북쪽 끝</b></td><td class="c">북쪽</td></tr>
     <tr><td>서리봉우리 → 포근언덕</td><td>서리봉우리 <b>남쪽 끝</b></td><td class="c">남쪽</td></tr>
+    <tr><td>포근언덕 → 불꽃마루 <small>(Lv 30부터)</small></td><td>포근언덕 <b>남쪽 끝</b></td><td class="c">남쪽</td></tr>
+    <tr><td>불꽃마루 → 포근언덕</td><td>불꽃마루 <b>북쪽 끝</b></td><td class="c">북쪽</td></tr>
   </table></div>
   <ul>
     <li>높이 날아서 지나가는 사람은 바람 기둥이 다시 띄우지 않는다. 낮게 들어온 사람만 띄운다.</li>
@@ -360,8 +375,17 @@ sup a { cursor: pointer; }
     <li><b>눈보라 정령</b>: 늑대보다 아프고 경험치가 많다. Lv 20이 넘으면 가장 좋은 사냥감.</li>
   </ul>
 
+  <h3 id="mon-fire">불꽃마루의 몬스터</h3>
+  <p>Lv 30이 되기 전에는 보이지 않는다.</p>
+  <div data-auto="monsters" data-arg="3"></div>
+  <ul>
+    <li><b>불씨 도마뱀</b>: 이 섬의 첫 상대. 꼬리 끝에 불이 붙어 있다. 바로 앞에 원을 그리니 옆으로 피한다. 서리봉우리의 어떤 몬스터보다 아프니 가만히 서서 맞으며 싸우면 진다. <del>이 문서를 쓰던 사람이 Lv 30으로 그렇게 싸우다 졌다.</del></li>
+    <li><b>용암 덩어리</b>: 느리고 튼튼하며 자기 둘레 전체에 터뜨린다. 버섯돌이 잡던 대로 "때리고 → 빠지고".</li>
+    <li><b>불새</b>: 서리 늑대보다 빠르다. 걸어서는 못 떨쳐 낸다. 느려지게 하는 기술이 없으면 방패나 돌진으로 받아넘겨야 한다.</li>
+  </ul>
+
   <h3 id="bosses">섬의 우두머리</h3>
-  <p>섬마다 하나씩 있다. 포근언덕의 폭풍 골렘만 진짜 <b>월드 보스</b>고, 나머지 둘은 아주 센 일반 몬스터다.</p>
+  <p>섬마다 하나씩 있다. 포근언덕의 폭풍 골렘만 진짜 <b>월드 보스</b>고, 나머지 셋은 아주 센 일반 몬스터다.</p>
   <h4 id="golem">⚡ 폭풍 골렘 (포근언덕 · 월드 보스)</h4>
   <p>섬 <b>서북쪽</b>에 가끔 나타나는 큰 바위 거인. 작은 지도에 보라색 큰 점으로 보이고, 나타나 있는 동안 화면에 체력 막대가 뜬다. 혼자 잡으라고 만든 몬스터가 아니다. <del>그런데 꼭 혼자 가 보는 사람이 있다.</del></p>
   <div class="tw"><table class="wiki">
@@ -396,6 +420,15 @@ sup a { cursor: pointer; }
     <li>혼자 가려면 강화한 무기와 구운 생선을 챙기고, 가능하면 등불 든 친구를 데려가자.</li>
     <li>거인의 심장은 비싸게 팔리고 <a href="#upgrade">+9, +10 강화</a>에도 든다. 지금 게임에서 가장 벌이가 좋은 사냥감이다. <del>거인 입장에서는 1분 30초마다 찾아오는 강도.</del></li>
   </ul>
+  <h4 id="dragon">🐉 분화구의 용 (불꽃마루)</h4>
+  <p>불꽃마루 분화구 <b>한가운데</b>에 산다. 숫자는 위의 불꽃마루 표에 있다. 지금 게임에서 가장 센 상대다.</p>
+  <ul>
+    <li>버섯 여왕, 서리 거인과 같은 방식이다. <b>내려찍기</b>와 <b>자기 둘레 큰 원</b>(반지름 9)을 번갈아 쓴다.</li>
+    <li>분화구 안은 좁다. 큰 원이 뜨면 테두리 쪽으로 달려 나가야 하는데, 테두리가 오르막이라 생각보다 느리다. 돌진 기술을 아껴 두자.</li>
+    <li>분화구 밖으로 끌고 나오면 돌아가서 체력을 다 채운다. 안에서 싸워야 한다.</li>
+    <li>혼자 잡으라고 만든 상대가 아니다. 망치가 붙잡고, 등불이 치료하고, 나머지가 때리는 정석대로 가자.</li>
+    <li>용의 심장은 게임에서 가장 비싼 물건이다. <del>모모가 그 심장으로 뭘 하는지는 묻지 않는 것이 좋다.</del></li>
+  </ul>
 
   <h2 id="combat">전투</h2>
   <ul>
@@ -417,7 +450,7 @@ sup a { cursor: pointer; }
   <ul>
     <li>기술 칸은 <b>무기가 아니라 레벨로</b> 열린다. Lv 4가 되면 어떤 무기를 들어도 기술 네 개를 다 쓸 수 있다.</li>
     <li>최대 레벨은 원래 30이었다. 게임이 나온 다음 날 Lv 30을 찍은 사람이 나와서 올랐다. <del>만든 쪽은 한 달은 걸릴 줄 알았다.</del></li>
-    <li>가장 센 일반 몬스터는 Lv 24다. 그 위로는 내 캐릭터만 계속 세진다.</li>
+    <li>Lv 30이 되면 <a href="#isle-fire">불꽃마루</a>가 나타난다. Lv 30~45짜리 몬스터가 사는 곳이라, 그 뒤의 레벨은 거기서 올린다.</li>
     <li>레벨을 빨리 올리려면: 밤에 사냥하고(1.5배), 반딧불이 펫을 데리고(+10%), 의뢰를 같이 한다.</li>
   </ul>
   <h3 id="titles">칭호</h3>
@@ -657,7 +690,9 @@ sup a { cursor: pointer; }
     <tr><td class="c">10~13</td><td>버섯숲</td><td>두꺼비, 박쥐</td><td>길 쪽으로 한 마리씩 끌어내서</td></tr>
     <tr><td class="c">13~16</td><td>버섯숲</td><td>숲의 정령, 나무지기, 버섯 여왕</td><td>여왕은 둘 이상이 가자</td></tr>
     <tr><td class="c">16~20</td><td>서리봉우리</td><td>도깨비, 펭귄</td><td>미끄러운 바닥에 먼저 익숙해질 것</td></tr>
-    <tr><td class="c">20 이상</td><td>서리봉우리</td><td>눈보라 정령, 서리 늑대, 서리 거인</td><td>밤에 잡으면 1.5배</td></tr>
+    <tr><td class="c">20~29</td><td>서리봉우리</td><td>눈보라 정령, 서리 늑대, 서리 거인</td><td>밤에 잡으면 1.5배</td></tr>
+    <tr><td class="c">30~37</td><td>불꽃마루</td><td>불씨 도마뱀, 용암 덩어리</td><td>무기를 +5 이상으로 올리고 가자</td></tr>
+    <tr><td class="c">38 이상</td><td>불꽃마루</td><td>불새, 분화구의 용</td><td>용은 여럿이</td></tr>
   </table></div>
   <h3 id="guide-gold">돈 버는 법</h3>
   <ul>
@@ -737,7 +772,7 @@ sup a { cursor: pointer; }
     <tr><td class="c">4</td><td>함께하기</td><td>파티, 1:1 거래, 월드 보스 폭풍 골렘</td></tr>
     <tr><td class="c">5</td><td>넓히기</td><td>버섯숲 섬, 글라이더와 바람 기둥, 낮과 밤, 섬에 놓는 물건</td></tr>
     <tr><td class="c">6</td><td>목표</td><td>촌장의 의뢰, 바람의 돌과 다리, 무기 강화, 오래 쉰 사람 내보내기</td></tr>
-    <tr><td class="c">7</td><td>겨루기</td><td>1:1 결투, 칭호, 기록과 순위판</td><td class="c" rowspan="9">11월 21일</td></tr>
+    <tr><td class="c">7</td><td>겨루기</td><td>1:1 결투, 칭호, 기록과 순위판</td><td class="c" rowspan="10">11월 21일</td></tr>
     <tr><td class="c">8</td><td>쉬어가기</td><td>구름 낚시, 모닥불 요리, 펫</td></tr>
     <tr><td class="c">9</td><td>서리봉우리</td><td>세 번째 섬, 광장 안전 구역</td></tr>
     <tr><td class="c">10</td><td>돈 쓸 곳</td><td>도전 강화(+6~+10), 뽑기 상자, 장식</td></tr>
@@ -746,6 +781,7 @@ sup a { cursor: pointer; }
     <tr><td class="c">13</td><td>꾸미고 나누기</td><td>부위별 장신구(상점 판매 · 거래 가능), 보물 상자, 폭죽</td></tr>
     <tr><td class="c">14</td><td>북적이는 섬</td><td>섬마다 몬스터 2종씩, 버섯 여왕, 휴대폰 화면 정리, 새 버전 안내</td></tr>
     <tr><td class="c">15</td><td>다듬기</td><td>아이패드 확대 막기, 내보내는 시간 늘림, 레벨 상한 60, 이 문서 전면 개정</td></tr>
+    <tr><td class="c">16</td><td>불꽃마루</td><td>Lv 30이 되면 나타나는 네 번째 섬, 몬스터 3종과 분화구의 용, 의뢰 3가지</td></tr>
   </table></div>
   <p>1단계부터 5단계까지가 처음 기획이었다. 6단계부터는 그때그때 들어온 요청으로 만들어졌다. <del>기획서는 5단계에서 끝났는데 게임은 끝나지 않았다.</del></p>
 
@@ -796,8 +832,8 @@ sup a { cursor: pointer; }
 
   <table class="navbox">
     <caption>구름섬 아르카</caption>
-    <tr><th>섬</th><td><a href="#isle-main">포근언덕</a><a href="#isle-shroom">버섯숲</a><a href="#isle-frost">서리봉우리</a><a href="#travel">섬 사이 이동</a><a href="#daynight">낮과 밤</a></td></tr>
-    <tr><th>몬스터</th><td><a href="#mon-main">포근언덕</a><a href="#mon-shroom">버섯숲</a><a href="#mon-frost">서리봉우리</a><a href="#golem">폭풍 골렘</a><a href="#queen">버섯 여왕</a><a href="#giant">서리 거인</a></td></tr>
+    <tr><th>섬</th><td><a href="#isle-main">포근언덕</a><a href="#isle-shroom">버섯숲</a><a href="#isle-frost">서리봉우리</a><a href="#isle-fire">불꽃마루</a><a href="#travel">섬 사이 이동</a><a href="#daynight">낮과 밤</a></td></tr>
+    <tr><th>몬스터</th><td><a href="#mon-main">포근언덕</a><a href="#mon-shroom">버섯숲</a><a href="#mon-frost">서리봉우리</a><a href="#mon-fire">불꽃마루</a><a href="#golem">폭풍 골렘</a><a href="#queen">버섯 여왕</a><a href="#giant">서리 거인</a><a href="#dragon">분화구의 용</a></td></tr>
     <tr><th>성장</th><td><a href="#level">레벨</a><a href="#weapons">무기와 기술</a><a href="#upgrade">강화</a><a href="#titles">칭호</a><a href="#items">아이템</a></td></tr>
     <tr><th>꾸미기</th><td><a href="#accs">장신구</a><a href="#pets">펫</a><a href="#decos">섬에 놓는 물건</a><a href="#gacha">뽑기 상자</a><a href="#firework">폭죽</a></td></tr>
     <tr><th>함께</th><td><a href="#party">파티</a><a href="#trade">거래</a><a href="#duel">결투</a><a href="#rank">순위</a></td></tr>
@@ -817,7 +853,8 @@ sup a { cursor: pointer; }
 </main>
 <aside id="side">
   <div class="card"><h5>최근 변경</h5><ul>
-    <li><a href="#inc-wiki">구름섬 아르카/전면 개정</a><span>방금</span></li>
+    <li><a href="#isle-fire">불꽃마루/허공에서 칼춤 추는 사람 목격담</a><span>방금</span></li>
+    <li><a href="#inc-wiki">구름섬 아르카/전면 개정</a><span>30분 전</span></li>
     <li><a href="#quests">촌장 루루/재산 재분배</a><span>1분 전</span></li>
     <li><a href="#inc-max">레벨 상한/하루 만에 돌파</a><span>9분 전</span></li>
     <li><a href="#queen">버섯 여왕/왕관 착용 시도</a><span>21분 전</span></li>
@@ -842,7 +879,7 @@ sup a { cursor: pointer; }
 // 표와 목차를 게임의 규칙 파일(shared.js)에서 바로 읽어 그림 → 게임을 고치면 문서 숫자도 같이 바뀜
 (function () {
   var A = window.ARCA; if (!A) return;
-  var MI = { slime: '🟢', shroom: '🍄', turtle: '🐢', golem: '⚡', toad: '🐸', wisp: '🧚', yeti: '☃️', wolf: '🐺', giant: '🧊', bee: '🐝', scarecrow: '🎃', bat: '🦇', treant: '🌳', penguin: '🐧', icewisp: '🌨️', queen: '👑' };
+  var MI = { slime: '🟢', shroom: '🍄', turtle: '🐢', golem: '⚡', toad: '🐸', wisp: '🧚', yeti: '☃️', wolf: '🐺', giant: '🧊', bee: '🐝', scarecrow: '🎃', bat: '🦇', treant: '🌳', penguin: '🐧', icewisp: '🌨️', queen: '👑', lizard: '🦎', magma: '🌋', firebird: '🦅', dragon: '🐉' };
   var N = function (v) { return Number(v).toLocaleString('ko-KR'); };
   var S = function (ms) { var s = ms / 1000; return (s >= 60 ? (s % 60 ? Math.floor(s / 60) + '분 ' + (s % 60) + '초' : s / 60 + '분') : (+s.toFixed(2)) + '초'); };
   var P = function (x) { return (+(x * 100).toFixed(1)) + '%'; };
@@ -860,7 +897,7 @@ sup a { cursor: pointer; }
       var kinds = Object.keys(cnt).filter(function (k) { return isl[k] === Number(arg); }).sort(function (a, b) { return A.MONSTERS[a].lv - A.MONSTERS[b].lv; });
       return table(['이름', '수', '레벨', '체력', '공격력', '경험치', '골드', '떨어뜨리는 것', '원이 차는 시간', '다시 나타남'], kinds.map(function (k) {
         var m = A.MONSTERS[k], l = A.LOOT[k];
-        return [(MI[k] || '') + ' ' + (m.elite ? '<b>' + m.name + '</b>' : m.name), cnt[k], m.lv, N(m.hp), m.atk, m.xp, l.gold[0] + '~' + l.gold[1], l.drops.map(function (d) { return A.ITEMS[d[0]].name + ' ' + P(d[1]); }).join(', '), S(m.windup), S(m.respawn)];
+        return [(MI[k] || '') + ' ' + (m.elite ? '<b>' + m.name + '</b>' : m.name), cnt[k], m.lv, N(m.hp), m.atk, N(m.xp), l.gold[0] + '~' + l.gold[1], l.drops.map(function (d) { return A.ITEMS[d[0]].name + ' ' + P(d[1]); }).join(', '), S(m.windup), S(m.respawn)];
       }), ['', 'n', 'n', 'n', 'n', 'n', 'n', '', 'n', 'n']);
     },
     levels: function () {

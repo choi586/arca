@@ -314,15 +314,81 @@ const snowFx = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMate
   snowFx.geometry.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
   snowFx.visible = false; snowFx.frustumCulled = false; scene.add(snowFx);
 }
+// ---------- 불꽃마루 섬 (Lv30 이 되어야 나타남) ----------
+const lockedObjs = []; // 레벨이 되면 한꺼번에 보이게 할 것들
+const emberFx = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ color: 0xff922b, size: 0.2, transparent: true, opacity: 0.9, depthWrite: false }));
+{
+  const I = ISLANDS[3], grp = new THREE.Group();
+  const g = new THREE.PlaneGeometry(I.R * 2 + 2, I.R * 2 + 2, 72, 72).toNonIndexed();
+  g.rotateX(-Math.PI / 2);
+  const pos = g.attributes.position, cols = [], c = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    let x = pos.getX(i), z = pos.getZ(i);
+    const r = Math.hypot(x, z);
+    if (r > I.R) { x *= I.R / r; z *= I.R / r; }
+    pos.setX(i, x + I.x); pos.setZ(i, z + I.z);
+    pos.setY(i, islandH(x + I.x, z + I.z));
+  }
+  for (let i = 0; i < pos.count; i += 3) {
+    const x = (pos.getX(i) + pos.getX(i + 1) + pos.getX(i + 2)) / 3 - I.x, z = (pos.getZ(i) + pos.getZ(i + 1) + pos.getZ(i + 2)) / 3 - I.z;
+    const y = (pos.getY(i) + pos.getY(i + 1) + pos.getY(i + 2)) / 3, r = Math.hypot(x, z);
+    const n = Math.sin(x * 1.2 + z * 1.6) * 0.5 + Math.sin(x * 2.6 - z * 1.2) * 0.5;
+    c.setHSL(0.03 + n * 0.015, 0.18, 0.2 + n * 0.035);        // 검붉은 화산재
+    if (n > 0.6 && r > 17) c.setHSL(0.06, 0.95, 0.5);          // 군데군데 갈라진 틈의 불빛
+    if (y > 6.5) c.setHSL(0.02, 0.3, 0.14);                    // 분화구 테두리
+    if (r < 9) c.setHSL(0.05, 0.75, 0.3 + n * 0.05);           // 분화구 바닥은 달궈져 있음
+    if (r > I.R - 2.5) c.setHSL(0.02, 0.2, 0.13);
+    for (let k = 0; k < 3; k++) cols.push(c.r, c.g, c.b);
+  }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  g.computeVertexNormals();
+  const top = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95 }));
+  top.receiveShadow = true;
+  const bottom = rockBottom(I.R, 36, 13, 0.9); bottom.position.x = I.x; bottom.position.z = I.z;
+  grp.add(top, bottom);
+  for (const rk of LAYOUT.lavaRocks) {
+    const rock = mesh(new THREE.DodecahedronGeometry(rk.s, 0), '#2b2b2b'); rock.position.set(rk.x, islandH(rk.x, rk.z) + rk.s * 0.4, rk.z); rock.rotation.set(rk.x, rk.z, 0.3); rock.scale.y = 1.2;
+    const glow = mesh(new THREE.DodecahedronGeometry(rk.s * 0.5, 0), '#ff6b00', { emissive: '#ff4500', emissiveIntensity: 1.2 }, false); glow.position.set(rk.x + rk.s * 0.35, islandH(rk.x, rk.z) + rk.s * 0.5, rk.z + rk.s * 0.3);
+    grp.add(rock, glow);
+  }
+  for (const lp of LAYOUT.lavaPools) {
+    const pool = new THREE.Mesh(new THREE.CircleGeometry(lp.s, 14), new THREE.MeshBasicMaterial({ color: 0xff7b00 })); pool.rotation.x = -Math.PI / 2; pool.position.set(lp.x, islandH(lp.x, lp.z) + 0.12, lp.z);
+    const edge = new THREE.Mesh(new THREE.RingGeometry(lp.s, lp.s + 0.3, 14), new THREE.MeshBasicMaterial({ color: 0x3a1a0a })); edge.rotation.x = -Math.PI / 2; edge.position.copy(pool.position);
+    grp.add(pool, edge);
+  }
+  // 분화구에서 올라오는 붉은 빛기둥 (멀리서도 섬이 보이게)
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(7, 9, 40, 16, 1, true), flatMat(0xff5a1f, 0.12)); beam.position.set(I.x, 22, I.z); grp.add(beam);
+  const lava = new THREE.Mesh(new THREE.CircleGeometry(4.5, 20), new THREE.MeshBasicMaterial({ color: 0xff8c1a })); lava.rotation.x = -Math.PI / 2; lava.position.set(I.x, islandH(I.x, I.z) + 0.1, I.z + 0.01); grp.add(lava);
+  grp.visible = false; scene.add(grp); lockedObjs.push(grp);
+  const pts = []; for (let i = 0; i < 400; i++) pts.push((Math.random() - 0.5) * 50, Math.random() * 22, (Math.random() - 0.5) * 50);
+  emberFx.geometry.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  emberFx.visible = false; emberFx.frustumCulled = false; scene.add(emberFx);
+}
+let islesOpen = false;
+ARCA.world.lv = 1; // 내 레벨을 받기 전에는 레벨 제한 섬이 없는 것으로 침
+function applyUnlock(announce) { // 내 레벨에 맞춰 레벨 제한 섬을 나타나게 함
+  ARCA.world.lv = me.lv;
+  const open = me.lv >= ISLANDS[3].minLv;
+  if (open === islesOpen) return;
+  islesOpen = open;
+  for (const o of lockedObjs) o.visible = open;
+  if (open && announce) {
+    toast('🌋 남쪽 하늘에 새로운 섬이 나타났어요!');
+    addLog('🌋 Lv30이 되어 남쪽 하늘에 불꽃마루가 나타났어요. 포근언덕 남쪽 끝의 새 바람 기둥을 타고 가요');
+    if (me.av) pop('🌋 새로운 섬!', me.x, me.y + 3.4, me.z, 'lvup');
+  }
+}
 // ---------- 바람 기둥 ----------
 const updraftFx = [];
 for (const u of UPDRAFTS) {
   const y0 = islandH(u.x, u.z);
   const col = new THREE.Mesh(new THREE.CylinderGeometry(u.r, u.r, UPDRAFT_TOP, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.1, side: THREE.DoubleSide, depthWrite: false }));
   col.position.set(u.x, y0 + UPDRAFT_TOP / 2, u.z); scene.add(col);
+  if (u.minLv) { col.visible = false; lockedObjs.push(col); }
   for (let k = 0; k < 5; k++) {
     const ring = new THREE.Mesh(new THREE.TorusGeometry(u.r * 0.8, 0.09, 5, 24), new THREE.MeshBasicMaterial({ color: 0xc5f6fa, transparent: true, opacity: 0.6, depthWrite: false }));
     ring.rotation.x = Math.PI / 2; ring.position.set(u.x, y0, u.z); scene.add(ring);
+    if (u.minLv) { ring.visible = false; lockedObjs.push(ring); }
     updraftFx.push({ ring, y0, off: k / 5 });
   }
 }
@@ -525,6 +591,40 @@ function makeMonster(kind) {
     for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; const d = monsterMesh(new THREE.SphereGeometry(0.13, 6, 5), '#ffffff', mats); d.position.set(Math.cos(a) * 0.62, 1.42, Math.sin(a) * 0.62); body.add(d); }
     const top = monsterMesh(new THREE.SphereGeometry(0.15, 6, 5), '#ffffff', mats); top.position.y = 1.78; body.add(top);
     [-0.25, 0.25].forEach((x) => { const f = monsterMesh(new THREE.SphereGeometry(0.18, 6, 5), '#d9c9a8', mats); f.position.set(x, 0.1, 0.1); f.scale.y = 0.6; body.add(f); });
+  } else if (kind === 'lizard') { // 불꽃마루: 불씨 도마뱀
+    const b = monsterMesh(new THREE.BoxGeometry(0.7, 0.5, 1.7), '#c92a2a', mats); b.position.y = 0.55;
+    const head = monsterMesh(new THREE.BoxGeometry(0.6, 0.45, 0.7), '#e03131', mats); head.position.set(0, 0.7, 1.1);
+    const tail = monsterMesh(new THREE.ConeGeometry(0.25, 1.3, 5), '#c92a2a', mats); tail.rotation.x = -Math.PI / 2; tail.position.set(0, 0.5, -1.4);
+    const fire = monsterMesh(new THREE.ConeGeometry(0.2, 0.5, 5), '#ffd43b', mats, { emissive: '#ff922b', emissiveIntensity: 1.2 }); fire.position.set(0, 0.85, -2.0);
+    body.add(b, head, tail, fire, eye(-0.2, 0.85, 1.42), eye(0.2, 0.85, 1.42));
+    for (let i = 0; i < 4; i++) { const sp = monsterMesh(new THREE.ConeGeometry(0.12, 0.35, 4), '#ff922b', mats, { emissive: '#f76707', emissiveIntensity: 0.7 }); sp.position.set(0, 0.95, 0.6 - i * 0.45); body.add(sp); }
+    [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach(([x, z]) => { const l = monsterMesh(new THREE.BoxGeometry(0.2, 0.4, 0.25), '#a61e1e', mats); l.position.set(x * 0.45, 0.2, z * 0.55); body.add(l); });
+  } else if (kind === 'magma') { // 불꽃마루: 용암 덩어리
+    const b = monsterMesh(new THREE.DodecahedronGeometry(1.2, 0), '#2b2b2b', mats); b.position.y = 1.2;
+    const core = monsterMesh(new THREE.DodecahedronGeometry(0.85, 0), '#ff6b00', mats, { emissive: '#ff4500', emissiveIntensity: 1.3 }); core.position.set(0, 1.25, 0.25);
+    body.add(b, core, eye(-0.3, 1.6, 1.0, 1.5), eye(0.3, 1.6, 1.0, 1.5));
+    for (const x of [-1, 1]) { const arm = monsterMesh(new THREE.DodecahedronGeometry(0.5, 0), '#343a40', mats); arm.position.set(x * 1.35, 0.9, 0.2); body.add(arm); }
+  } else if (kind === 'firebird') { // 불꽃마루: 불새
+    const b = monsterMesh(new THREE.SphereGeometry(0.5, 9, 7), '#ff922b', mats, { emissive: '#f76707', emissiveIntensity: 0.6 }); b.scale.z = 1.3; b.position.y = 1.9;
+    const beak = monsterMesh(new THREE.ConeGeometry(0.1, 0.35, 5), '#ffd43b', mats); beak.rotation.x = Math.PI / 2; beak.position.set(0, 1.95, 0.8);
+    const tail = monsterMesh(new THREE.ConeGeometry(0.3, 1.1, 5), '#ffd43b', mats, { emissive: '#ff922b', emissiveIntensity: 0.9 }); tail.rotation.x = -Math.PI / 2; tail.position.set(0, 1.9, -1.1);
+    body.add(b, beak, tail, eye(-0.18, 2.05, 0.5), eye(0.18, 2.05, 0.5));
+    for (const x of [-1, 1]) { const w = monsterMesh(new THREE.ConeGeometry(0.6, 1.4, 3), '#fa5252', mats, { emissive: '#f03e3e', emissiveIntensity: 0.5 }); w.scale.z = 0.12; w.rotation.z = x * 1.9; w.position.set(x * 0.95, 2.0, 0); body.add(w); }
+  } else if (kind === 'dragon') { // 불꽃마루 보스: 분화구의 용
+    const b = monsterMesh(new THREE.BoxGeometry(1.8, 1.6, 3.6), '#a61e1e', mats); b.position.y = 1.9;
+    const belly = monsterMesh(new THREE.BoxGeometry(1.4, 0.5, 3.2), '#ffd8a8', mats); belly.position.y = 1.15;
+    const neck = monsterMesh(new THREE.BoxGeometry(0.9, 1.8, 0.9), '#a61e1e', mats); neck.position.set(0, 3.1, 1.9); neck.rotation.x = 0.5;
+    const head = monsterMesh(new THREE.BoxGeometry(1.2, 0.9, 1.7), '#c92a2a', mats); head.position.set(0, 4.0, 2.9);
+    const jaw = monsterMesh(new THREE.BoxGeometry(1.0, 0.25, 1.3), '#ffd8a8', mats); jaw.position.set(0, 3.5, 3.1);
+    const tail = monsterMesh(new THREE.ConeGeometry(0.6, 3.2, 5), '#a61e1e', mats); tail.rotation.x = -Math.PI / 2; tail.position.set(0, 1.8, -3.3);
+    body.add(b, belly, neck, head, jaw, tail, eye(-0.4, 4.25, 3.7, 2), eye(0.4, 4.25, 3.7, 2));
+    for (const x of [-1, 1]) {
+      const horn = monsterMesh(new THREE.ConeGeometry(0.16, 0.8, 5), '#ffd43b', mats, { emissive: '#fab005', emissiveIntensity: 0.6 }); horn.position.set(x * 0.4, 4.8, 2.4); horn.rotation.x = -0.4;
+      const wing = monsterMesh(new THREE.ConeGeometry(1.6, 3.4, 3), '#7a1414', mats); wing.scale.z = 0.1; wing.rotation.z = x * 2.0; wing.position.set(x * 2.2, 3.2, 0);
+      body.add(horn, wing);
+      for (const z of [1.1, -1.1]) { const leg = monsterMesh(new THREE.BoxGeometry(0.6, 1.2, 0.7), '#8a1818', mats); leg.position.set(x * 0.85, 0.6, z); body.add(leg); }
+    }
+    for (let i = 0; i < 5; i++) { const sp = monsterMesh(new THREE.ConeGeometry(0.22, 0.6, 4), '#ff922b', mats, { emissive: '#f76707', emissiveIntensity: 0.8 }); sp.position.set(0, 2.95, 1.2 - i * 0.7); body.add(sp); }
   } else if (kind === 'queen') { // 버섯숲 보스: 버섯 여왕
     const stem = monsterMesh(new THREE.CylinderGeometry(1.0, 1.3, 2.6, 10), '#f8f0dc', mats); stem.position.y = 1.3;
     const cap = monsterMesh(new THREE.SphereGeometry(2.4, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), '#ae3ec9', mats, { emissive: '#862e9c', emissiveIntensity: 0.4 }); cap.position.y = 2.5; cap.scale.y = 0.7;
@@ -991,7 +1091,9 @@ const handlers = {
       seen.add(id);
       let mo = monsters.get(id);
       if (mo && mo.dying) continue;
-      if (!mo) { if (!MONSTERS[MONSTER_KINDS[ki]]) continue; mo = addMonster(id, MONSTER_KINDS[ki], x, z, ry); } // 모르는 몬스터(새 버전)는 건너뜀
+      const mdef = MONSTERS[MONSTER_KINDS[ki]];
+      if (!mdef || !ARCA.unlocked(mdef)) { seen.delete(id); continue; } // 모르는 몬스터(새 버전)나 아직 안 열린 섬의 몬스터는 건너뜀
+      if (!mo) mo = addMonster(id, MONSTER_KINDS[ki], x, z, ry);
       mo.tx = x; mo.tz = z; mo.tr = ry; mo.st = st; mo.slow = slow;
       if (mo.kind === 'golem') bossHp = hp;
       if (mo.hp !== hp) { mo.hp = hp; setTagHp(mo.tag, hp); }
@@ -1014,6 +1116,7 @@ const handlers = {
     store.set('arca.lv', String(m.lv)); store.set('arca.xp', String(m.xp));
     refreshStats();
     const first = !statsReady; statsReady = true;
+    applyUnlock(!first && wasLv < ISLANDS[3].minLv);
     if (first) return;
     if (me.lv > wasLv && statsReady) {
       UNLOCK.forEach((u, k) => {
@@ -2177,7 +2280,7 @@ function updateMe(dt) {
   if (jumpQueued && me.onGround && !me.dead) { me.vy = JUMP; me.onGround = false; me.emote = 0; }
   else if ((jumpQueued || glideQueued) && !me.onGround && !me.dead) me.glide = !me.glide; // 공중에서 한 번 더 누르면 글라이더
   jumpQueued = glideQueued = false;
-  const inDraft = UPDRAFTS.some((u) => Math.hypot(u.x - me.x, u.z - me.z) < u.r);
+  const inDraft = UPDRAFTS.some((u) => ARCA.unlocked(u) && Math.hypot(u.x - me.x, u.z - me.z) < u.r);
   if (inDraft && !updraftHint) { updraftHint = true; toast('🌬️ 바람 기둥! 점프한 뒤 공중에서 한 번 더 누르면 글라이더를 펴요'); addLog('🌬️ 바람 기둥에서 글라이더를 펴면 높이 올라가요. 그대로 옆 섬까지 날아갈 수 있어요!'); }
   // 낮은 곳에서 들어온 사람만 띄움 (높이 날아서 지나가는 사람은 그대로 통과)
   if (!inDraft || !me.glide) me.lift = false; else if (me.y < 11) me.lift = true;
@@ -2193,6 +2296,7 @@ function updateMe(dt) {
     curIsle = isle; $('isle').textContent = `${isle.icon} ${isle.name}`;
     toast(`${isle.icon} ${isle.name}에 도착!`);
     if (isle.id === 1) addLog('🍄 버섯숲은 Lv10 안팎의 몬스터가 살아요. 돌아갈 때는 서쪽 끝의 바람 기둥을 타세요');
+    if (isle.id === 3) addLog('🌋 불꽃마루는 Lv30이 넘는 몬스터가 살아요. 분화구 한가운데에는 용이 있어요. 돌아갈 때는 북쪽 끝의 바람 기둥을 타세요');
     if (isle.id === 2) addLog('❄️ 서리봉우리는 Lv16이 넘는 몬스터가 살고 바닥이 미끄러워요. 돌아갈 때는 남쪽 끝의 바람 기둥을 타세요');
   }
 
@@ -2287,21 +2391,22 @@ function drawMinimap() { // 내가 있는 섬을 보여 줌
   const X = (x) => c + (x - I.x) * s, Z = (z) => c + (z - I.z) * s, on = (x, z, pad = 4) => Math.hypot(x - I.x, z - I.z) < I.R + pad;
   const dot = (x, z, r) => { mm.beginPath(); mm.arc(X(x), Z(z), r, 0, Math.PI * 2); mm.fill(); };
   mm.clearRect(0, 0, W, W);
-  mm.fillStyle = I.id === 2 ? '#dbe4ff' : I.id ? '#3f8f7f' : '#69b34c'; dot(I.x, I.z, I.R * s);
+  mm.fillStyle = I.id === 3 ? '#5c2e1f' : I.id === 2 ? '#dbe4ff' : I.id ? '#3f8f7f' : '#69b34c'; dot(I.x, I.z, I.R * s);
   if (I.id === 0) {
     mm.fillStyle = '#e6d6ae'; dot(0, 0, 13 * s);
     mm.fillStyle = '#5fc1ff'; dot(0, 0, 3 * s);
     for (const h of houses) { mm.fillStyle = h.color; mm.fillRect(X(h.x) - 4, Z(h.z) - 4, 8, 8); }
-  } else if (I.id === 2) { mm.fillStyle = '#74c0fc'; for (const t of LAYOUT.iceRocks) dot(t.x, t.z, 2.5); mm.fillStyle = '#5c8f7f'; for (const t of LAYOUT.frostTrees) dot(t.x, t.z, 1.6); }
+  } else if (I.id === 3) { mm.fillStyle = '#ff7b00'; dot(I.x, I.z, 9 * s); for (const t of LAYOUT.lavaPools) dot(t.x, t.z, 2); mm.fillStyle = '#1f1f1f'; for (const t of LAYOUT.lavaRocks) dot(t.x, t.z, 2); }
+  else if (I.id === 2) { mm.fillStyle = '#74c0fc'; for (const t of LAYOUT.iceRocks) dot(t.x, t.z, 2.5); mm.fillStyle = '#5c8f7f'; for (const t of LAYOUT.frostTrees) dot(t.x, t.z, 1.6); }
   else { mm.fillStyle = '#e599f7'; for (const sh of LAYOUT.shrooms) dot(sh.x, sh.z, 2); }
   mm.strokeStyle = '#c5f6fa'; mm.lineWidth = 2;
-  for (const u of UPDRAFTS) if (on(u.x, u.z, 8)) { mm.beginPath(); mm.arc(X(u.x), Z(u.z), 4, 0, Math.PI * 2); mm.stroke(); }
+  for (const u of UPDRAFTS) if (ARCA.unlocked(u) && on(u.x, u.z, 8)) { mm.beginPath(); mm.arc(X(u.x), Z(u.z), 4, 0, Math.PI * 2); mm.stroke(); }
   mm.fillStyle = '#a0723a';
   for (const e of decos.values()) if (on(e.d.x, e.d.z)) mm.fillRect(X(e.d.x) - 1.5, Z(e.d.z) - 1.5, 3, 3);
   for (const mo of monsters.values()) {
     if (mo.dying || !on(mo.av.position.x, mo.av.position.z)) continue;
-    mm.fillStyle = mo.kind === 'golem' ? '#9c36b5' : mo.kind === 'turtle' || mo.kind === 'giant' || mo.kind === 'queen' ? '#7a3b00' : '#e03131';
-    dot(mo.av.position.x, mo.av.position.z, mo.kind === 'golem' ? 6 : mo.kind === 'giant' || mo.kind === 'queen' ? 5 : mo.kind === 'turtle' ? 3.5 : 2);
+    mm.fillStyle = mo.kind === 'golem' ? '#9c36b5' : mo.kind === 'turtle' || mo.kind === 'giant' || mo.kind === 'queen' || mo.kind === 'dragon' ? '#7a3b00' : '#e03131';
+    dot(mo.av.position.x, mo.av.position.z, mo.kind === 'golem' ? 6 : mo.kind === 'giant' || mo.kind === 'queen' || mo.kind === 'dragon' ? 5 : mo.kind === 'turtle' ? 3.5 : 2);
   }
   for (const [id, o] of others) {
     if (!on(o.av.position.x, o.av.position.z)) continue;
@@ -2345,6 +2450,12 @@ function frame(now) {
     updateElder(dt);
     updateLeisure(dt);
     updateChest(dt, now);
+    emberFx.visible = curIsle.id === 3;
+    if (emberFx.visible) { // 불꽃마루에서는 불티가 위로 올라감
+      const ep = emberFx.geometry.attributes.position;
+      for (let i = 0; i < ep.count; i++) { let y = ep.getY(i) + dt * 2.5; if (y > 22) y -= 22; ep.setY(i, y); }
+      ep.needsUpdate = true; emberFx.position.set(me.x, me.y - 3, me.z);
+    }
     snowFx.visible = curIsle.id === 2;
     if (snowFx.visible) {
       const sp = snowFx.geometry.attributes.position;
