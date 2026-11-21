@@ -259,3 +259,5 @@ body.touch #recordBtn { display: none; }
 .odds .r3 b { color: #9c36b5; } .gres .r3 { color: #e599f7; }
 .odds .r4 b { color: #e67700; } .gres .r4 { color: #ffd43b; }
 #shop .tabs button { padding: 8px 4px; font-size: 13px; }
+
+#bagPets button small { color: #2f9e44; font-weight: 400; }

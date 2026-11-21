@@ -90,6 +90,7 @@ function sendStats(p) { send(p.ws, { t: 'stats', hp: Math.ceil(p.hp), maxHp: p.m
 function titleName(p) { return p.title && A.TITLES[p.title] ? A.TITLES[p.title].name : ''; }
 function statsOf(p) { return { lv: p.lv, gold: p.inv.gold, kills: p.st.kills, boss: p.st.boss, wins: p.st.wins, quests: p.st.quests, fish: p.st.fish, maxUp: Math.max(0, ...Object.values(p.inv.up)) }; }
 function sendSt(p) { send(p.ws, { t: 'st', st: p.st, title: p.title }); }
+function perk(p) { const pet = A.PETS[p.inv.pet]; return (pet && pet.perk) || {}; } // 데리고 있는 펫의 능력
 function sendInv(p) { send(p.ws, { t: 'inv', ...p.inv }); }
 function bagSlots(inv) { return Object.keys(inv.items).length; }
 function addItem(inv, id, n) { // 가방이 꽉 차면 못 넣음
@@ -107,10 +108,15 @@ function hurtMonster(ch, m, p, mult) {
     if (Date.now() - (p.safeTold || 0) > 4000) { p.safeTold = Date.now(); notice(p, '🛡️ 광장 안에서는 몬스터를 공격할 수 없어요. 밖으로 나가서 싸워요'); }
     return;
   }
-  const crit = Math.random() < 0.12;
+  const sk = p.curSk || {};
+  const crit = Math.random() < 0.12 + (sk.crit || 0) + (perk(p).crit || 0); // 단검과 꼬마 유령은 치명타가 더 잘 터짐
   const up = (1 + A.UP_BONUS * (p.inv.up[p.inv.equip] || 0)) * (Date.now() < p.buffUntil ? A.FOOD_BUFF.atk : 1); // 강화한 무기와 구운 생선은 더 아픔
   const dmg = Math.max(1, Math.round(p.atk * mult * up * (0.9 + Math.random() * 0.2) * (crit ? 1.6 : 1)));
   m.hp -= dmg;
+  if (sk.leech && !p.dead && p.hp < p.maxHp) { // 낫은 준 피해의 일부만큼 체력을 되찾음
+    const before = p.hp; p.hp = Math.min(p.maxHp, p.hp + Math.max(1, Math.round(dmg * sk.leech)));
+    broadcast(ch, { t: 'heal', id: p.id, amt: Math.round(p.hp - before) }); sendStats(p);
+  }
   m.hitters.add(p.id);
   if (m.def.boss) m.dmgBy.set(p.id, (m.dmgBy.get(p.id) || 0) + dmg);
   if (!m.target || m.returning) { m.target = p.id; m.returning = false; }
@@ -131,10 +137,10 @@ function killMonster(ch, m) {
   const loot = A.LOOT[m.kind], bonus = isNight() ? A.NIGHT_REWARD : 1; // 밤에는 보상이 더 많음
   for (const pid of m.hitters) {
     const p = list.get(pid); if (!p) continue;
-    giveXp(ch, p, Math.round(m.def.xp * bonus));
+    giveXp(ch, p, Math.round(m.def.xp * bonus * (1 + (perk(p).xp || 0))));
     questEvent(p, 'kill', m.kind);
     p.st.kills++; sendSt(p);
-    const gold = Math.round((loot.gold[0] + Math.floor(Math.random() * (loot.gold[1] - loot.gold[0] + 1))) * bonus);
+    const gold = Math.round((loot.gold[0] + Math.floor(Math.random() * (loot.gold[1] - loot.gold[0] + 1))) * bonus * (1 + (perk(p).gold || 0)));
     p.inv.gold = Math.min(999999, p.inv.gold + gold);
     const got = [];
     for (const [id, chance] of loot.drops) if (Math.random() < chance) { const n = addItem(p.inv, id, 1); got.push([id, n]); }
@@ -156,7 +162,7 @@ function giveXp(ch, p, xp) {
 function hurtPlayer(ch, p, dmgRaw) {
   if (p.dead) return;
   const guard = Date.now() < p.guardUntil ? p.guard : 0;
-  const dmg = Math.max(1, Math.round(dmgRaw * (0.9 + Math.random() * 0.2) * (1 - guard)));
+  const dmg = Math.max(1, Math.round(dmgRaw * (0.9 + Math.random() * 0.2) * (1 - guard) * (1 - (perk(p).def || 0))));
   p.hp -= dmg; p.lastHurt = Date.now();
   broadcast(ch, { t: 'hit', p: p.id, dmg });
   if (p.hp <= 0) {
@@ -197,6 +203,7 @@ function playerAttack(ch, p, k, ry) {
   const fx = Math.sin(ry), fz = Math.cos(ry);
   const { monsters } = channels.get(ch);
   const fxMsg = { t: 'fx', id: p.id, w: p.inv.equip, k };
+  p.curSk = sk; // 피해 계산이 지금 쓴 기술의 특성(치명타·흡수)을 알 수 있게
   const near = (m) => Math.abs(A.islandH(m.x, m.z) - p.y) < 4;
 
   if (sk.kind === 'heal') { healAround(ch, p, sk.heal, sk.range); }
@@ -217,7 +224,7 @@ function playerAttack(ch, p, k, ry) {
       if (sk.kind === 'blast') {
         const c = targets[0];
         for (const m of monsters) if (m.alive && Math.hypot(m.x - c.x, m.z - c.z) < sk.radius + m.def.size * 0.6) hurtMonster(ch, m, p, sk.mult);
-      } else for (const m of targets) hurtMonster(ch, m, p, sk.mult);
+      } else for (const m of targets) { hurtMonster(ch, m, p, sk.mult); if (sk.slow) m.slowUntil = now + sk.slow; }
     }
   } else { // arc, around, line
     for (const m of monsters) {
@@ -301,7 +308,7 @@ function handleLeisure(p, m) {
   if (m.t === 'fish') {
     if (p.dead || p.duel) return;
     if (!A.canFish(p.x, p.z)) return notice(p, '낚시는 섬 가장자리에서 할 수 있어요');
-    const wait = A.FISH.minMs + Math.random() * (A.FISH.maxMs - A.FISH.minMs);
+    const wait = (A.FISH.minMs + Math.random() * (A.FISH.maxMs - A.FISH.minMs)) * (1 - (perk(p).fish || 0));
     p.fish = { bite: now + wait, x: p.x, z: p.z };
     return send(p.ws, { t: 'fishing', in: Math.round(wait), window: A.FISH.window });
   }
@@ -354,7 +361,7 @@ function handleLeisure(p, m) {
 
 // ---------- 결투 ----------
 function hurtDuel(ch, p, q, mult) {
-  const crit = Math.random() < 0.12, up = (1 + A.UP_BONUS * (p.inv.up[p.inv.equip] || 0)) * (Date.now() < p.buffUntil ? A.FOOD_BUFF.atk : 1);
+  const crit = Math.random() < 0.12 + ((p.curSk || {}).crit || 0), up = (1 + A.UP_BONUS * (p.inv.up[p.inv.equip] || 0)) * (Date.now() < p.buffUntil ? A.FOOD_BUFF.atk : 1);
   const guard = Date.now() < q.guardUntil ? q.guard : 0;
   const dmg = Math.max(1, Math.round(p.atk * mult * up * A.DUEL.dmg * (0.9 + Math.random() * 0.2) * (crit ? 1.6 : 1) * (1 - guard)));
   q.hp -= dmg; q.lastHurt = Date.now();

@@ -216,6 +216,28 @@ const WEAPONS = {
       { name: '회복의 비', icon: '🌈', kind: 'heal', cd: 14000, heal: 0.6, range: 11 },
     ] },
 };
+// 새 무기 3종. crit: 치명타 확률 추가 · leech: 준 피해의 일부만큼 체력 흡수 · slow: 맞은 적을 느리게
+WEAPONS.dagger = { name: '그림자 쌍단검', icon: '🔪', price: 1200, color: 0xced4da, desc: '아주 빠르고 치명타가 잘 터져요',
+  skills: [
+    { name: '찌르기', icon: '🔪', kind: 'arc', cd: 300, mult: 0.72, range: 2.5, arc: 1.0, crit: 0.25 },
+    { name: '연속 베기', icon: '✂️', kind: 'arc', cd: 3500, mult: 2.2, range: 2.7, arc: 1.2, crit: 0.25 },
+    { name: '그림자 이동', icon: '🌑', kind: 'line', cd: 5000, mult: 1.8, range: 9, width: 1.4, move: 'dash', crit: 0.25 },
+    { name: '급소 찌르기', icon: '🎯', kind: 'arc', cd: 10000, mult: 4.2, range: 2.7, arc: 0.9, crit: 0.5 },
+  ] };
+WEAPONS.spear = { name: '천둥 창', icon: '⚡', price: 1500, color: 0xffe066, desc: '멀리 찌르는 근접 무기. 번개로 적을 느리게',
+  skills: [
+    { name: '창 찌르기', icon: '🔱', kind: 'line', cd: 600, mult: 1.1, range: 4.8, width: 0.9 },
+    { name: '휩쓸기', icon: '💫', kind: 'around', cd: 4000, mult: 1.5, range: 4.4 },
+    { name: '도약 찌르기', icon: '🦘', kind: 'line', cd: 6000, mult: 2.6, range: 9, width: 1.6, move: 'dash' },
+    { name: '천둥 투창', icon: '⚡', kind: 'shot', cd: 9000, mult: 3.0, range: 16, slow: 2500 },
+  ] };
+WEAPONS.scythe = { name: '달빛 낫', icon: '🌙', price: 1800, color: 0xb197fc, desc: '넓게 베고, 준 피해만큼 체력을 조금씩 흡수',
+  skills: [
+    { name: '베어내기', icon: '🌙', kind: 'arc', cd: 800, mult: 1.25, range: 3.6, arc: 1.7, leech: 0.08 },
+    { name: '초승달', icon: '🌒', kind: 'around', cd: 4500, mult: 1.7, range: 4.6, leech: 0.1 },
+    { name: '영혼 수확', icon: '👻', kind: 'blast', cd: 8000, mult: 2.2, range: 9, radius: 4, leech: 0.15 },
+    { name: '달의 장막', icon: '🌫️', kind: 'guard', cd: 14000, guard: 0.4, dur: 6000 },
+  ] };
 const WEAPON_IDS = Object.keys(WEAPONS);
 
 // ---------- 아이템 ----------
@@ -263,12 +285,12 @@ function canFish(x, z) { const I = islandOf(x, z); return !!I && Math.hypot(x - 
 const FOOD_BUFF = { atk: 1.15, ms: 120000 };
 const COOK_RANGE = 5; // 모닥불에서 이만큼 안
 const PETS = {
-  slimy: { name: '꼬마 슬라임', icon: '🟢', price: 300, desc: '통통 튀며 따라와요' },
-  firefly: { name: '반딧불이', icon: '✨', price: 400, desc: '머리 위를 빙글빙글 돌아요. 밤에 예뻐요' },
-  shelly: { name: '아기 돌거북', icon: '🐢', price: 500, desc: '느릿느릿 열심히 따라와요' },
-  whale: { name: '아기 하늘고래', icon: '🐳', price: 0, desc: '낚시로만 만날 수 있는 아주 드문 친구' },
-  goldie: { name: '황금 슬라임', icon: '🟡', price: 0, gacha: true, desc: '뽑기 상자에서만 나오는 번쩍이는 슬라임' },
-  ghosty: { name: '꼬마 유령', icon: '👻', price: 0, gacha: true, desc: '고급 뽑기 상자에서만 나오는 둥둥 유령' },
+  slimy: { name: '꼬마 슬라임', icon: '🟢', price: 300, desc: '통통 튀며 따라와요', perk: { gold: 0.1 }, perkText: '몬스터가 주는 골드 +10%' },
+  firefly: { name: '반딧불이', icon: '✨', price: 400, desc: '머리 위를 빙글빙글 돌아요. 밤에 예뻐요', perk: { xp: 0.1 }, perkText: '몬스터가 주는 경험치 +10%' },
+  shelly: { name: '아기 돌거북', icon: '🐢', price: 500, desc: '느릿느릿 열심히 따라와요', perk: { def: 0.1 }, perkText: '몬스터에게 받는 피해 -10%' },
+  whale: { name: '아기 하늘고래', icon: '🐳', price: 0, desc: '낚시로만 만날 수 있는 아주 드문 친구', perk: { fish: 0.3, xp: 0.05 }, perkText: '낚시 기다리는 시간 -30%, 경험치 +5%' },
+  goldie: { name: '황금 슬라임', icon: '🟡', price: 0, gacha: true, desc: '뽑기 상자에서만 나오는 번쩍이는 슬라임', perk: { gold: 0.25 }, perkText: '몬스터가 주는 골드 +25%' },
+  ghosty: { name: '꼬마 유령', icon: '👻', price: 0, gacha: true, desc: '고급 뽑기 상자에서만 나오는 둥둥 유령', perk: { crit: 0.08 }, perkText: '치명타 확률 +8%' },
 };
 // ---------- 장식 (뽑기로만 얻어 몸에 다는 꾸밈) ----------
 const COSMETICS = {
