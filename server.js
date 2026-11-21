@@ -20,8 +20,8 @@ const DAY_MS = Number(process.env.DAY_MS) || A.DAY_MS;   // 게임 속 하루 �
 const dayStart = Date.now() - DAY_MS * 0.1;              // 서버가 켜질 때는 아침
 const phaseNow = () => ((Date.now() - dayStart) % DAY_MS) / DAY_MS;
 const isNight = () => A.isNightPhase(phaseNow());
-const AFK_MS = Number(process.env.AFK_MS) || 10 * 60000; // 이만큼 아무것도 안 하면 섬에서 내보냄
-const HIDDEN_MS = Number(process.env.HIDDEN_MS) || 2 * 60000; // 화면을 가린 채(다른 탭·다른 앱) 이만큼 지나면 내보냄
+const AFK_MS = Number(process.env.AFK_MS) || 30 * 60000; // 이만큼 아무것도 안 하면 섬에서 내보냄
+const HIDDEN_MS = Number(process.env.HIDDEN_MS) || 10 * 60000; // 화면을 가린 채(다른 탭·다른 앱) 이만큼 지나면 내보냄
 const ASK_MS = 30000;            // 초대·거래 요청이 살아 있는 시간
 const LEASH = 18;               // 몬스터가 집에서 이만큼 멀어지면 돌아감
 const COLORS = ['#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#38d9a9', '#4dabf7', '#748ffc', '#da77f2', '#f783ac', '#f8f9fa'];
