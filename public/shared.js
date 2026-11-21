@@ -490,6 +490,8 @@ const TITLES = {
   treasure: { name: '보물 사냥꾼', how: '보물 상자 10개 열기', ok: (s) => s.chests >= 10 },
   angler: { name: '구름 강태공', how: '낚시 30번 성공', ok: (s) => s.fish >= 30 },
   sky: { name: '하늘의 주인', how: 'Lv 20 달성', ok: (s) => s.lv >= 20 },
+  lv40: { name: '구름 위의 전설', how: 'Lv 40 달성', ok: (s) => s.lv >= 40 },
+  lv60: { name: '아르카의 끝을 본 자', how: 'Lv 60 달성', ok: (s) => s.lv >= 60 },
 };
 const TITLE_IDS = Object.keys(TITLES);
 function cleanStats(raw) {
@@ -500,7 +502,7 @@ function cleanStats(raw) {
 // ---------- 결투 ----------
 const DUEL = { countdown: 3000, maxMs: 90000, range: 12, leave: 45, dmg: 0.5, loserHp: 0.3 };
 
-const MAX_LV = 30;
+const MAX_LV = 60; // 처음에는 30이었는데 하루 만에 끝까지 간 사람이 나와서 올림
 const needXp = (lv) => 10 * lv * lv + 10;
 const statsFor = (lv) => ({ maxHp: 80 + (lv - 1) * 15, atk: 10 + (lv - 1) * 3 });
 
