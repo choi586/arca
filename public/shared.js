@@ -256,7 +256,7 @@ const LOOT = {
 };
 // ---------- 구름 낚시 · 요리 · 펫 ----------
 // 섬 가장자리(끝에서 FISH.edge 걸음 안)에서 구름 속으로 낚싯줄을 던짐. 찌가 흔들린 뒤 window 안에 당겨야 잡힘
-const FISH = { edge: 7, minMs: 2000, maxMs: 6000, window: 1300, whale: 0.01 };
+const FISH = { edge: 7, minMs: 2000, maxMs: 6000, window: 1300, whale: 0.01, whalePity: 100 }; // 고래는 1%, 못 만나도 100번째에는 반드시
 const FISH_DAY = [['cloudfish', 0.5], ['starfish', 0.25], ['boot', 0.14], ['rainbow', 0.08], ['windstone', 0.03]];
 const FISH_NIGHT = [['cloudfish', 0.33], ['starfish', 0.22], ['moonjelly', 0.27], ['boot', 0.08], ['rainbow', 0.08], ['windstone', 0.02]];
 function canFish(x, z) { const I = islandOf(x, z); return !!I && Math.hypot(x - I.x, z - I.z) > I.R - FISH.edge; }
@@ -343,7 +343,7 @@ function cleanQuests(raw) {
 }
 
 function cleanInv(raw) { // 저장된 가방을 안전하게 정리
-  const inv = { gold: 0, items: {}, weapons: ['sword'], equip: 'sword', up: {}, pets: [], pet: '', cos: [], wear: '', pity: 0 };
+  const inv = { gold: 0, items: {}, weapons: ['sword'], equip: 'sword', up: {}, pets: [], pet: '', cos: [], wear: '', pity: 0, wp: 0 };
   if (!raw || typeof raw !== 'object') return inv;
   const n = (v, max) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)));
   inv.gold = n(raw.gold, 999999);
@@ -358,6 +358,7 @@ function cleanInv(raw) { // 저장된 가방을 안전하게 정리
   if (Array.isArray(raw.cos)) for (const k of raw.cos) if (COSMETICS[k] && !inv.cos.includes(k)) inv.cos.push(k);
   if (inv.cos.includes(raw.wear)) inv.wear = raw.wear;
   inv.pity = n(raw.pity, 9);
+  inv.wp = n(raw.wp, FISH.whalePity - 1); // 고래를 못 만난 채 낚시에 성공한 횟수
   if (raw.up && typeof raw.up === 'object') for (const w of inv.weapons) { const u = n(raw.up[w], MAX_UP); if (u) inv.up[w] = u; }
   return inv;
 }

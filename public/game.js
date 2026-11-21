@@ -1001,7 +1001,7 @@ const handlers = {
   fx(m) { const o = others.get(m.id); if (o && WEAPONS[m.w]) { setWeapon(o.av, m.w); skillFx(o.av, m.w, m.k, m.tg); } },
   inv(m) {
     const prevEquip = me.inv.equip;
-    me.inv = { gold: m.gold, items: m.items, weapons: m.weapons, equip: m.equip, up: m.up || {}, pets: m.pets || [], pet: m.pet || '', cos: m.cos || [], wear: m.wear || '', pity: m.pity || 0 };
+    me.inv = { gold: m.gold, items: m.items, weapons: m.weapons, equip: m.equip, up: m.up || {}, pets: m.pets || [], pet: m.pet || '', cos: m.cos || [], wear: m.wear || '', pity: m.pity || 0, wp: m.wp || 0 };
     setPet(me, me.inv.pet); setCos(me, me.inv.wear);
     store.set('arca.inv', JSON.stringify(me.inv));
     if (me.av) {
@@ -1027,7 +1027,7 @@ const handlers = {
     if (m.fail) { toast(m.fail); return; }
     if (m.pet) { toast('🐳 아기 하늘고래를 만났어요!!'); pop('🐳', me.x, me.y + 3, me.z, 'lvup'); return; }
     const it = ITEMS[m.item];
-    pop(`${it.icon} ${it.name}`, me.x, me.y + 2.8, me.z, 'item'); toast(`🎣 ${it.icon} ${it.name}을(를) 낚았어요!`); addLog(`🎣 낚았어요: ${it.icon} ${it.name}`);
+    pop(`${it.icon} ${it.name}`, me.x, me.y + 2.8, me.z, 'item'); toast(`🎣 ${it.icon} ${it.name}을(를) 낚았어요!`); addLog(`🎣 낚았어요: ${it.icon} ${it.name}${m.wp > 0 ? ` · 🐳 고래 보장까지 ${m.wp}/${ARCA.FISH.whalePity}` : ''}`);
   },
   foodbuff(m) { buffUntil = performance.now() + m.ms; toast('🍢 든든해요! 2분 동안 공격력이 올라요'); renderTrack(); },
   cookfx(m) { const av = avatarOf(m.id); if (av) pop('🍢', av.position.x, av.position.y + 2.6, av.position.z, 'item'); },

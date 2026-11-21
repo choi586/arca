@@ -312,8 +312,10 @@ function handleLeisure(p, m) {
     if (now < f.bite) return send(p.ws, { t: 'caught', fail: '너무 빨리 당겼어요! 찌가 흔들릴 때까지 기다려요' });
     if (now > f.bite + A.FISH.window + 250) return send(p.ws, { t: 'caught', fail: '아깝다, 놓쳤어요!' });
     p.st.fish++; sendSt(p);
-    if (Math.random() < A.FISH.whale && !inv.pets.includes('whale')) {
-      inv.pets.push('whale'); inv.pet = 'whale';
+    const noWhale = !inv.pets.includes('whale');
+    if (noWhale) inv.wp++;
+    if (noWhale && (Math.random() < A.FISH.whale || inv.wp >= A.FISH.whalePity)) { // 100번째에는 반드시 만남
+      inv.pets.push('whale'); inv.pet = 'whale'; inv.wp = 0;
       sendInv(p);
       broadcast(p.ch, { t: 'pet', id: p.id, pet: 'whale' });
       broadcast(p.ch, { t: 'notice', text: `🐳 ${p.name} 님이 낚시로 아기 하늘고래를 만났어요!` });
@@ -325,7 +327,7 @@ function handleLeisure(p, m) {
     if (id === 'cloudfish' && (A.islandOf(p.x, p.z) || {}).id === 2) id = 'icefish'; // 서리봉우리에서는 얼음새우가 낚임
     const n = addItem(inv, id, 1);
     sendInv(p);
-    return send(p.ws, n ? { t: 'caught', item: id } : { t: 'caught', fail: `${A.ITEMS[id].name}을(를) 낚았지만 가방이 꽉 차서 놓아줬어요` });
+    return send(p.ws, n ? { t: 'caught', item: id, wp: noWhale ? inv.wp : -1 } : { t: 'caught', fail: `${A.ITEMS[id].name}을(를) 낚았지만 가방이 꽉 차서 놓아줬어요` });
   }
   if (m.t === 'cook') {
     const fire = [...channels.get(p.ch).decos.values()].some((d) => d.k === 'campfire' && Math.hypot(d.x - p.x, d.z - p.z) < A.COOK_RANGE);
@@ -847,6 +849,8 @@ wss.on('connection', (ws) => {
       };
       applyLevel(me); me.hp = me.maxHp;
       if (A.TITLES[m.title] && A.TITLES[m.title].ok(statsOf(me))) me.title = m.title;
+      // 보장이 생기기 전에 낚은 횟수도 쳐 줌 (처음 한 번만)
+      if (m.inv && m.inv.wp === undefined && !me.inv.pets.includes('whale')) me.inv.wp = Math.min(A.FISH.whalePity - 1, me.st.fish);
       const c = channels.get(ch);
       c.players.set(me.id, me);
       // 전에 놓아 둔 꾸미기 물건을 다시 놓음 (브라우저에 저장된 목록)
