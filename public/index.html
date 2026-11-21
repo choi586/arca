@@ -31,6 +31,7 @@
     <button id="start" class="big">섬에 들어가기</button>
     <p id="status" class="status"></p>
     <p class="guide"><a href="/guide.html" target="_blank" rel="noopener">📖 설명서·공략집 보기</a></p>
+    <p class="guide"><a href="#" id="codeLoad">💾 이어하기 코드로 캐릭터 불러오기</a></p>
   </div>
 </div>
 
@@ -131,5 +132,13 @@
 <script src="three.min.js"></script>
 <script src="shared.js"></script>
 <script src="game.js"></script>
+<!-- 이어하기 코드 창 (접속 전에도, 게임 중에도 씀) -->
+<div id="codeBox" hidden><div>
+  <b id="codeTitle"></b>
+  <p id="codeDesc"></p>
+  <textarea id="codeText" spellcheck="false" autocomplete="off"></textarea>
+  <p id="codeMsg"></p>
+  <div class="btns" id="codeBtns"></div>
+</div></div>
 </body>
 </html>

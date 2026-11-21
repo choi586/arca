@@ -261,3 +261,17 @@ body.touch #recordBtn { display: none; }
 #shop .tabs button { padding: 8px 4px; font-size: 13px; }
 
 #bagPets button small { color: #2f9e44; font-weight: 400; }
+
+/* ---------- 이어하기 코드 ---------- */
+#codeBtn { position: fixed; left: 392px; top: 50px; padding: 6px 12px; border: 0; border-radius: 12px; background: rgba(255,255,255,.85); font-size: 13px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+body.touch #codeBtn { display: none; }
+#codeBox { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: rgba(20,30,50,.6); padding: 16px; }
+#codeBox > div { background: #fff; border-radius: 18px; padding: 20px 22px; width: min(460px, 100%); box-shadow: 0 12px 40px rgba(0,0,0,.3); -webkit-user-select: text; user-select: text; }
+#codeBox b { font-size: 18px; }
+#codeBox p { margin: 8px 0; font-size: 13.5px; color: #4a5b70; line-height: 1.5; }
+#codeText { width: 100%; height: 120px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; padding: 10px; border: 2px solid #d5e3f3; border-radius: 12px; resize: none; word-break: break-all; -webkit-user-select: text; user-select: text; }
+#codeMsg { min-height: 20px; font-weight: 700; }
+#codeMsg.ok { color: #2f9e44; } #codeMsg.bad { color: #c92a2a; }
+#codeBox .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+#codeBox .btns button { flex: 1; padding: 11px 10px; border: 0; border-radius: 12px; background: #edf1f6; font-size: 14px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+#codeBox .btns button.main { background: #1c7ed6; color: #fff; }

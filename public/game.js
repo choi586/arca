@@ -1874,7 +1874,7 @@ addEventListener('keydown', (e) => {
     } else if (e.key === 'Escape') sayEl.blur();
     return;
   }
-  if (e.target.tagName === 'INPUT') return;
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || !$('codeBox').hidden) return; // 글자를 치는 중에는 게임 키로 치지 않음
   if (e.key === 'Enter') { e.preventDefault(); sayEl.focus(); return; }
   if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) jumpQueued = true; }
   if (!e.repeat) {
@@ -2192,5 +2192,79 @@ requestAnimationFrame(frame);
 refreshStats();
 
 // 자동 확인용
-window.__arca = { fish: () => fishState, fishKey: () => fishKey(), me, others: () => others.size, monsters: () => monsters, groundAt, tryAttack, net: (o) => net(o), openPanel, decos: () => decos, setPhase: (p) => { dayPhase = p; phaseAt = performance.now(); }, party: () => party, trade: () => trade, otherIds: () => [...others.keys()] };
+// ================= 이어하기 코드 (다른 컴퓨터·초기화된 컴퓨터로 캐릭터 옮기기) =================
+// 캐릭터는 브라우저에 저장돼 있어서, 그 내용을 글자 코드로 바꿔 두었다가 다른 곳에서 다시 넣는 방식
+const CODE_KEYS = ['name', 'color', 'hat', 'lv', 'xp', 'inv', 'q', 'st', 'title', 'deco'];
+function codeSum(str) { let h = 7; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) % 1679616; return h.toString(36).padStart(4, '0'); }
+function makeCode() {
+  const data = {};
+  for (const k of CODE_KEYS) { const v = store.get('arca.' + k); if (v !== null && v !== '') data[k] = v; }
+  if (everJoined) { // 저장이 막힌 브라우저에서도 지금 캐릭터를 담을 수 있게 화면의 값으로 채움
+    Object.assign(data, { name: profile.name, color: profile.color, hat: String(profile.hat), lv: String(me.lv), xp: String(me.xp), inv: JSON.stringify(me.inv), q: JSON.stringify(quests), st: JSON.stringify(myst), title: myTitle });
+  }
+  const body = btoa(unescape(encodeURIComponent(JSON.stringify(data)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return `ARCA1-${codeSum(body)}-${body}`;
+}
+function readCode(text) { // 코드가 온전하면 내용을, 아니면 null
+  const m = /ARCA1-([0-9a-z]{4})-([A-Za-z0-9_-]+)/.exec(String(text).replace(/\s+/g, ''));
+  if (!m || codeSum(m[2]) !== m[1]) return null;
+  try {
+    const data = JSON.parse(decodeURIComponent(escape(atob(m[2].replace(/-/g, '+').replace(/_/g, '/')))));
+    return data && typeof data === 'object' && data.lv ? data : null;
+  } catch (e) { return null; }
+}
+function codeUI(mode) {
+  const box = $('codeBox'), ta = $('codeText'), msg = $('codeMsg'), btns = $('codeBtns');
+  const btn = (text, fn, cls) => { const b = el('button', cls || '', text); b.onclick = fn; btns.appendChild(b); return b; };
+  btns.textContent = ''; msg.textContent = ''; msg.className = '';
+  box.hidden = false;
+  if (mode === 'save') {
+    const code = makeCode();
+    $('codeTitle').textContent = '💾 이어하기 코드';
+    $('codeDesc').textContent = `지금 캐릭터(${profile.name} · Lv${me.lv} · ${me.inv.gold}G)가 이 코드에 담겨 있어요. 복사하거나 파일로 저장해 두면, 다른 컴퓨터나 초기화된 컴퓨터에서 그대로 불러올 수 있어요. 코드를 만든 뒤에 더 키운 것은 들어 있지 않으니, 끝낼 때 새로 받아 두세요.`;
+    ta.value = code; ta.readOnly = true;
+    btn('📋 복사하기', async () => {
+      let ok = false;
+      try { await navigator.clipboard.writeText(code); ok = true; } catch (e) { ta.focus(); ta.select(); try { ok = document.execCommand('copy'); } catch (e2) { ok = false; } }
+      msg.textContent = ok ? '복사했어요! 메모장이나 메일에 붙여 넣어 보관하세요.' : '자동 복사가 안 돼요. 코드를 길게 눌러 직접 복사해 주세요.'; msg.className = ok ? 'ok' : 'bad';
+    }, 'main');
+    btn('📄 파일로 저장', () => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([`구름섬 아르카 이어하기 코드 (${profile.name} · Lv${me.lv})\n게임 첫 화면의 "이어하기 코드로 캐릭터 불러오기"에 아래 코드를 붙여 넣으세요.\n\n${code}\n`], { type: 'text/plain' }));
+      a.download = `아르카-${profile.name}-Lv${me.lv}.txt`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      msg.textContent = '파일로 저장했어요. 다운로드 폴더를 확인하세요.'; msg.className = 'ok';
+    });
+    btn('닫기', () => { box.hidden = true; });
+  } else {
+    $('codeTitle').textContent = '💾 이어하기 코드로 불러오기';
+    $('codeDesc').textContent = '보관해 둔 코드(ARCA1-로 시작)를 아래에 붙여 넣어요. 저장해 둔 파일의 내용을 통째로 붙여 넣어도 돼요.';
+    ta.value = ''; ta.readOnly = false; ta.placeholder = 'ARCA1-…';
+    let armed = false;
+    const go = btn('불러오기', () => {
+      const data = readCode(ta.value);
+      if (!data) { msg.textContent = '코드가 올바르지 않아요. 처음부터 끝까지 빠짐없이 붙여 넣었는지 확인해 주세요.'; msg.className = 'bad'; armed = false; go.textContent = '불러오기'; return; }
+      const curLv = Number(store.get('arca.lv')) || 1;
+      if (!armed && curLv > 1) { // 이미 캐릭터가 있으면 한 번 더 물어봄
+        armed = true; go.textContent = '정말 덮어쓰기';
+        msg.textContent = `코드 속 캐릭터: ${data.name || '바람잡이'} · Lv${data.lv}. 이 브라우저에 있는 캐릭터(Lv${curLv})는 지워지고 코드의 캐릭터로 바뀌어요. 맞으면 한 번 더 눌러 주세요.`; msg.className = 'bad';
+        return;
+      }
+      for (const k of CODE_KEYS) { if (data[k] !== undefined) store.set('arca.' + k, String(data[k])); else { try { localStorage.removeItem('arca.' + k); } catch (e) { /* 괜찮음 */ } } }
+      if (store.get('arca.lv') !== String(data.lv)) { msg.textContent = '이 브라우저는 저장이 막혀 있어서 불러올 수 없어요. 시크릿 창이 아닌 일반 창에서 해 주세요.'; msg.className = 'bad'; return; }
+      msg.textContent = `${data.name || '바람잡이'} · Lv${data.lv} 캐릭터를 불러왔어요! 잠시 뒤 다시 시작해요…`; msg.className = 'ok';
+      setTimeout(() => location.reload(), 1200);
+    }, 'main');
+    ta.oninput = () => { armed = false; go.textContent = '불러오기'; };
+    btn('닫기', () => { box.hidden = true; });
+    setTimeout(() => ta.focus(), 50);
+  }
+}
+$('codeLoad').onclick = (e) => { e.preventDefault(); codeUI('load'); };
+{
+  const b = el('button', '', '💾 저장 코드'); b.id = 'codeBtn'; b.onclick = () => codeUI('save'); $('hud').appendChild(b);
+  const inPeople = el('button', 'wide-btn', '💾 이어하기 코드 받기 (다른 컴퓨터에서 이어서 하기)'); inPeople.onclick = () => codeUI('save'); $('people').appendChild(inPeople);
+  const inBag = el('button', 'wide-btn', '💾 이어하기 코드 받기'); inBag.onclick = () => codeUI('save'); $('bag').appendChild(inBag);
+}
+
+window.__arca = { makeCode, readCode, fish: () => fishState, fishKey: () => fishKey(), me, others: () => others.size, monsters: () => monsters, groundAt, tryAttack, net: (o) => net(o), openPanel, decos: () => decos, setPhase: (p) => { dayPhase = p; phaseAt = performance.now(); }, party: () => party, trade: () => trade, otherIds: () => [...others.keys()] };
 })();
