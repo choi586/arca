@@ -190,6 +190,12 @@ const ITEMS = {
   shell: { name: '이끼 껍질', icon: '🐚', type: 'mat', sell: 30, desc: '돌거북의 단단한 껍질 조각' },
   glowcap: { name: '빛나는 갓', icon: '🌟', type: 'mat', sell: 20, desc: '독버섯 두꺼비의 반짝이는 갓 조각' },
   dust: { name: '정령 가루', icon: '✨', type: 'mat', sell: 38, desc: '숲의 정령이 남긴 가루' },
+  cloudfish: { name: '구름붕어', icon: '🐟', type: 'fish', sell: 6, desc: '구름 속을 헤엄치는 흔한 물고기. 모닥불에 구울 수 있어요' },
+  starfish: { name: '별정어리', icon: '🐠', type: 'fish', sell: 14, desc: '비늘이 별처럼 반짝여요. 모닥불에 구울 수 있어요' },
+  moonjelly: { name: '달빛해파리', icon: '🦑', type: 'mat', sell: 35, desc: '밤에만 낚여요. 귀해서 굽지 않고 팔아요' },
+  rainbow: { name: '무지개송어', icon: '🐡', type: 'mat', sell: 50, desc: '아주 드문 물고기. 귀해서 굽지 않고 팔아요' },
+  boot: { name: '낡은 장화', icon: '🥾', type: 'mat', sell: 1, desc: '누가 구름 아래로 떨어뜨린 장화. 한 짝뿐이에요' },
+  grilled: { name: '구운 생선', icon: '🍢', type: 'food', heal: 0.4, sell: 10, desc: '먹으면 체력 40% 회복 + 2분 동안 공격력 15% 증가' },
   windstone: { name: '바람의 돌', icon: '🌀', type: 'key', sell: 0, desc: '광장 분수의 수정에 바치면 바람의 다리가 가까워져요' },
   shard: { name: '폭풍의 조각', icon: '💎', type: 'mat', sell: 120, desc: '폭풍 골렘을 쓰러뜨린 증표. 비싸게 팔려요' },
 };
@@ -204,6 +210,22 @@ const LOOT = {
   toad: { gold: [15, 25], drops: [['glowcap', 0.6], ['potion', 0.15]] },
   wisp: { gold: [22, 36], drops: [['dust', 0.55], ['bigpotion', 0.1]] },
 };
+// ---------- 구름 낚시 · 요리 · 펫 ----------
+// 섬 가장자리(끝에서 FISH.edge 걸음 안)에서 구름 속으로 낚싯줄을 던짐. 찌가 흔들린 뒤 window 안에 당겨야 잡힘
+const FISH = { edge: 7, minMs: 2000, maxMs: 6000, window: 1300, whale: 0.01 };
+const FISH_DAY = [['cloudfish', 0.5], ['starfish', 0.25], ['boot', 0.14], ['rainbow', 0.08], ['windstone', 0.03]];
+const FISH_NIGHT = [['cloudfish', 0.33], ['starfish', 0.22], ['moonjelly', 0.27], ['boot', 0.08], ['rainbow', 0.08], ['windstone', 0.02]];
+function canFish(x, z) { const I = islandOf(x, z); return !!I && Math.hypot(x - I.x, z - I.z) > I.R - FISH.edge; }
+const FOOD_BUFF = { atk: 1.15, ms: 120000 };
+const COOK_RANGE = 5; // 모닥불에서 이만큼 안
+const PETS = {
+  slimy: { name: '꼬마 슬라임', icon: '🟢', price: 300, desc: '통통 튀며 따라와요' },
+  firefly: { name: '반딧불이', icon: '✨', price: 400, desc: '머리 위를 빙글빙글 돌아요. 밤에 예뻐요' },
+  shelly: { name: '아기 돌거북', icon: '🐢', price: 500, desc: '느릿느릿 열심히 따라와요' },
+  whale: { name: '아기 하늘고래', icon: '🐳', price: 0, desc: '낚시로만 만날 수 있는 아주 드문 친구' },
+};
+const PET_IDS = Object.keys(PETS);
+
 // ---------- 무기 강화 ----------
 // 한 단계마다 그 무기의 피해가 8%씩 늘어남. UPGRADES[n] = n강에서 n+1강으로 올릴 때 드는 것
 const MAX_UP = 5, UP_BONUS = 0.08;
@@ -240,7 +262,7 @@ function cleanQuests(raw) {
 }
 
 function cleanInv(raw) { // 저장된 가방을 안전하게 정리
-  const inv = { gold: 0, items: {}, weapons: ['sword'], equip: 'sword', up: {} };
+  const inv = { gold: 0, items: {}, weapons: ['sword'], equip: 'sword', up: {}, pets: [], pet: '' };
   if (!raw || typeof raw !== 'object') return inv;
   const n = (v, max) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)));
   inv.gold = n(raw.gold, 999999);
@@ -250,6 +272,8 @@ function cleanInv(raw) { // 저장된 가방을 안전하게 정리
   }
   if (Array.isArray(raw.weapons)) for (const w of raw.weapons) if (WEAPONS[w] && !inv.weapons.includes(w)) inv.weapons.push(w);
   if (inv.weapons.includes(raw.equip)) inv.equip = raw.equip;
+  if (Array.isArray(raw.pets)) for (const k of raw.pets) if (PETS[k] && !inv.pets.includes(k)) inv.pets.push(k);
+  if (inv.pets.includes(raw.pet)) inv.pet = raw.pet;
   if (raw.up && typeof raw.up === 'object') for (const w of inv.weapons) { const u = n(raw.up[w], MAX_UP); if (u) inv.up[w] = u; }
   return inv;
 }
@@ -285,13 +309,14 @@ const TITLES = {
   storm: { name: '폭풍을 잠재운 자', how: '폭풍 골렘 처치에 참여', ok: (s) => s.boss >= 1 },
   duelist: { name: '결투가', how: '결투 3번 승리', ok: (s) => s.wins >= 3 },
   champion: { name: '광장의 챔피언', how: '결투 10번 승리', ok: (s) => s.wins >= 10 },
+  angler: { name: '구름 강태공', how: '낚시 30번 성공', ok: (s) => s.fish >= 30 },
   sky: { name: '하늘의 주인', how: 'Lv 20 달성', ok: (s) => s.lv >= 20 },
 };
 const TITLE_IDS = Object.keys(TITLES);
 function cleanStats(raw) {
   const n = (v) => Math.max(0, Math.min(9999999, Math.floor(Number(v) || 0)));
   raw = raw && typeof raw === 'object' ? raw : {};
-  return { kills: n(raw.kills), boss: n(raw.boss), wins: n(raw.wins), loses: n(raw.loses), quests: n(raw.quests) };
+  return { kills: n(raw.kills), boss: n(raw.boss), wins: n(raw.wins), loses: n(raw.loses), quests: n(raw.quests), fish: n(raw.fish) };
 }
 // ---------- 결투 ----------
 const DUEL = { countdown: 3000, maxMs: 90000, range: 12, leave: 45, dmg: 0.5, loserHp: 0.3 };
@@ -300,7 +325,7 @@ const MAX_LV = 30;
 const needXp = (lv) => 10 * lv * lv + 10;
 const statsFor = (lv) => ({ maxHp: 80 + (lv - 1) * 15, atk: 10 + (lv - 1) * 3 });
 
-const api = { TITLES, TITLE_IDS, cleanStats, DUEL, ELDER, TALK_RANGE, ALTAR_RANGE, BRIDGE, world, onBridge, MAX_UP, UP_BONUS, UPGRADES, QUESTS, QUEST_IDS, QUEST_ACTIVE_MAX, cleanQuests, ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
+const api = { FISH, FISH_DAY, FISH_NIGHT, canFish, FOOD_BUFF, COOK_RANGE, PETS, PET_IDS, TITLES, TITLE_IDS, cleanStats, DUEL, ELDER, TALK_RANGE, ALTAR_RANGE, BRIDGE, world, onBridge, MAX_UP, UP_BONUS, UPGRADES, QUESTS, QUEST_IDS, QUEST_ACTIVE_MAX, cleanQuests, ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
   UNLOCK, KEYS, WEAPONS, WEAPON_IDS, ITEMS, ITEM_IDS, SHOP_ITEMS, MAX_STACK, BAG_SLOTS, LOOT, cleanInv, MAX_LV, needXp, statsFor };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ARCA = api;
 })(this);

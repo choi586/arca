@@ -81,13 +81,13 @@ function broadcast(ch, msg, exceptId) {
   const s = JSON.stringify(msg);
   for (const p of channels.get(ch).players.values()) if (p.id !== exceptId && p.ws.readyState === 1) p.ws.send(s);
 }
-function publicInfo(p) { return { id: p.id, name: p.name, color: p.color, hat: p.hat, x: p.x, y: p.y, z: p.z, ry: p.ry, lv: p.lv, w: p.inv.equip, title: titleName(p) }; }
+function publicInfo(p) { return { id: p.id, name: p.name, color: p.color, hat: p.hat, x: p.x, y: p.y, z: p.z, ry: p.ry, lv: p.lv, w: p.inv.equip, title: titleName(p), pet: p.inv.pet }; }
 function cleanText(s, max) { return String(s || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, max); }
 const num = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
 const r2 = (v) => Math.round(v * 100) / 100;
 function sendStats(p) { send(p.ws, { t: 'stats', hp: Math.ceil(p.hp), maxHp: p.maxHp, lv: p.lv, xp: p.xp, need: A.needXp(p.lv), atk: p.atk }); }
 function titleName(p) { return p.title && A.TITLES[p.title] ? A.TITLES[p.title].name : ''; }
-function statsOf(p) { return { lv: p.lv, gold: p.inv.gold, kills: p.st.kills, boss: p.st.boss, wins: p.st.wins, quests: p.st.quests, maxUp: Math.max(0, ...Object.values(p.inv.up)) }; }
+function statsOf(p) { return { lv: p.lv, gold: p.inv.gold, kills: p.st.kills, boss: p.st.boss, wins: p.st.wins, quests: p.st.quests, fish: p.st.fish, maxUp: Math.max(0, ...Object.values(p.inv.up)) }; }
 function sendSt(p) { send(p.ws, { t: 'st', st: p.st, title: p.title }); }
 function sendInv(p) { send(p.ws, { t: 'inv', ...p.inv }); }
 function bagSlots(inv) { return Object.keys(inv.items).length; }
@@ -103,7 +103,7 @@ function applyLevel(p) { const s = A.statsFor(p.lv); p.maxHp = s.maxHp; p.atk = 
 function hurtMonster(ch, m, p, mult) {
   if (!m.alive) return;
   const crit = Math.random() < 0.12;
-  const up = 1 + A.UP_BONUS * (p.inv.up[p.inv.equip] || 0); // 강화한 무기는 더 아픔
+  const up = (1 + A.UP_BONUS * (p.inv.up[p.inv.equip] || 0)) * (Date.now() < p.buffUntil ? A.FOOD_BUFF.atk : 1); // 강화한 무기와 구운 생선은 더 아픔
   const dmg = Math.max(1, Math.round(p.atk * mult * up * (0.9 + Math.random() * 0.2) * (crit ? 1.6 : 1)));
   m.hp -= dmg;
   m.hitters.add(p.id);
@@ -239,9 +239,63 @@ function playerAttack(ch, p, k, ry) {
   broadcast(ch, fxMsg, p.id);
 }
 
+// ---------- 구름 낚시 · 요리 · 펫 ----------
+function handleLeisure(p, m) {
+  const inv = p.inv, now = Date.now();
+  if (m.t === 'fish') {
+    if (p.dead || p.duel) return;
+    if (!A.canFish(p.x, p.z)) return notice(p, '낚시는 섬 가장자리에서 할 수 있어요');
+    const wait = A.FISH.minMs + Math.random() * (A.FISH.maxMs - A.FISH.minMs);
+    p.fish = { bite: now + wait, x: p.x, z: p.z };
+    return send(p.ws, { t: 'fishing', in: Math.round(wait), window: A.FISH.window });
+  }
+  if (m.t === 'reel') {
+    const f = p.fish; p.fish = null;
+    if (!f) return;
+    if (Math.hypot(p.x - f.x, p.z - f.z) > 1.5) return send(p.ws, { t: 'caught', fail: '움직여서 낚싯줄이 끊어졌어요' });
+    if (now < f.bite) return send(p.ws, { t: 'caught', fail: '너무 빨리 당겼어요! 찌가 흔들릴 때까지 기다려요' });
+    if (now > f.bite + A.FISH.window + 250) return send(p.ws, { t: 'caught', fail: '아깝다, 놓쳤어요!' });
+    p.st.fish++; sendSt(p);
+    if (Math.random() < A.FISH.whale && !inv.pets.includes('whale')) {
+      inv.pets.push('whale'); inv.pet = 'whale';
+      sendInv(p);
+      broadcast(p.ch, { t: 'pet', id: p.id, pet: 'whale' });
+      broadcast(p.ch, { t: 'notice', text: `🐳 ${p.name} 님이 낚시로 아기 하늘고래를 만났어요!` });
+      return send(p.ws, { t: 'caught', pet: 'whale' });
+    }
+    const table = isNight() ? A.FISH_NIGHT : A.FISH_DAY;
+    let r = Math.random(), id = table[0][0];
+    for (const [k, w] of table) { if (r < w) { id = k; break; } r -= w; }
+    const n = addItem(inv, id, 1);
+    sendInv(p);
+    return send(p.ws, n ? { t: 'caught', item: id } : { t: 'caught', fail: `${A.ITEMS[id].name}을(를) 낚았지만 가방이 꽉 차서 놓아줬어요` });
+  }
+  if (m.t === 'cook') {
+    const fire = [...channels.get(p.ch).decos.values()].some((d) => d.k === 'campfire' && Math.hypot(d.x - p.x, d.z - p.z) < A.COOK_RANGE);
+    if (!fire) return notice(p, '모닥불 가까이에서 구울 수 있어요. 꾸미기(K)로 모닥불을 놓아 보세요');
+    let total = 0;
+    for (const id of A.ITEM_IDS) if (A.ITEMS[id].type === 'fish' && inv.items[id]) { total += inv.items[id]; }
+    if (!total) return notice(p, '구울 물고기가 없어요. 섬 가장자리에서 낚시(X)해 보세요');
+    const room = A.MAX_STACK - (inv.items.grilled || 0);
+    if (room <= 0) return notice(p, '구운 생선을 더 가질 수 없어요');
+    let left = Math.min(total, room), cooked = 0;
+    for (const id of A.ITEM_IDS) if (A.ITEMS[id].type === 'fish' && inv.items[id] && left > 0) { const n = Math.min(left, inv.items[id]); removeItem(inv, id, n); left -= n; cooked += n; }
+    inv.items.grilled = (inv.items.grilled || 0) + cooked; // 날생선 칸이 비니 가방이 넘칠 일은 없음
+    sendInv(p);
+    broadcast(p.ch, { t: 'cookfx', id: p.id });
+    return notice(p, `🍢 생선 ${cooked}마리를 구웠어요! 가방에서 눌러 먹어요`);
+  }
+  if (m.t === 'pet') {
+    if (m.id && !inv.pets.includes(m.id)) return;
+    inv.pet = m.id || '';
+    sendInv(p);
+    broadcast(p.ch, { t: 'pet', id: p.id, pet: inv.pet });
+  }
+}
+
 // ---------- 결투 ----------
 function hurtDuel(ch, p, q, mult) {
-  const crit = Math.random() < 0.12, up = 1 + A.UP_BONUS * (p.inv.up[p.inv.equip] || 0);
+  const crit = Math.random() < 0.12, up = (1 + A.UP_BONUS * (p.inv.up[p.inv.equip] || 0)) * (Date.now() < p.buffUntil ? A.FOOD_BUFF.atk : 1);
   const guard = Date.now() < q.guardUntil ? q.guard : 0;
   const dmg = Math.max(1, Math.round(p.atk * mult * up * A.DUEL.dmg * (0.9 + Math.random() * 0.2) * (crit ? 1.6 : 1) * (1 - guard)));
   q.hp -= dmg; q.lastHurt = Date.now();
@@ -286,6 +340,16 @@ function handleShop(p, m) {
   const inv = p.inv;
   if (m.t === 'use') {
     const it = A.ITEMS[m.item];
+    if (it && it.type === 'food' && !p.dead) { // 구운 생선: 회복 + 잠깐 공격력 증가
+      if (Date.now() < (p.potionAt || 0) || !removeItem(inv, m.item, 1)) return;
+      p.potionAt = Date.now() + 1000;
+      const before = p.hp; p.hp = Math.min(p.maxHp, p.hp + p.maxHp * it.heal);
+      p.buffUntil = Date.now() + A.FOOD_BUFF.ms;
+      broadcast(p.ch, { t: 'heal', id: p.id, amt: Math.round(p.hp - before) });
+      send(p.ws, { t: 'foodbuff', ms: A.FOOD_BUFF.ms });
+      sendStats(p); sendInv(p);
+      return;
+    }
     if (!it || it.type !== 'potion' || p.dead) return;
     const now = Date.now();
     if (now < (p.potionAt || 0)) return;
@@ -308,6 +372,14 @@ function handleShop(p, m) {
       if (inv.gold < w.price) return notice(p, '골드가 모자라요');
       inv.gold -= w.price; inv.weapons.push(m.id);
       notice(p, `샀어요: ${w.icon} ${w.name} — 가방(I)에서 바꿔 들 수 있어요`);
+    } else if (A.PETS[m.id]) {
+      const pet = A.PETS[m.id];
+      if (!pet.price) return notice(p, `${pet.name}은(는) 살 수 없어요. 낚시로만 만날 수 있어요`);
+      if (inv.pets.includes(m.id)) return notice(p, '이미 함께하고 있어요');
+      if (inv.gold < pet.price) return notice(p, '골드가 모자라요');
+      inv.gold -= pet.price; inv.pets.push(m.id); inv.pet = m.id;
+      broadcast(p.ch, { t: 'pet', id: p.id, pet: m.id });
+      notice(p, `${pet.icon} ${pet.name}이(가) 따라오기 시작했어요! 가방(I)에서 바꿀 수 있어요`);
     } else if (A.SHOP_ITEMS.includes(m.id)) {
       const it = A.ITEMS[m.id], n = Math.max(1, Math.min(10, Math.floor(num(m.n, 1))));
       if (inv.gold < it.buy * n) return notice(p, '골드가 모자라요');
@@ -704,7 +776,7 @@ wss.on('connection', (ws) => {
         hp: 0, maxHp: 0, atk: 0, dead: false, deadAt: 0, lastHurt: 0, lastAtk: 0, cds: {}, guard: 0, guardUntil: 0, potionAt: 0,
         inv: A.cleanInv(m.inv), // 가방도 브라우저에 저장된 것을 이어받음
         party: 0, trade: null, asks: new Map(), uid, lastAct: Date.now(),
-        st: A.cleanStats(m.st), title: '', duel: null, // 기록도 브라우저에 저장된 것을 이어받음
+        st: A.cleanStats(m.st), title: '', duel: null, fish: null, buffUntil: 0, // 기록도 브라우저에 저장된 것을 이어받음
         q: A.cleanQuests(m.q), // 의뢰 진행도 브라우저에 저장된 것을 이어받음
       };
       applyLevel(me); me.hp = me.maxHp;
@@ -741,6 +813,8 @@ wss.on('connection', (ws) => {
       playerAttack(me.ch, me, Math.floor(num(m.k, -1)), num(m.ry, me.ry));
     } else if (m.t === 'use' || m.t === 'equip' || m.t === 'buy' || m.t === 'sell') {
       handleShop(me, m);
+    } else if (m.t === 'fish' || m.t === 'reel' || m.t === 'cook' || m.t === 'pet') {
+      handleLeisure(me, m);
     } else if (m.t === 'title' || m.t === 'rank') {
       handleRecord(me, m);
     } else if (['pinvite', 'pleave', 'treq', 'dreq', 'answer', 'toffer', 'tok', 'tcancel'].includes(m.t)) {

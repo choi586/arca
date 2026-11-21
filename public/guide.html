@@ -145,7 +145,7 @@ code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size:
     <h1>구름섬 아르카</h1>
     <div class="tools"><a href="#fn-1" title="즐겨찾기는 브라우저의 것을 쓰자">★ 13</a><a href="#fn-1" id="rfn-1" title="진짜 위키가 아니라서 아무도 고칠 수 없다.">편집</a><a href="#s-14">토론</a><a href="#s-12">역사</a></div>
   </div>
-  <div class="modified">최근 수정 시각: 2026-11-21 (7단계 "겨루기" 기준) · 기여자 2명<sup><a href="#fn-5" id="rfn-5" title="사람 한 명과 인공지능 하나.">[5]</a></sup></div>
+  <div class="modified">최근 수정 시각: 2026-11-21 (8단계 "쉬어가기" 기준) · 기여자 2명<sup><a href="#fn-5" id="rfn-5" title="사람 한 명과 인공지능 하나.">[5]</a></sup></div>
   <div class="cat">분류: <a href="#top">브라우저 게임</a><a href="#top">멀티플레이 RPG</a><a href="#top">2026년 게임</a><a href="#top">하루 만에 만들어진 것</a><a href="#top">울타리가 없는 곳</a><a href="#top">서버가 자는 게임</a></div>
 
   <div class="tmpl sleep"><span class="em">🛌</span><div><b>이 게임의 서버는 잠꾸러기입니다.</b><br>한동안 아무도 안 오면 잠들고, 깨우는 데 50초쯤 걸립니다. 고장이 아니라 무료 요금제입니다.</div></div>
@@ -161,8 +161,8 @@ code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size:
     <tr><th>인원</th><td>섬 하나에 최대 40명<br>넘치면 채널이 새로 열림</td></tr>
     <tr><th>가격</th><td>무료. 현금 결제 없음<br><del>결제 기능을 만들 줄 몰라서가 아니다</del></td></tr>
     <tr><th>최대 레벨</th><td>Lv 30</td></tr>
-    <tr><th>현재 버전</th><td>7단계 "겨루기"</td></tr>
-    <tr><th>출시</th><td>2026년 11월 20일<br><small>(1~6단계는 전부 같은 날, 7단계는 다음 날)</small></td></tr>
+    <tr><th>현재 버전</th><td>8단계 "쉬어가기"</td></tr>
+    <tr><th>출시</th><td>2026년 11월 20일<br><small>(1~6단계는 전부 같은 날, 7·8단계는 다음 날)</small></td></tr>
     <tr><th>개발</th><td>사람 1명 + Claude<br><del>말로 시키는 쪽과 만드는 쪽</del></td></tr>
     <tr><th>엔진</th><td>Three.js · WebSocket</td></tr>
     <tr><th>서버</th><td>Render 무료 요금제<br><small>(취침 가능)</small></td></tr>
@@ -203,6 +203,8 @@ code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size:
         <ol><li><a href="#s-16-1">16.1.</a> 촌장 루루의 의뢰</li><li><a href="#s-16-2">16.2.</a> 바람의 돌과 바람의 다리</li><li><a href="#s-16-3">16.3.</a> 무기 강화</li><li><a href="#s-16-4">16.4.</a> 오래 쉬면 섬에서 나간다</li></ol></li>
       <li><a href="#s-17">17.</a> 7단계: 결투 · 칭호 · 순위
         <ol><li><a href="#s-17-1">17.1.</a> 결투</li><li><a href="#s-17-2">17.2.</a> 칭호</li><li><a href="#s-17-3">17.3.</a> 순위판</li></ol></li>
+      <li><a href="#s-18">18.</a> 8단계: 낚시 · 요리 · 펫
+        <ol><li><a href="#s-18-1">18.1.</a> 구름 낚시</li><li><a href="#s-18-2">18.2.</a> 모닥불 요리</li><li><a href="#s-18-3">18.3.</a> 펫</li></ol></li>
     </ol>
   </div>
 
@@ -239,6 +241,8 @@ code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size:
     <tr><td>채팅</td><td class="c"><kbd>Enter</kbd></td><td>한 번 누르면 입력, 다시 누르면 보내기</td></tr>
     <tr><td>촌장과 이야기</td><td class="c"><kbd>T</kbd></td><td>촌장 루루 가까이에서. 의뢰를 맡고 완료한다</td></tr>
     <tr><td>기록 · 칭호 · 순위</td><td class="c"><kbd>L</kbd></td><td>휴대폰은 👥 사람들 창 맨 아래 버튼</td></tr>
+    <tr><td>구름 낚시</td><td class="c"><kbd>X</kbd></td><td>섬 가장자리에서. 한 번 누르면 던지고, 찌가 흔들릴 때 다시 누르면 당긴다</td></tr>
+    <tr><td>생선 굽기</td><td class="c"><kbd>C</kbd></td><td>모닥불 가까이에서</td></tr>
     <tr><td>바람의 돌 바치기</td><td class="c"><kbd>V</kbd></td><td>광장 분수 가까이에서. 가진 돌을 모두 바친다</td></tr>
     <tr><td>창 닫기</td><td class="c"><kbd>Esc</kbd></td><td></td></tr>
   </table></div>
@@ -563,6 +567,7 @@ code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size:
     <tr><td class="c">5</td><td>넓히기</td><td>버섯숲 섬, 글라이더와 바람 기둥, 낮과 밤, 꾸미기</td><td class="c">✅ 완료</td></tr>
     <tr><td class="c">6</td><td>목표</td><td>촌장 루루의 의뢰, 바람의 돌과 바람의 다리, 무기 강화, 오래 쉰 사람 내보내기</td><td class="c">✅ 완료</td></tr>
     <tr><td class="c">7</td><td>겨루기</td><td>1:1 결투, 칭호 10가지, 기록과 순위판</td><td class="c">✅ 완료</td></tr>
+    <tr><td class="c">8</td><td>쉬어가기</td><td>구름 낚시, 모닥불 요리, 펫 4종</td><td class="c">✅ 완료</td></tr>
   </table></div>
 
   <h2 id="s-13"><a href="#top">13.</a> 여담</h2>
@@ -688,6 +693,7 @@ code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size:
     <tr><td>폭풍을 잠재운 자</td><td>폭풍 골렘 처치에 참여</td><td>한 대만 때려도 준다. <a href="#s-15">한 대 계</a>의 정점</td></tr>
     <tr><td>결투가</td><td>결투 3번 승리</td><td></td></tr>
     <tr><td>광장의 챔피언</td><td>결투 10번 승리</td><td>같은 친구를 10번 이겨도 된다. 그 친구와의 사이는 책임지지 않는다</td></tr>
+    <tr><td>구름 강태공</td><td>낚시 30번 성공</td><td>8단계에서 추가. 장화를 낚아도 센다</td></tr>
     <tr><td>하늘의 주인</td><td>Lv 20 달성</td><td></td></tr>
   </table></div>
   <ul>
@@ -699,6 +705,65 @@ code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size:
   <ul>
     <li>접속해 있는 사람만 센다. 혼자 들어와 있으면 모든 부문 1등이다. <del>가장 쉬운 1등.</del></li>
     <li>창을 열 때의 순위다. 열어 둔 채로는 바뀌지 않으니 다시 열어 보자.</li>
+  </ul>
+
+  <h2 id="s-18"><a href="#top">18.</a> 8단계: 낚시 · 요리 · 펫</h2>
+  <div class="q">물이 없는데 뭘 낚아요?<footer>— 이 기능을 처음 본 사람 대부분</footer></div>
+  <p>이 세계에는 바다가 없다. 대신 섬 아래에 구름이 있고, 구름 속에 물고기가 산다. 왜 사는지는 묻지 말자. <del>대균열 때 바다도 같이 떠올랐다는 설이 있다. 방금 지어낸 설이다.</del></p>
+  <h3 id="s-18-1"><a href="#s-18">18.1.</a> 구름 낚시</h3>
+  <ul>
+    <li><b>섬 끝에서 7걸음 안</b>에 서면 "🎣 구름 낚시" 버튼이 뜬다. <kbd>X</kbd>를 누르면 구름 쪽으로 돌아서서 찌를 던진다. 포근언덕과 버섯숲 어디서든 된다. 다리 위에서는 안 된다.</li>
+    <li>2~6초 뒤 찌가 흔들리며 <b>❗</b>가 뜬다. 그때부터 <b>1.3초 안에</b> <kbd>X</kbd>를 다시 누르면 낚인다.</li>
+    <li>❗ 전에 누르면 "너무 빨리 당겼어요", 늦으면 "놓쳤어요". 기다리는 동안 움직이면 그만둔다.</li>
+    <li>낚싯대는 따로 살 필요가 없다. 모든 바람잡이는 글라이더와 낚싯대를 타고난다.</li>
+    <li>결투 중에는 낚시할 수 없다. <del>상대가 싸우는데 낚시하는 것은 예의가 아니다.</del></li>
+  </ul>
+  <div class="tw"><table class="wiki">
+    <tr><th colspan="2">낚이는 것</th><th>낮</th><th>밤</th><th>파는 값</th><th>비고</th></tr>
+    <tr><td class="ic">🐟</td><td>구름붕어</td><td class="n">50%</td><td class="n">33%</td><td class="n">6G</td><td>구울 수 있다</td></tr>
+    <tr><td class="ic">🐠</td><td>별정어리</td><td class="n">25%</td><td class="n">22%</td><td class="n">14G</td><td>구울 수 있다</td></tr>
+    <tr><td class="ic">🦑</td><td>달빛해파리</td><td class="n">-</td><td class="n">27%</td><td class="n">35G</td><td>밤에만 낚인다</td></tr>
+    <tr><td class="ic">🐡</td><td>무지개송어</td><td class="n">8%</td><td class="n">8%</td><td class="n">50G</td><td>가장 비싼 물고기</td></tr>
+    <tr><td class="ic">🥾</td><td>낡은 장화</td><td class="n">14%</td><td class="n">8%</td><td class="n">1G</td><td>한 짝뿐이다. 누가 떨어뜨렸는지는 <a href="#s-14-6">14.6</a> 참고</td></tr>
+    <tr><td class="ic">🌀</td><td>바람의 돌</td><td class="n">3%</td><td class="n">2%</td><td class="n">-</td><td>의뢰 말고 돌을 얻는 유일한 방법</td></tr>
+  </table></div>
+  <ul>
+    <li>한 번 낚을 때마다 평균 <b>낮 11G, 밤 19G</b>쯤 번다. 한 번에 5~6초 걸리니 버섯돌이 사냥과 비슷하고, 맞을 일이 없다. <b>밤낚시</b>가 훨씬 낫다.</li>
+    <li>맞을 일이 없다고 했지만, 포근언덕 가장자리는 버섯돌이가 사는 곳과 가깝다. 찌만 보다가 등 뒤에서 포자를 맞는 수가 있다. 던지기 전에 주변부터 정리할 것.</li>
+    <li>낚은 것은 가방 칸을 차지한다. 가방이 꽉 차 있으면 낚은 것을 그대로 놓아준다.</li>
+    <li>낚시 30번에 성공하면 칭호 〈구름 강태공〉을 얻는다.</li>
+    <li>낚시하는 사람 뒤에서 결투를 신청하지 말자. 규칙상 가능하지만 사람이 할 짓이 아니다.</li>
+  </ul>
+  <h3 id="s-18-2"><a href="#s-18">18.2.</a> 모닥불 요리</h3>
+  <p>구름붕어나 별정어리를 가지고 <b>모닥불 5걸음 안</b>에 가면 "🍢 굽기" 버튼이 뜬다. <kbd>C</kbd>를 누르면 가진 것을 <b>전부</b> 구운 생선으로 바꾼다. 내 모닥불이 아니어도 된다. 남이 피워 둔 불에 슬쩍 가서 구워도 아무도 모른다.</p>
+  <div class="tw"><table class="wiki">
+    <tr><th colspan="2">음식</th><th>효과</th><th>파는 값</th></tr>
+    <tr><td class="ic">🍢</td><td>구운 생선</td><td>체력 40% 회복 + <b>2분 동안 공격력 15% 증가</b></td><td class="n">10G</td></tr>
+  </table></div>
+  <ul>
+    <li>가방에서 눌러서 먹는다. <kbd>H</kbd>(물약 키)로는 먹어지지 않는다.</li>
+    <li>공격력 증가는 무기 강화와 <b>곱해진다.</b> +5 무기(40%)에 구운 생선이면 1.4 × 1.15 = 1.61배. 골렘이 오기 30초 전 알림이 뜨면 그때 하나 먹자.</li>
+    <li>결투에서도 통한다. 결투 전에 뭘 먹고 오는 친구를 조심할 것.</li>
+    <li>여러 개를 먹어도 시간이 쌓이지 않는다. 다시 2분으로 돌아갈 뿐이다.</li>
+    <li>달빛해파리와 무지개송어는 귀해서 구워지지 않는다. 팔자.</li>
+    <li>별정어리는 날것이 14G, 구우면 10G다. 돈이 목적이면 굽지 말고 팔고, 싸울 거면 굽자.</li>
+    <li>모닥불은 꾸미기(<kbd>K</kbd>)에서 40G. <a href="#s-4-4">꾸미기</a>가 처음으로 쓸모를 얻었다. <del>천막은 여전히 쓸모가 없다.</del></li>
+  </ul>
+  <h3 id="s-18-3"><a href="#s-18">18.3.</a> 펫</h3>
+  <p>뒤를 따라다니는 작은 친구. 상인 모모의 "사기" 탭 맨 아래에 있다. <b>능력은 없다.</b> 귀여운 것이 능력이다.</p>
+  <div class="tw"><table class="wiki">
+    <tr><th colspan="2">펫</th><th>얻는 법</th><th>특징</th></tr>
+    <tr><td class="ic">🟢</td><td>꼬마 슬라임</td><td class="n">300G</td><td>통통 튀며 따라온다</td></tr>
+    <tr><td class="ic">✨</td><td>반딧불이</td><td class="n">400G</td><td>머리 위를 빙글빙글 돈다. 밤에 보기 좋다</td></tr>
+    <tr><td class="ic">🐢</td><td>아기 돌거북</td><td class="n">500G</td><td>느리다. 주인이 달리면 한참 뒤에 도착한다</td></tr>
+    <tr><td class="ic">🐳</td><td>아기 하늘고래</td><td>낚시 성공 시 <b>1%</b></td><td>살 수 없다. 어깨 높이로 떠서 따라온다. 낚으면 채널 모두에게 알려진다</td></tr>
+  </table></div>
+  <ul>
+    <li>가방(<kbd>I</kbd>)의 "펫" 칸에서 바꾸거나 쉬게 할 수 있다. 한 번에 한 마리만 데리고 다닌다.</li>
+    <li>다른 사람에게도 보인다. 거래는 안 된다.</li>
+    <li>펫은 싸우지 않고 맞지도 않는다. 주인이 쓰러져도 옆에서 가만히 기다린다.</li>
+    <li>꼬마 슬라임을 데리고 말랑 슬라임을 사냥하는 것에 대해서는 의견이 갈린다. <del>꼬마 슬라임 본인은 아무 말이 없다.</del></li>
+    <li>하늘고래는 평균 100번을 낚아야 한 번 나온다. 한 번에 5~6초니 10분쯤 걸리는 셈이지만, 운이 없으면 한 시간도 걸린다. 그동안 서버가 잠들 걱정은 안 해도 된다. 낚시하는 동안은 "움직임"으로 친다.</li>
   </ul>
 
   <h2 id="s-15"><a href="#top">15.</a> 은어</h2>
@@ -718,7 +783,7 @@ code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size:
     <tr><th>섬</th><td><a href="#s-4">포근언덕</a><a href="#s-4-2">버섯숲</a><a href="#s-4-1">바람 기둥</a></td></tr>
     <tr><th>몬스터</th><td><a href="#s-5-1">말랑 슬라임</a><a href="#s-5-2">버섯돌이</a><a href="#s-5-3">이끼 돌거북</a><a href="#s-5-5">독버섯 두꺼비</a><a href="#s-5-5">숲의 정령</a><a href="#s-5-4">폭풍 골렘</a></td></tr>
     <tr><th>무기</th><td><a href="#s-8-1">바람검</a><a href="#s-8-2">참나무 활</a><a href="#s-8-3">별빛 지팡이</a><a href="#s-8-4">바위 망치와 방패</a><a href="#s-8-5">반딧불 등불</a></td></tr>
-    <tr><th>시스템</th><td><a href="#s-6">전투</a><a href="#s-7">성장</a><a href="#s-9">가방과 상점</a><a href="#s-10-5">파티와 거래</a><a href="#s-4-3">낮과 밤</a><a href="#s-4-4">꾸미기</a><a href="#s-16-1">의뢰</a><a href="#s-16-2">바람의 다리</a><a href="#s-16-3">강화</a><a href="#s-17-1">결투</a><a href="#s-17-2">칭호</a><a href="#s-17-3">순위판</a></td></tr>
+    <tr><th>시스템</th><td><a href="#s-6">전투</a><a href="#s-7">성장</a><a href="#s-9">가방과 상점</a><a href="#s-10-5">파티와 거래</a><a href="#s-4-3">낮과 밤</a><a href="#s-4-4">꾸미기</a><a href="#s-16-1">의뢰</a><a href="#s-16-2">바람의 다리</a><a href="#s-16-3">강화</a><a href="#s-17-1">결투</a><a href="#s-17-2">칭호</a><a href="#s-17-3">순위판</a><a href="#s-18-1">낚시</a><a href="#s-18-2">요리</a><a href="#s-18-3">펫</a></td></tr>
     <tr><th>인물</th><td><a href="#s-9">상인 모모</a><a href="#s-16-1">촌장 루루</a><a href="#s-14-3">'테스트' 님</a></td></tr>
   </table>
 
@@ -729,11 +794,12 @@ code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size:
     <div><a href="#rfn-4" id="fn-4">[4]</a> 나눠 갖는 게 아니라 각자 전부 받는다. 그래서 이 게임에는 "스틸"이라는 말이 없다.</div>
     <div><a href="#rfn-5" id="fn-5">[5]</a> 사람 한 명과 인공지능(Claude) 하나. 사람은 "만들어 줘"를 맡았고 나머지는 나머지가 맡았다.</div>
   </div>
-  <div class="license">이 문서는 구름섬 아르카 7단계 기준으로 쓰였습니다. 게임이 업데이트되면 숫자가 달라질 수 있습니다. 아르카위키는 게임 안내를 위한 설명서이며 실제 위키 사이트가 아닙니다. 옆 칸의 "최근 변경"과 "실시간 검색어"는 꾸며 낸 장식이고, 본문의 숫자와 "사건 사고"는 사실입니다.</div>
+  <div class="license">이 문서는 구름섬 아르카 8단계 기준으로 쓰였습니다. 게임이 업데이트되면 숫자가 달라질 수 있습니다. 아르카위키는 게임 안내를 위한 설명서이며 실제 위키 사이트가 아닙니다. 옆 칸의 "최근 변경"과 "실시간 검색어"는 꾸며 낸 장식이고, 본문의 숫자와 "사건 사고"는 사실입니다.</div>
 </main>
 <aside id="side">
   <div class="card"><h5>최근 변경</h5><ul>
-    <li><a href="#s-17-1">결투/우정 파괴 사례</a><span>방금</span></li>
+    <li><a href="#s-18-3">아기 하늘고래/목격담</a><span>방금</span></li>
+    <li><a href="#s-17-1">결투/우정 파괴 사례</a><span>2분 전</span></li>
     <li><a href="#s-16-2">바람의 다리/실종 신고</a><span>1분 전</span></li>
     <li><a href="#s-5-4">폭풍 골렘</a><span>3분 전</span></li>
     <li><a href="#s-8-2">뒤구르기 사격/추락 목록</a><span>5분 전</span></li>

@@ -682,11 +682,12 @@ function addOther(p) {
   av.position.set(p.x, p.y, p.z); av.rotation.y = p.ry;
   scene.add(av);
   const tag = makeTag(p.name); setTagLv(tag, p.lv || 1); setTagTitle(tag, p.title);
-  others.set(p.id, { av, tag, tx: p.x, ty: p.y, tz: p.z, tr: p.ry, a: 0, name: p.name });
+  const o = { av, tag, tx: p.x, ty: p.y, tz: p.z, tr: p.ry, a: 0, name: p.name };
+  others.set(p.id, o); setPet(o, p.pet);
 }
 function removeOther(id) {
   const o = others.get(id); if (!o) return;
-  scene.remove(o.av); o.tag.el.remove(); others.delete(id);
+  scene.remove(o.av); o.tag.el.remove(); setPet(o, ''); others.delete(id);
 }
 function clearOthers() { for (const id of [...others.keys()]) removeOther(id); for (const id of [...monsters.keys()]) removeMonster(id); }
 function updateCount() { $('count').textContent = String(others.size + 1); }
@@ -920,7 +921,8 @@ const handlers = {
   fx(m) { const o = others.get(m.id); if (o && WEAPONS[m.w]) { setWeapon(o.av, m.w); skillFx(o.av, m.w, m.k, m.tg); } },
   inv(m) {
     const prevEquip = me.inv.equip;
-    me.inv = { gold: m.gold, items: m.items, weapons: m.weapons, equip: m.equip, up: m.up || {} };
+    me.inv = { gold: m.gold, items: m.items, weapons: m.weapons, equip: m.equip, up: m.up || {}, pets: m.pets || [], pet: m.pet || '' };
+    setPet(me, me.inv.pet);
     store.set('arca.inv', JSON.stringify(me.inv));
     if (me.av) {
       setWeapon(me.av, me.inv.equip);
@@ -939,6 +941,17 @@ const handlers = {
     }
   },
   notice(m) { toast(m.text); addLog(m.text); },
+  fishing(m) { fishState = { biteAt: performance.now() + m.in, window: m.window, bit: false }; toast('🎣 찌를 던졌어요… 흔들릴 때까지 기다려요'); },
+  caught(m) {
+    stopFishing();
+    if (m.fail) { toast(m.fail); return; }
+    if (m.pet) { toast('🐳 아기 하늘고래를 만났어요!!'); pop('🐳', me.x, me.y + 3, me.z, 'lvup'); return; }
+    const it = ITEMS[m.item];
+    pop(`${it.icon} ${it.name}`, me.x, me.y + 2.8, me.z, 'item'); toast(`🎣 ${it.icon} ${it.name}을(를) 낚았어요!`); addLog(`🎣 낚았어요: ${it.icon} ${it.name}`);
+  },
+  foodbuff(m) { buffUntil = performance.now() + m.ms; toast('🍢 든든해요! 2분 동안 공격력이 올라요'); renderTrack(); },
+  cookfx(m) { const av = avatarOf(m.id); if (av) pop('🍢', av.position.x, av.position.y + 2.6, av.position.z, 'item'); },
+  pet(m) { const o = m.id === me.id ? me : others.get(m.id); if (o) setPet(o, m.pet); },
   st(m) {
     myst = m.st; myTitle = m.title || '';
     store.set('arca.st', JSON.stringify(myst)); store.set('arca.title', myTitle);
@@ -1132,6 +1145,13 @@ function renderBag() {
     b.onclick = () => { if (id !== me.inv.equip) net({ t: 'equip', w: id }); };
     wl.appendChild(b);
   }
+  let pl = $('bagPets');
+  if (!pl) { pl = el('div', 'chips'); pl.id = 'bagPets'; const t = el('div', 'ptitle', '펫 '); t.id = 'bagPetsT'; t.appendChild(el('small', '', '눌러서 데리고 다녀요')); wl.after(t, pl); }
+  pl.textContent = ''; $('bagPetsT').hidden = pl.hidden = !me.inv.pets.length;
+  if (me.inv.pets.length) {
+    const none = el('button', me.inv.pet ? '' : 'on', '쉬게 하기'); none.onclick = () => net({ t: 'pet', id: '' }); pl.appendChild(none);
+    for (const k of me.inv.pets) { const b = el('button', k === me.inv.pet ? 'on' : '', `${ARCA.PETS[k].icon} ${ARCA.PETS[k].name}`); b.onclick = () => net({ t: 'pet', id: k }); pl.appendChild(b); }
+  }
   const grid = $('bagItems'); grid.textContent = '';
   const ids = ITEM_IDS.filter((id) => me.inv.items[id]);
   $('bagCount').textContent = `${ids.length} / ${BAG_SLOTS}칸`;
@@ -1144,6 +1164,7 @@ function renderBag() {
     b.onclick = () => {
       $('bagTip').textContent = `${it.icon} ${it.name}: ${it.desc}`;
       if (it.type === 'potion') { if (me.hp >= me.maxHp) toast('체력이 이미 가득해요'); else net({ t: 'use', item: id }); }
+      if (it.type === 'food') net({ t: 'use', item: id });
     };
     grid.appendChild(b);
   }
@@ -1174,6 +1195,11 @@ function renderShop() {
       const r = shopRow(w.icon, w.name, w.desc, own ? '' : `${w.price}G`, [[own ? '가지고 있음' : '사기', !own && g >= w.price, () => net({ t: 'buy', id })]]);
       r.querySelector('.what').appendChild(el('small', 'sks', w.skills.map((s) => s.icon).join(' ')));
       list.appendChild(r);
+    }
+    for (const k of ARCA.PET_IDS) {
+      const pet = ARCA.PETS[k], own = me.inv.pets.includes(k);
+      if (!pet.price && !own) { list.appendChild(shopRow(pet.icon, pet.name, pet.desc, '', [['낚시로만', false, () => {}]])); continue; }
+      list.appendChild(shopRow(pet.icon, pet.name, pet.desc, own ? '' : `${pet.price}G`, [[own ? '함께하는 중' : '데려오기', !own && g >= pet.price, () => net({ t: 'buy', id: k })]]));
     }
   } else if (shopTab === 'up') { // 무기 강화
     list.appendChild(el('div', 'tip', `재료와 골드로 무기를 강화해요. 한 단계마다 그 무기의 피해가 ${ARCA.UP_BONUS * 100}%씩 늘어요 (최대 +${ARCA.MAX_UP}).`));
@@ -1273,6 +1299,8 @@ function renderTrack() {
   const box = $('qtrack'); if (!box) return;
   box.textContent = '';
   box.appendChild(el('div', 'w', wind.bridge ? '🌉 바람의 다리 열림' : `🌀 바람의 돌 ${Math.min(wind.n, wind.need)}/${wind.need}`));
+  const left = buffUntil - performance.now();
+  if (left > 0) box.appendChild(el('div', 'ok', `🍢 공격력 +15% · ${Math.floor(left / 60000)}:${String(Math.floor(left / 1000) % 60).padStart(2, '0')}`));
   for (const id in quests.active) {
     const [n, need] = questProg(id);
     box.appendChild(el('div', n >= need ? 'ok' : '', `${n >= need ? '✅' : '📌'} ${QUESTS[id].name} ${n}/${need}`));
@@ -1297,7 +1325,7 @@ $('quest').querySelector('.x').onclick = () => { $('quest').hidden = true; };
 
 // ================= 기록 · 칭호 · 순위 · 결투 =================
 let myst = { kills: 0, boss: 0, wins: 0, loses: 0, quests: 0 }, myTitle = '', rankData = null, duelOp = 0, duelStart = 0, knownTitles = null;
-function myStats() { return { lv: me.lv, gold: me.inv.gold, kills: myst.kills, boss: myst.boss, wins: myst.wins, quests: myst.quests, maxUp: Math.max(0, ...Object.values(me.inv.up || {})) }; }
+function myStats() { return { lv: me.lv, gold: me.inv.gold, fish: myst.fish || 0, kills: myst.kills, boss: myst.boss, wins: myst.wins, quests: myst.quests, maxUp: Math.max(0, ...Object.values(me.inv.up || {})) }; }
 function earnedTitles() { const st = myStats(); return ARCA.TITLE_IDS.filter((id) => ARCA.TITLES[id].ok(st)); }
 function checkNewTitles() { // 새 칭호를 얻으면 알려 줌
   const now = earnedTitles();
@@ -1317,7 +1345,7 @@ function checkNewTitles() { // 새 칭호를 얻으면 알려 줌
 function renderRecord() {
   if (!$('record') || $('record').hidden) return;
   const box = $('recStats'); box.textContent = '';
-  for (const [label, v] of [['🗡️ 사냥', myst.kills], ['⚡ 골렘 처치', myst.boss], ['⚔️ 결투', `${myst.wins}승 ${myst.loses}패`], ['📜 의뢰', myst.quests]]) {
+  for (const [label, v] of [['🗡️ 사냥', myst.kills], ['⚡ 골렘', myst.boss], ['⚔️ 결투', `${myst.wins}승 ${myst.loses}패`], ['📜 의뢰', myst.quests], ['🎣 낚시', myst.fish || 0]]) {
     const d = el('div'); d.append(el('small', '', label), el('b', '', String(v))); box.appendChild(d);
   }
   const st = myStats(), tl = $('recTitles'); tl.textContent = '';
@@ -1339,6 +1367,104 @@ function renderRecord() {
     rows.forEach(([name, v, mine], i) => { const r = el('div', mine ? 'mine' : '', `${['🥇', '🥈', '🥉', '4.', '5.'][i]} ${name}`); r.appendChild(el('span', '', unit === 'Lv' ? `Lv${v}` : `${v}${unit}`)); col.appendChild(r); });
     rk.appendChild(col);
   }
+}
+
+// ================= 구름 낚시 · 요리 · 펫 =================
+let fishState = null, buffUntil = 0, canFishNow = false, canCookNow = false, buffTick = 0;
+const bobber = new THREE.Group();
+{
+  const ball = mesh(new THREE.SphereGeometry(0.18, 8, 6), '#fa5252', null, false); bobber.add(ball);
+  const top = mesh(new THREE.SphereGeometry(0.1, 6, 5), '#ffffff', null, false); top.position.y = 0.16; bobber.add(top);
+  bobber.visible = false; scene.add(bobber);
+}
+const fishLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: 0xffffff }));
+fishLine.visible = false; fishLine.frustumCulled = false; scene.add(fishLine);
+{
+  const hints = $('hints');
+  const mk = (id, text, fn) => { const d = el('div'); d.id = id; d.hidden = true; const b = el('button', '', text); b.onclick = fn; d.appendChild(b); hints.appendChild(d); };
+  mk('fishHint', '🎣 구름 낚시 (X)', () => fishKey());
+  mk('cookHint', '🍢 모닥불에 생선 굽기 (C)', () => net({ t: 'cook' }));
+}
+function stopFishing() { fishState = null; bobber.visible = false; fishLine.visible = false; me.actT = 0; }
+function fishKey() { // X: 던지기 / 당기기
+  if (!joined || me.dead) return;
+  if (fishState) { net({ t: 'reel' }); return; }
+  if (!ARCA.canFish(me.x, me.z) || !me.onGround) { toast('낚시는 섬 가장자리에 서서 할 수 있어요'); return; }
+  const I = ARCA.islandOf(me.x, me.z);
+  me.ry = Math.atan2(me.x - I.x, me.z - I.z); // 구름 쪽을 바라봄
+  me.emote = 0;
+  net({ t: 'm', p: [+me.x.toFixed(2), +me.y.toFixed(2), +me.z.toFixed(2), +me.ry.toFixed(2)], a: ANIM.cast });
+  net({ t: 'fish' });
+}
+function rawFishCount() { let n = 0; for (const id of ITEM_IDS) if (ITEMS[id].type === 'fish') n += me.inv.items[id] || 0; return n; }
+function updateLeisure(dt) {
+  const now = performance.now();
+  if (fishState) {
+    const moving = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].some((k) => keys.has(k)) || Math.hypot(joy.x, joy.y) > 0.2;
+    if (moving || me.dead) { stopFishing(); toast('낚시를 그만뒀어요'); }
+    else {
+      me.actA = ANIM.cast; me.actT = 0.3;
+      const fx = Math.sin(me.ry), fz = Math.cos(me.ry), bit = now >= fishState.biteAt;
+      if (bit && !fishState.bit) { fishState.bit = true; toast('❗ 지금이에요! X 를 눌러 당겨요'); pop('❗', me.x + fx * 2, me.y + 2.2, me.z + fz * 2, 'lvup'); }
+      if (now > fishState.biteAt + fishState.window + 400 && !fishState.late) { fishState.late = true; net({ t: 'reel' }); } // 너무 늦으면 서버가 놓쳤다고 알려 줌
+      bobber.visible = fishLine.visible = true;
+      bobber.position.set(me.x + fx * 7, me.y - 3 + Math.sin(now / (bit ? 60 : 400)) * (bit ? 0.25 : 0.1), me.z + fz * 7);
+      const pos = fishLine.geometry.attributes.position;
+      pos.setXYZ(0, me.x + fx * 0.6, me.y + 1.5, me.z + fz * 0.6); pos.setXYZ(1, bobber.position.x, bobber.position.y, bobber.position.z); pos.needsUpdate = true;
+    }
+  }
+  const cf = !fishState && !me.dead && me.onGround && ARCA.canFish(me.x, me.z);
+  if (cf !== canFishNow) { canFishNow = cf; $('fishHint').hidden = !cf; }
+  let cook = false;
+  if (!me.dead && rawFishCount() > 0) for (const e of decos.values()) if (e.d.k === 'campfire' && Math.hypot(e.d.x - me.x, e.d.z - me.z) < ARCA.COOK_RANGE) { cook = true; break; }
+  if (cook !== canCookNow) { canCookNow = cook; $('cookHint').hidden = !cook; }
+  if (buffUntil && (buffTick += dt) > 1) { buffTick = 0; if (now > buffUntil) buffUntil = 0; renderTrack(); }
+}
+// 펫: 주인 뒤를 따라다니는 작은 친구 (꾸밈용)
+function makePet(kind) {
+  const g = new THREE.Group();
+  if (kind === 'slimy') {
+    const b = mesh(new THREE.SphereGeometry(0.32, 10, 8), '#8ce99a', { transparent: true, opacity: 0.9, roughness: 0.3 }); b.scale.y = 0.75; b.position.y = 0.24; g.add(b);
+    for (const x of [-0.1, 0.1]) { const e = mesh(new THREE.SphereGeometry(0.04, 5, 5), '#222', null, false); e.position.set(x, 0.3, 0.27); g.add(e); }
+  } else if (kind === 'shelly') {
+    const sh = mesh(new THREE.DodecahedronGeometry(0.34, 0), '#5c7a3a'); sh.scale.y = 0.6; sh.position.y = 0.28; g.add(sh);
+    const hd = mesh(new THREE.SphereGeometry(0.14, 7, 6), '#8f9c5a'); hd.position.set(0, 0.24, 0.38); g.add(hd);
+    for (const x of [-0.06, 0.06]) { const e = mesh(new THREE.SphereGeometry(0.03, 5, 5), '#222', null, false); e.position.set(x, 0.29, 0.49); g.add(e); }
+  } else if (kind === 'firefly') {
+    const b = mesh(new THREE.IcosahedronGeometry(0.12, 0), '#fff3bf', { emissive: '#ffd43b', emissiveIntensity: 1.5 }, false); g.add(b);
+    for (const x of [-0.14, 0.14]) { const w = mesh(new THREE.SphereGeometry(0.09, 5, 4), '#e7f5ff', { transparent: true, opacity: 0.6 }, false); w.scale.set(1, 0.2, 0.6); w.position.set(x, 0.06, 0); g.add(w); }
+  } else { // whale
+    const b = mesh(new THREE.SphereGeometry(0.42, 10, 8), '#74c0fc'); b.scale.set(0.8, 0.7, 1.25); g.add(b);
+    const belly = mesh(new THREE.SphereGeometry(0.36, 8, 6), '#e7f5ff'); belly.scale.set(0.75, 0.5, 1.1); belly.position.y = -0.12; g.add(belly);
+    const tail = mesh(new THREE.ConeGeometry(0.22, 0.3, 4), '#4dabf7'); tail.rotation.x = -Math.PI / 2; tail.position.z = -0.62; tail.scale.x = 1.8; g.add(tail);
+    for (const x of [-0.24, 0.24]) { const e = mesh(new THREE.SphereGeometry(0.04, 5, 5), '#222', null, false); e.position.set(x, 0.06, 0.4); g.add(e); }
+  }
+  return g;
+}
+function setPet(o, kind) {
+  kind = ARCA.PETS[kind] ? kind : '';
+  if (o.petKind === kind) return;
+  if (o.petMesh) scene.remove(o.petMesh);
+  o.petKind = kind; o.petMesh = null;
+  if (kind) { o.petMesh = makePet(kind); o.petT = Math.random() * 9; scene.add(o.petMesh); if (o.av) o.petMesh.position.copy(o.av.position); }
+}
+function updatePet(o, dt) {
+  const m = o.petMesh; if (!m || !o.av) return;
+  o.petT += dt;
+  const av = o.av, k = o.petKind, fly = k === 'firefly' || k === 'whale';
+  let tx, tz, ty;
+  if (k === 'firefly') { tx = av.position.x + Math.cos(o.petT * 1.6) * 0.9; tz = av.position.z + Math.sin(o.petT * 1.6) * 0.9; ty = av.position.y + 2.3 + Math.sin(o.petT * 3) * 0.15; }
+  else {
+    tx = av.position.x - Math.sin(av.rotation.y) * 1.3 + Math.cos(av.rotation.y) * 0.8; tz = av.position.z - Math.cos(av.rotation.y) * 1.3 - Math.sin(av.rotation.y) * 0.8;
+    ty = fly ? av.position.y + 1.5 + Math.sin(o.petT * 2) * 0.2 : av.position.y;
+  }
+  const dx = tx - m.position.x, dz = tz - m.position.z, d = Math.hypot(dx, dz);
+  if (d > 25) m.position.set(tx, ty, tz);
+  const sp = Math.min(1, dt * (k === 'shelly' ? 2.2 : 5));
+  m.position.x += dx * sp; m.position.z += dz * sp;
+  const hop = k === 'slimy' && d > 0.25 ? Math.abs(Math.sin(o.petT * 9)) * 0.35 : 0;
+  m.position.y += (ty + hop - m.position.y) * Math.min(1, dt * 8);
+  if (d > 0.1 && k !== 'firefly') m.rotation.y = lerpAngle(m.rotation.y, Math.atan2(dx, dz), Math.min(1, dt * 8));
 }
 
 // ================= 꾸미기 =================
@@ -1579,6 +1705,8 @@ addEventListener('keydown', (e) => {
     if (e.code === 'KeyP') openPanel('people');
     if (e.code === 'KeyK') openPanel('deco');
     if (e.code === 'KeyL') openPanel('record');
+    if (e.code === 'KeyX') fishKey();
+    if (e.code === 'KeyC') net({ t: 'cook' });
     if (e.code === 'KeyT') { if (nearElderNow) openPanel('quest'); else toast('의뢰는 광장의 촌장 루루 가까이에서 볼 수 있어요'); }
     if (e.code === 'KeyV') net({ t: 'donate' });
     if (e.code === 'KeyG') glideQueued = true;
@@ -1849,6 +1977,8 @@ function frame(now) {
     updateMonsters(dt);
     updateMerchant(dt);
     updateElder(dt);
+    updateLeisure(dt);
+    updatePet(me, dt); for (const o of others.values()) updatePet(o, dt);
     updateDecos(dt);
     placeTag(me.tag, me.av, dt, me.a === ANIM.sit ? 2.05 : me.a === ANIM.dead ? 1.2 : 2.5);
     updateSkillSlots();
@@ -1864,5 +1994,5 @@ requestAnimationFrame(frame);
 refreshStats();
 
 // 자동 확인용
-window.__arca = { me, others: () => others.size, monsters: () => monsters, groundAt, tryAttack, net: (o) => net(o), openPanel, decos: () => decos, setPhase: (p) => { dayPhase = p; phaseAt = performance.now(); }, party: () => party, trade: () => trade, otherIds: () => [...others.keys()] };
+window.__arca = { fish: () => fishState, fishKey: () => fishKey(), me, others: () => others.size, monsters: () => monsters, groundAt, tryAttack, net: (o) => net(o), openPanel, decos: () => decos, setPhase: (p) => { dayPhase = p; phaseAt = performance.now(); }, party: () => party, trade: () => trade, otherIds: () => [...others.keys()] };
 })();

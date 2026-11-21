@@ -242,3 +242,9 @@ body.touch #recordBtn { display: none; }
 .rank3 span { color: #4a5b70; }
 .rank3 small { color: #8592a3; }
 #people .wide-btn { width: 100%; margin-top: 10px; }
+
+/* ---------- 8단계: 낚시 · 요리 · 펫 ---------- */
+#fishHint button { background: #a5d8ff; }
+#cookHint button { background: #ffc9c9; }
+.recstats { grid-template-columns: repeat(5, 1fr); }
+#bagPets { margin-bottom: 4px; }
