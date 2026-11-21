@@ -2100,6 +2100,10 @@ canvas.addEventListener('pointercancel', endLook);
 canvas.addEventListener('wheel', (e) => { e.preventDefault(); camDist = Math.max(4, Math.min(20, camDist + e.deltaY * 0.01)); }, { passive: false });
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
+// 아이패드·휴대폰에서 화면이 확대되지 않게 (두 손가락 벌리기, 사파리의 확대 동작)
+for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
+document.addEventListener('touchmove', (e) => { if (e.touches.length > 1 && !e.target.closest('.panel, #codeBox')) e.preventDefault(); }, { passive: false });
+addEventListener('wheel', (e) => { if (e.ctrlKey) e.preventDefault(); }, { passive: false }); // 트랙패드로 벌려서 확대하는 것도 막음
 // 휴대폰
 if (('ontouchstart' in window) || navigator.maxTouchPoints > 0 && matchMedia('(pointer: coarse)').matches) document.body.classList.add('touch');
 {

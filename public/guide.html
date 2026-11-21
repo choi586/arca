@@ -129,6 +129,11 @@ table.navbox td a + a::before { content: " · "; color: var(--sub); }
 sup a[title] { cursor: help; }
 @media (max-width: 980px) { .wrap { display: block; padding: 0; margin: 0; } aside { position: static; margin: 12px; } .topbar .search { display: none; } .topbar .play { margin-left: auto; } }
 code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size: 13px; }
+/* 각주 말풍선: 번호를 누르거나 마우스를 올리면 그 자리에 뜸 */
+.fnpop { position: absolute; z-index: 30; max-width: min(340px, calc(100vw - 24px)); background: var(--paper); color: var(--text); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 4px 18px rgba(0,0,0,.22); padding: 10px 12px; font-size: 13.5px; line-height: 1.55; }
+.fnpop b.n { color: var(--link); margin-right: 5px; }
+.fnpop .go { display: block; margin-top: 6px; font-size: 12px; text-align: right; }
+sup a { cursor: pointer; }
 </style>
 </head>
 <body>
@@ -1207,5 +1212,39 @@ code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size:
   </ul><div class="cap">※ 역시 장식이다.</div></div>
 </aside>
 </div>
+<script>
+// 각주: 번호를 누르면 맨 아래로 내려가는 대신 그 자리에 말풍선으로 보여 줌
+(function () {
+  var pop = null, pinned = false, owner = null;
+  function close() { if (pop) { pop.remove(); pop = null; owner = null; pinned = false; } }
+  function show(a, pin) {
+    var id = a.getAttribute('href').slice(1), fn = document.getElementById(id);
+    if (!fn) return;
+    var row = fn.parentElement, html = row.innerHTML.replace(/^\s*<a[^>]*>[^<]*<\/a>\s*/, '');
+    if (pop && owner === a) { pinned = pin || pinned; return; }
+    close();
+    pop = document.createElement('div'); pop.className = 'fnpop';
+    pop.innerHTML = '<b class="n">[' + id.replace('fn-', '') + ']</b>' + html;
+    document.body.appendChild(pop);
+    var r = a.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+    var left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2));
+    var top = r.bottom + 6;
+    if (top + h > window.innerHeight - 8 && r.top - h - 6 > 8) top = r.top - h - 6; // 아래에 자리가 없으면 위로
+    pop.style.left = (left + window.scrollX) + 'px'; pop.style.top = (top + window.scrollY) + 'px';
+    owner = a; pinned = !!pin;
+    pop.addEventListener('mouseleave', function () { if (!pinned) close(); });
+  }
+  var links = document.querySelectorAll('a[href^="#fn-"]');
+  for (var i = 0; i < links.length; i++) (function (a) {
+    a.removeAttribute('title'); // 브라우저 기본 말풍선과 겹치지 않게
+    a.addEventListener('click', function (e) { e.preventDefault(); if (pop && owner === a && pinned) close(); else show(a, true); });
+    a.addEventListener('mouseenter', function () { if (!pinned) show(a, false); });
+    a.addEventListener('mouseleave', function (e) { if (!pinned && !(pop && pop.contains(e.relatedTarget))) setTimeout(function () { if (!pinned && pop && !pop.matches(':hover')) close(); }, 120); });
+  })(links[i]);
+  document.addEventListener('click', function (e) { if (pop && !pop.contains(e.target) && !e.target.closest('a[href^="#fn-"]')) close(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+  window.addEventListener('resize', close);
+})();
+</script>
 </body>
 </html>

@@ -335,3 +335,29 @@ body.touch #tbtns button.on { background: #4dabf7; color: #fff; }
 body.touch #toast { max-width: 60%; }
 
 #newVer { position: fixed; left: 50%; top: 10px; transform: translateX(-50%); z-index: 25; padding: 10px 18px; border: 0; border-radius: 14px; background: #1c7ed6; color: #fff; font-size: 14px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,.3); white-space: nowrap; }
+
+/* ========== 확대 막기 (아이패드·휴대폰) ========== */
+html, body { touch-action: manipulation; overscroll-behavior: none; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }  /* 빠르게 두 번 눌러도 확대 안 됨 */
+#hud, #join, #tags, #pops { touch-action: manipulation; }
+#hud button, #join button, #codeBox button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+/* 글씨가 16px 보다 작은 입력 칸을 누르면 아이패드가 화면을 확대하므로, 터치 기기에서는 모두 16px */
+body.touch input, body.touch textarea, body.touch select { font-size: 16px !important; }
+/* 태블릿처럼 화면이 넓은 터치 기기에서는 조작 버튼을 조금 크게 */
+@media (min-width: 700px) {
+  body.touch #stick { transform: scale(1.35); transform-origin: bottom left; }
+  body.touch #tbtns { transform: scale(1.35); transform-origin: bottom right; }
+  body.touch #skills { transform: scale(1.35); transform-origin: bottom right; bottom: 152px; }
+  body.touch #stat { transform: scale(1.35); transform-origin: top left; }
+  body.touch #bossBar { top: 58px; transform: scale(1.35); transform-origin: top left; }
+  body.touch #partyBox { top: 110px; }
+  body.touch #minimap { width: 120px; height: 120px; }
+  body.touch #bossTimer { top: 132px; width: 120px; font-size: 11px; }
+  body.touch #qtrack { top: 150px; width: 150px; }
+  body.touch #qtrack div { font-size: 11px; }
+  body.touch #chat { bottom: 190px; width: 44%; }
+  body.touch #log div { font-size: 13px; }
+  body.touch #toast { font-size: 15px; top: 110px; }
+  body.touch #hints button { font-size: 14px; padding: 9px 14px; }
+  body.touch .panel { width: min(520px, calc(100% - 32px)); }
+  body.touch .tag .nm { font-size: 12px; }
+}
