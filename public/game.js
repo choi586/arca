@@ -1272,6 +1272,7 @@ const bridgeMesh = new THREE.Group();
   $('hud').appendChild(panel);
   const track = el('div'); track.id = 'qtrack'; $('hud').appendChild(track);
   const tabUp = el('button', '', '강화'); tabUp.dataset.tab = 'up'; document.querySelector('#shop .tabs').appendChild(tabUp);
+  tabUp.onclick = () => { shopTab = 'up'; renderShop(); };
 }
 function questProg(id) { // [지금, 목표]
   const q = QUESTS[id];
@@ -1397,8 +1398,16 @@ function fishKey() { // X: 던지기 / 당기기
   net({ t: 'fish' });
 }
 function rawFishCount() { let n = 0; for (const id of ITEM_IDS) if (ITEMS[id].type === 'fish') n += me.inv.items[id] || 0; return n; }
+let safeNow = null;
+{
+  const ring = new THREE.Mesh(new THREE.RingGeometry(ARCA.SAFE_R - 0.25, ARCA.SAFE_R, 72), flatMat(0x74c0fc, 0.45));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = islandH(ARCA.SAFE_R, 0) + 0.25; scene.add(ring);
+  const badge = el('span'); badge.id = 'safeBadge'; badge.textContent = ' · 🛡️ 안전 구역'; badge.hidden = true; $('info').appendChild(badge);
+}
 function updateLeisure(dt) {
   const now = performance.now();
+  const safe = ARCA.inSafe(me.x, me.z);
+  if (safe !== safeNow) { if (safeNow !== null) toast(safe ? '🛡️ 광장에 들어왔어요. 여기는 몬스터가 못 와요' : '⚠️ 광장을 나왔어요. 몬스터를 조심해요'); safeNow = safe; $('safeBadge').hidden = !safe; }
   if (fishState) {
     const moving = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].some((k) => keys.has(k)) || Math.hypot(joy.x, joy.y) > 0.2;
     if (moving || me.dead) { stopFishing(); toast('낚시를 그만뒀어요'); }

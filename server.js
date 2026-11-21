@@ -102,6 +102,10 @@ function applyLevel(p) { const s = A.statsFor(p.lv); p.maxHp = s.maxHp; p.atk = 
 // ---------- 전투 ----------
 function hurtMonster(ch, m, p, mult) {
   if (!m.alive) return;
+  if (A.inSafe(p.x, p.z)) { // 안전 구역 안에서 밖의 몬스터를 때릴 수는 없음 (맞지 않는 대신 때리지도 못함)
+    if (Date.now() - (p.safeTold || 0) > 4000) { p.safeTold = Date.now(); notice(p, '🛡️ 광장 안에서는 몬스터를 공격할 수 없어요. 밖으로 나가서 싸워요'); }
+    return;
+  }
   const crit = Math.random() < 0.12;
   const up = (1 + A.UP_BONUS * (p.inv.up[p.inv.equip] || 0)) * (Date.now() < p.buffUntil ? A.FOOD_BUFF.atk : 1); // 강화한 무기와 구운 생선은 더 아픔
   const dmg = Math.max(1, Math.round(p.atk * mult * up * (0.9 + Math.random() * 0.2) * (crit ? 1.6 : 1)));
@@ -481,6 +485,8 @@ function pushOut(m) {
   }
   const I = A.ISLANDS[m.isl], dx = m.x - I.x, dz = m.z - I.z, r = Math.hypot(dx, dz), lim = I.R - 3;
   if (r > lim) { m.x = I.x + dx * lim / r; m.z = I.z + dz * lim / r; }
+  const safe = A.SAFE_R + m.def.size * 0.6; // 광장 안으로는 못 들어감
+  if (m.isl === 0 && r < safe && r > 0.0001) { m.x = dx * safe / r; m.z = dz * safe / r; }
 }
 function stepToward(m, tx, tz, speed, dt) {
   const dx = tx - m.x, dz = tz - m.z, d = Math.hypot(dx, dz);
@@ -499,7 +505,7 @@ function startAttack(ch, m, pat) {
   else if (pat === 2) {
     wind = 1500; m.circles = [];
     for (const p of channels.get(ch).players.values()) {
-      if (p.dead || m.circles.length >= 6 || Math.hypot(p.x - m.x, p.z - m.z) > 30) continue;
+      if (p.dead || A.inSafe(p.x, p.z) || m.circles.length >= 6 || Math.hypot(p.x - m.x, p.z - m.z) > 30) continue;
       m.circles.push({ x: p.x, z: p.z, r: 3.2 });
     }
     if (!m.circles.length) return;
@@ -557,7 +563,7 @@ function updateMonsters(ch, dt) {
     if (m.st === 2) {
       if (now >= m.windEnd) {
         for (const p of players.values()) { // 원이 여러 개여도 한 번만 다침
-          if (p.dead) continue;
+          if (p.dead || A.inSafe(p.x, p.z)) continue; // 광장 안은 안전
           if (m.circles.some((c) => Math.hypot(p.x - c.x, p.z - c.z) < c.r + 0.45 && Math.abs(p.y - A.islandH(c.x, c.z)) < 3)) hurtPlayer(ch, p, def.atk * (isNight() ? A.NIGHT_ATK : 1));
         }
         m.st = 0; m.nextAtk = now + def.cd;
@@ -565,7 +571,7 @@ function updateMonsters(ch, dt) {
       continue;
     }
     let tgt = m.target ? players.get(m.target) : null;
-    if (tgt && (tgt.dead || Math.hypot(tgt.x - m.x, tgt.z - m.z) > def.aggro * 1.6)) { tgt = null; m.target = 0; }
+    if (tgt && (tgt.dead || A.inSafe(tgt.x, tgt.z) || Math.hypot(tgt.x - m.x, tgt.z - m.z) > def.aggro * 1.6)) { tgt = null; m.target = 0; }
     if (!def.boss && Math.hypot(m.x - m.hx, m.z - m.hz) > LEASH) { m.returning = true; m.target = 0; tgt = null; }
     if (m.returning) {
       m.st = 1;
@@ -575,7 +581,7 @@ function updateMonsters(ch, dt) {
     if (!tgt) { // 가장 가까운 사람을 찾음
       let best = null, bd = def.aggro;
       for (const p of players.values()) {
-        if (p.dead || Math.abs(p.y - A.islandH(m.x, m.z)) > 4) continue;
+        if (p.dead || A.inSafe(p.x, p.z) || Math.abs(p.y - A.islandH(m.x, m.z)) > 4) continue;
         const d = Math.hypot(p.x - m.x, p.z - m.z);
         if (d < bd) { bd = d; best = p; }
       }
