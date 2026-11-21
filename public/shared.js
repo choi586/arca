@@ -24,9 +24,10 @@ const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a
 const ISLANDS = [
   { id: 0, name: '포근언덕', icon: '🌿', x: 0, z: 0, R },
   { id: 1, name: '버섯숲', icon: '🍄', x: 124, z: 0, R: 30 },
+  { id: 2, name: '서리봉우리', icon: '❄️', x: 0, z: -132, R: 34 }, // 북쪽의 눈 덮인 섬. 바닥이 미끄러움
 ];
 // 바람 기둥: 글라이더를 편 채 들어가면 하늘 높이 올라감
-const UPDRAFTS = [{ x: 56, z: 0, r: 4.5 }, { x: 99, z: 0, r: 4.5 }];
+const UPDRAFTS = [{ x: 56, z: 0, r: 4.5 }, { x: 99, z: 0, r: 4.5 }, { x: 0, z: -56, r: 4.5 }, { x: 0, z: -103, r: 4.5 }];
 const UPDRAFT_TOP = 22;
 function islandOf(x, z) { for (const I of ISLANDS) if (Math.hypot(x - I.x, z - I.z) <= I.R) return I; return null; }
 function shroomH(x, z) {
@@ -34,9 +35,16 @@ function shroomH(x, z) {
   const bumps = 1.2 * Math.sin(dx * 0.21 + 0.5) * Math.cos(dz * 0.19) + 0.6 * Math.sin(dx * 0.43 + dz * 0.37);
   return Math.max(0.6, 2.8 + bumps * smooth(0, 8, I.R - r) - smooth(I.R - 7, I.R, r) * 2);
 }
+function frostH(x, z) { // 가운데가 봉우리처럼 솟은 눈 섬
+  const I = ISLANDS[2], dx = x - I.x, dz = z - I.z, r = Math.hypot(dx, dz);
+  const bumps = 1.0 * Math.sin(dx * 0.23 + 1.1) * Math.cos(dz * 0.2) + 0.5 * Math.sin(dx * 0.41 - dz * 0.33);
+  return Math.max(0.6, 2.6 + 10 * Math.exp(-r * r / 150) + bumps * smooth(0, 8, I.R - r) - smooth(I.R - 7, I.R, r) * 1.8);
+}
 function islandH(x, z) {
-  const I = ISLANDS[1];
-  return Math.hypot(x - I.x, z - I.z) <= I.R + 0.5 ? shroomH(x, z) : mainH(x, z);
+  const I = ISLANDS[1], F = ISLANDS[2];
+  if (Math.hypot(x - I.x, z - I.z) <= I.R + 0.5) return shroomH(x, z);
+  if (Math.hypot(x - F.x, z - F.z) <= F.R + 0.5) return frostH(x, z);
+  return mainH(x, z);
 }
 function mainH(x, z) {
   const r = Math.hypot(x, z);
@@ -89,7 +97,18 @@ function buildLayout() {
     obstacles.push({ x, z, r: 0.55 * s });
     made++;
   }
-  return { obstacles, houses, trees, rocks, shrooms };
+  // 서리봉우리 섬: 눈 덮인 나무와 얼음 바위
+  const r3 = rng(6160), F = ISLANDS[2], frostTrees = [], iceRocks = [];
+  for (let i = 0, made = 0; i < 400 && made < 30; i++) {
+    const a = r3() * Math.PI * 2, r = 9 + r3() * (F.R - 13), x = F.x + Math.cos(a) * r, z = F.z + Math.sin(a) * r;
+    if (obstacles.some((o) => Math.hypot(o.x - x, o.z - z) < o.r + 3)) continue;
+    if (UPDRAFTS.some((u) => Math.hypot(u.x - x, u.z - z) < u.r + 3) || (Math.abs(x - F.x) < 5 && z > F.z)) continue; // 내리는 길은 비워 둠
+    const s = 0.9 + r3() * 0.9, ice = r3() < 0.3;
+    (ice ? iceRocks : frostTrees).push({ x, z, s });
+    obstacles.push({ x, z, r: (ice ? 0.8 : 0.45) * s });
+    made++;
+  }
+  return { obstacles, houses, trees, rocks, shrooms, frostTrees, iceRocks };
 }
 
 // ---------- 몬스터 ----------
@@ -103,7 +122,11 @@ MONSTERS.golem = { name: '폭풍 골렘', lv: 15, hp: 3000, atk: 30, speed: 2.6,
 // 버섯숲 섬의 몬스터
 MONSTERS.toad = { name: '독버섯 두꺼비', lv: 10, hp: 340, atk: 30, speed: 3.2, xp: 48, aggro: 9, reach: 2.6, hitR: 3.0, hitAt: 0.0, windup: 850, cd: 2000, size: 1.2, respawn: 20000 };
 MONSTERS.wisp = { name: '숲의 정령', lv: 13, hp: 460, atk: 38, speed: 3.8, xp: 80, aggro: 10, reach: 3.0, hitR: 2.4, hitAt: 2.2, windup: 700, cd: 1700, size: 1.0, respawn: 26000 };
-const MONSTER_KINDS = ['slime', 'shroom', 'turtle', 'golem', 'toad', 'wisp'];
+// 서리봉우리 섬의 몬스터
+MONSTERS.yeti = { name: '눈덩이 도깨비', lv: 16, hp: 720, atk: 46, speed: 3.0, xp: 130, aggro: 10, reach: 2.8, hitR: 3.0, hitAt: 1.2, windup: 800, cd: 2000, size: 1.3, respawn: 22000 };
+MONSTERS.wolf = { name: '서리 늑대', lv: 19, hp: 900, atk: 58, speed: 4.6, xp: 190, aggro: 13, reach: 2.6, hitR: 2.2, hitAt: 2.0, windup: 600, cd: 1500, size: 1.1, respawn: 26000 };
+MONSTERS.giant = { name: '서리 거인', lv: 24, hp: 3200, atk: 85, speed: 2.2, xp: 700, aggro: 12, reach: 4.2, hitR: 5.0, hitAt: 2.0, windup: 1300, cd: 2600, size: 2.4, respawn: 90000 };
+const MONSTER_KINDS = ['slime', 'shroom', 'turtle', 'golem', 'toad', 'wisp', 'yeti', 'wolf', 'giant'];
 const BOSS = { x: -30, z: -26 };
 const PARTY_MAX = 4, PARTY_SHARE_RANGE = 30;
 
@@ -135,6 +158,18 @@ function monsterHomes(obstacles) {
   };
   place2('toad', 8);
   place2('wisp', 4);
+  // 서리봉우리 섬: 도깨비와 늑대는 산자락, 거인은 봉우리 꼭대기
+  const F = ISLANDS[2], r3 = rng(8686);
+  const place3 = (kind, n) => {
+    for (let i = 0, made = 0; i < 400 && made < n; i++) {
+      const a = r3() * Math.PI * 2, r = 10 + r3() * (F.R - 16), x = F.x + Math.cos(a) * r, z = F.z + Math.sin(a) * r;
+      if (!free(x, z, 1.5) || (Math.abs(x - F.x) < 9 && z > F.z + 8)) continue; // 내리는 길은 비워 둠
+      homes.push({ kind, x, z, isl: 2 }); made++;
+    }
+  };
+  place3('yeti', 7);
+  place3('wolf', 5);
+  homes.push({ kind: 'giant', x: F.x, z: F.z, isl: 2 });
   return homes;
 }
 
@@ -198,6 +233,10 @@ const ITEMS = {
   rainbow: { name: '무지개송어', icon: '🐡', type: 'mat', sell: 50, desc: '아주 드문 물고기. 귀해서 굽지 않고 팔아요' },
   boot: { name: '낡은 장화', icon: '🥾', type: 'mat', sell: 1, desc: '누가 구름 아래로 떨어뜨린 장화. 한 짝뿐이에요' },
   grilled: { name: '구운 생선', icon: '🍢', type: 'food', heal: 0.4, sell: 10, desc: '먹으면 체력 40% 회복 + 2분 동안 공격력 15% 증가' },
+  icecrystal: { name: '얼음 결정', icon: '🧊', type: 'mat', sell: 45, desc: '눈덩이 도깨비가 떨어뜨리는 차가운 결정' },
+  fang: { name: '서리 송곳니', icon: '🦷', type: 'mat', sell: 65, desc: '서리 늑대의 날카로운 이빨' },
+  heart: { name: '거인의 심장', icon: '💙', type: 'mat', sell: 300, desc: '서리 거인이 남긴 얼지 않는 심장. 아주 비싸요' },
+  icefish: { name: '얼음새우', icon: '🦐', type: 'fish', sell: 24, desc: '서리봉우리에서만 낚여요. 모닥불에 구울 수 있어요' },
   windstone: { name: '바람의 돌', icon: '🌀', type: 'key', sell: 0, desc: '광장 분수의 수정에 바치면 바람의 다리가 가까워져요' },
   shard: { name: '폭풍의 조각', icon: '💎', type: 'mat', sell: 120, desc: '폭풍 골렘을 쓰러뜨린 증표. 비싸게 팔려요' },
 };
@@ -211,6 +250,9 @@ const LOOT = {
   turtle: { gold: [25, 40], drops: [['shell', 1], ['bigpotion', 0.3]] },
   toad: { gold: [15, 25], drops: [['glowcap', 0.6], ['potion', 0.15]] },
   wisp: { gold: [22, 36], drops: [['dust', 0.55], ['bigpotion', 0.1]] },
+  yeti: { gold: [30, 45], drops: [['icecrystal', 0.6], ['bigpotion', 0.1]] },
+  wolf: { gold: [40, 60], drops: [['fang', 0.55], ['bigpotion', 0.12]] },
+  giant: { gold: [150, 220], drops: [['heart', 1], ['bigpotion', 0.5]] },
 };
 // ---------- 구름 낚시 · 요리 · 펫 ----------
 // 섬 가장자리(끝에서 FISH.edge 걸음 안)에서 구름 속으로 낚싯줄을 던짐. 찌가 흔들린 뒤 window 안에 당겨야 잡힘
@@ -248,6 +290,9 @@ const QUESTS = {
   q4: { name: '하늘을 건너', type: 'visit', key: '1', n: 1, gold: 100, xp: 80, stones: 1, lv: 5, desc: '글라이더를 타고 동쪽의 버섯숲 섬에 발을 디뎌 봐요.' },
   q5: { name: '두꺼비 소동', type: 'kill', key: 'toad', n: 4, gold: 220, xp: 220, stones: 1, lv: 9, desc: '버섯숲 섬의 독버섯 두꺼비를 4마리 잡아 줘요.' },
   q6: { name: '정령의 흔적', type: 'collect', key: 'dust', n: 2, gold: 260, xp: 200, stones: 2, lv: 12, desc: '숲의 정령이 남기는 정령 가루 2개를 가져다줘요.' },
+  q8: { name: '설산 정찰', type: 'visit', key: '2', n: 1, gold: 300, xp: 400, stones: 2, lv: 15, desc: '포근언덕 북쪽 끝의 바람 기둥을 타고 서리봉우리에 발을 디뎌 봐요.' },
+  q9: { name: '늑대 무리', type: 'kill', key: 'wolf', n: 5, gold: 500, xp: 700, stones: 2, lv: 18, desc: '서리봉우리의 서리 늑대를 5마리 잡아 줘요.' },
+  q10: { name: '산꼭대기의 주인', type: 'kill', key: 'giant', n: 1, gold: 800, xp: 1000, stones: 3, lv: 22, desc: '서리봉우리 꼭대기의 서리 거인을 쓰러뜨려요.' },
   q7: { name: '폭풍을 잠재워라', type: 'kill', key: 'golem', n: 1, gold: 300, xp: 300, stones: 3, lv: 10, desc: '월드 보스 폭풍 골렘을 함께 쓰러뜨려요. 한 대라도 때리면 돼요.' },
 };
 const QUEST_IDS = Object.keys(QUESTS), QUEST_ACTIVE_MAX = 3;

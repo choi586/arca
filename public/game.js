@@ -264,6 +264,56 @@ for (const rk of LAYOUT.rocks) {
     scene.add(t);
   }
 }
+// ---------- 서리봉우리 섬 ----------
+{
+  const I = ISLANDS[2];
+  const g = new THREE.PlaneGeometry(I.R * 2 + 2, I.R * 2 + 2, 70, 70).toNonIndexed();
+  g.rotateX(-Math.PI / 2);
+  const pos = g.attributes.position, cols = [], c = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    let x = pos.getX(i), z = pos.getZ(i);
+    const r = Math.hypot(x, z);
+    if (r > I.R) { x *= I.R / r; z *= I.R / r; }
+    pos.setX(i, x + I.x); pos.setZ(i, z + I.z);
+    pos.setY(i, islandH(x + I.x, z + I.z));
+  }
+  for (let i = 0; i < pos.count; i += 3) {
+    const x = (pos.getX(i) + pos.getX(i + 1) + pos.getX(i + 2)) / 3 - I.x, z = (pos.getZ(i) + pos.getZ(i + 1) + pos.getZ(i + 2)) / 3 - I.z;
+    const y = (pos.getY(i) + pos.getY(i + 1) + pos.getY(i + 2)) / 3;
+    const n = Math.sin(x * 1.3 + z * 1.7) * 0.5 + Math.sin(x * 2.9 - z * 1.1) * 0.5;
+    if (n > 0.55 && y < 6) c.setHSL(0.56, 0.55, 0.78); // 군데군데 얼음판
+    else c.setHSL(0.58, 0.25, 0.9 + n * 0.04);
+    if (y > 9) c.setHSL(0.6, 0.2, 0.82);
+    if (Math.hypot(x, z) > I.R - 2.5) c.setHSL(0.6, 0.2, 0.6);
+    for (let k = 0; k < 3; k++) cols.push(c.r, c.g, c.b);
+  }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  g.computeVertexNormals();
+  const top = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.75 }));
+  top.receiveShadow = true;
+  const bottom = rockBottom(I.R, 34, 12, 0.9); bottom.position.x = I.x; bottom.position.z = I.z;
+  scene.add(top, bottom);
+  for (const t of LAYOUT.frostTrees) { // 눈 덮인 나무
+    const g2 = new THREE.Group(), s_ = t.s;
+    const trunk = mesh(new THREE.CylinderGeometry(0.16 * s_, 0.26 * s_, 1.4 * s_, 6), '#6b4a2f'); trunk.position.y = 0.7 * s_; g2.add(trunk);
+    for (let k = 0; k < 3; k++) {
+      const cone = mesh(new THREE.ConeGeometry((1.4 - k * 0.35) * s_, 1.6 * s_, 7), k === 2 ? '#f8f9fa' : '#2f6f5e'); cone.position.y = (1.5 + k * 0.85) * s_; g2.add(cone);
+      const snow = mesh(new THREE.ConeGeometry((1.0 - k * 0.25) * s_, 0.7 * s_, 7), '#ffffff'); snow.position.y = (1.95 + k * 0.85) * s_; g2.add(snow);
+    }
+    g2.position.set(t.x, islandH(t.x, t.z) - 0.1, t.z); g2.rotation.y = t.x; scene.add(g2);
+  }
+  for (const rk of LAYOUT.iceRocks) { // 얼음 바위
+    const ice = mesh(new THREE.OctahedronGeometry(rk.s * 1.1, 0), '#a5d8ff', { transparent: true, opacity: 0.8, roughness: 0.15, metalness: 0.1, emissive: '#1c7ed6', emissiveIntensity: 0.15 });
+    ice.position.set(rk.x, islandH(rk.x, rk.z) + rk.s * 0.5, rk.z); ice.rotation.set(0.3, rk.x, 0.2); ice.scale.y = 1.5; scene.add(ice);
+  }
+}
+// 서리봉우리에 있을 때 내리는 눈
+const snowFx = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ color: 0xffffff, size: 0.22, transparent: true, opacity: 0.9, depthWrite: false }));
+{
+  const pts = []; for (let i = 0; i < 500; i++) pts.push((Math.random() - 0.5) * 50, Math.random() * 22, (Math.random() - 0.5) * 50);
+  snowFx.geometry.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  snowFx.visible = false; snowFx.frustumCulled = false; scene.add(snowFx);
+}
 // ---------- 바람 기둥 ----------
 const updraftFx = [];
 for (const u of UPDRAFTS) {
@@ -286,7 +336,7 @@ for (let i = 0; i < 7; i++) {
   for (let k = 0; k < 3; k++) { const x = (rand() - 0.5) * rad, z = (rand() - 0.5) * rad; const t = makeTree(0.9 + rand() * 0.6, rand() < 0.5, x, z); t.position.set(x, 0.5, z); g.add(t); }
   g.position.set(Math.cos(a) * d, -15 + rand() * 40, Math.sin(a) * d);
   g.userData.baseY = g.position.y; g.userData.phase = rand() * 6;
-  if (Math.hypot(g.position.x - ISLANDS[1].x, g.position.z - ISLANDS[1].z) < ISLANDS[1].R + rad + 12) continue; // 버섯숲 섬과 겹치면 뺌
+  if (ISLANDS.some((I) => I.id && Math.hypot(g.position.x - I.x, g.position.z - I.z) < I.R + rad + 12)) continue; // 다른 섬과 겹치면 뺌
   scene.add(g); farIslands.push(g);
 }
 // 구름
@@ -460,6 +510,29 @@ function makeMonster(kind) {
     for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; const d = monsterMesh(new THREE.SphereGeometry(0.13, 6, 5), '#ffffff', mats); d.position.set(Math.cos(a) * 0.62, 1.42, Math.sin(a) * 0.62); body.add(d); }
     const top = monsterMesh(new THREE.SphereGeometry(0.15, 6, 5), '#ffffff', mats); top.position.y = 1.78; body.add(top);
     [-0.25, 0.25].forEach((x) => { const f = monsterMesh(new THREE.SphereGeometry(0.18, 6, 5), '#d9c9a8', mats); f.position.set(x, 0.1, 0.1); f.scale.y = 0.6; body.add(f); });
+  } else if (kind === 'yeti') { // 서리봉우리: 눈덩이 도깨비 (눈사람처럼 생김)
+    const lo = monsterMesh(new THREE.SphereGeometry(0.85, 10, 8), '#f1f3f5', mats); lo.position.y = 0.8;
+    const hi = monsterMesh(new THREE.SphereGeometry(0.6, 10, 8), '#ffffff', mats); hi.position.y = 1.9;
+    const horn1 = monsterMesh(new THREE.ConeGeometry(0.12, 0.45, 5), '#74c0fc', mats); horn1.position.set(-0.3, 2.45, 0); horn1.rotation.z = 0.4;
+    const horn2 = horn1.clone(); horn2.position.x = 0.3; horn2.rotation.z = -0.4;
+    const nose = monsterMesh(new THREE.ConeGeometry(0.09, 0.4, 5), '#ff922b', mats); nose.rotation.x = Math.PI / 2; nose.position.set(0, 1.85, 0.7);
+    body.add(lo, hi, horn1, horn2, nose, eye(-0.2, 2.02, 0.52, 1.1), eye(0.2, 2.02, 0.52, 1.1));
+    [-1, 1].forEach((x) => { const arm = monsterMesh(new THREE.CylinderGeometry(0.07, 0.07, 0.9, 5), '#6b4a2f', mats); arm.position.set(x * 0.95, 1.3, 0); arm.rotation.z = x * 1.0; body.add(arm); });
+  } else if (kind === 'wolf') { // 서리봉우리: 서리 늑대
+    const torso = monsterMesh(new THREE.BoxGeometry(0.7, 0.7, 1.6), '#ced4da', mats); torso.position.y = 0.9;
+    const head = monsterMesh(new THREE.BoxGeometry(0.55, 0.55, 0.6), '#dee2e6', mats); head.position.set(0, 1.25, 0.95);
+    const snout = monsterMesh(new THREE.BoxGeometry(0.28, 0.24, 0.4), '#adb5bd', mats); snout.position.set(0, 1.12, 1.38);
+    const tail = monsterMesh(new THREE.ConeGeometry(0.16, 0.8, 5), '#f1f3f5', mats); tail.position.set(0, 1.15, -1.05); tail.rotation.x = -1.0;
+    body.add(torso, head, snout, tail, eye(-0.17, 1.38, 1.26), eye(0.17, 1.38, 1.26));
+    [-0.2, 0.2].forEach((x) => { const ear = monsterMesh(new THREE.ConeGeometry(0.12, 0.3, 4), '#74c0fc', mats); ear.position.set(x, 1.65, 0.85); body.add(ear); });
+    [[-1, 1], [1, 1], [-1, -1], [1, -1]].forEach(([x, z]) => { const l = monsterMesh(new THREE.CylinderGeometry(0.11, 0.09, 0.6, 5), '#adb5bd', mats); l.position.set(x * 0.25, 0.3, z * 0.6); body.add(l); });
+  } else if (kind === 'giant') { // 서리봉우리 꼭대기: 서리 거인
+    const torso = monsterMesh(new THREE.DodecahedronGeometry(1.5, 0), '#a5d8ff', mats, { roughness: 0.3 }); torso.position.y = 2.6; torso.scale.set(1, 1.2, 0.8);
+    const head = monsterMesh(new THREE.IcosahedronGeometry(0.7, 0), '#d0ebff', mats, { roughness: 0.3 }); head.position.y = 4.6;
+    const crown = [0, 1, 2].map((i) => { const sp = monsterMesh(new THREE.ConeGeometry(0.18, 0.8, 4), '#4dabf7', mats, { emissive: '#1c7ed6', emissiveIntensity: 0.5 }); sp.position.set((i - 1) * 0.4, 5.4 - Math.abs(i - 1) * 0.15, 0); return sp; });
+    const gem = monsterMesh(new THREE.OctahedronGeometry(0.4, 0), '#e7f5ff', mats, { emissive: '#74c0fc', emissiveIntensity: 1 }); gem.position.set(0, 2.9, 1.15);
+    body.add(torso, head, ...crown, gem, eye(-0.25, 4.7, 0.6, 1.6), eye(0.25, 4.7, 0.6, 1.6));
+    [-1, 1].forEach((x) => { const arm = monsterMesh(new THREE.BoxGeometry(0.7, 2.6, 0.7), '#74c0fc', mats, { roughness: 0.3 }); arm.position.set(x * 1.9, 2.3, 0); const leg = monsterMesh(new THREE.BoxGeometry(0.8, 1.4, 0.8), '#74c0fc', mats, { roughness: 0.3 }); leg.position.set(x * 0.7, 0.7, 0); body.add(arm, leg); });
   } else if (kind === 'toad') { // 버섯숲: 독버섯 두꺼비
     const belly = monsterMesh(new THREE.SphereGeometry(0.85, 10, 8), '#74b816', mats); belly.position.y = 0.65; belly.scale.set(1.1, 0.8, 1);
     const cap = monsterMesh(new THREE.SphereGeometry(1.15, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), '#9c36b5', mats); cap.position.y = 1.05; cap.scale.y = 0.6;
@@ -1810,7 +1883,12 @@ function updateMe(dt) {
     if (me.emote) { me.emote = 0; me.emoteT = 0; }
   }
   if (me.glide && me.dashT <= 0) { mx = Math.sin(me.ry); mz = Math.cos(me.ry); speed = GLIDE_SPEED * (me.lift && me.y < UPDRAFT_TOP ? 0.25 : 1); } // 글라이더는 바라보는 쪽으로 계속 나아감 (바람 기둥 안에서는 천천히 떠오름)
-  me.x += mx * speed * dt; me.z += mz * speed * dt;
+  let vx = mx * speed, vz = mz * speed;
+  if (curIsle.id === 2 && me.onGround && !me.glide && me.dashT <= 0 && !me.dead) { // 서리봉우리는 바닥이 미끄러워서 바로 서거나 꺾지 못함
+    const k = Math.min(1, dt * 2.2);
+    me.svx += (vx - me.svx) * k; me.svz += (vz - me.svz) * k; vx = me.svx; vz = me.svz;
+  } else { me.svx = vx; me.svz = vz; }
+  me.x += vx * dt; me.z += vz * dt;
 
   // 물건에 부딪히면 밀려나기
   for (const o of obstacles) {
@@ -1838,6 +1916,7 @@ function updateMe(dt) {
     curIsle = isle; $('isle').textContent = `${isle.icon} ${isle.name}`;
     toast(`${isle.icon} ${isle.name}에 도착!`);
     if (isle.id === 1) addLog('🍄 버섯숲은 Lv10 안팎의 몬스터가 살아요. 돌아갈 때는 서쪽 끝의 바람 기둥을 타세요');
+    if (isle.id === 2) addLog('❄️ 서리봉우리는 Lv16이 넘는 몬스터가 살고 바닥이 미끄러워요. 돌아갈 때는 남쪽 끝의 바람 기둥을 타세요');
   }
 
   if (me.y < -45) { // 구름 아래로 떨어지면 광장으로
@@ -1931,20 +2010,21 @@ function drawMinimap() { // 내가 있는 섬을 보여 줌
   const X = (x) => c + (x - I.x) * s, Z = (z) => c + (z - I.z) * s, on = (x, z, pad = 4) => Math.hypot(x - I.x, z - I.z) < I.R + pad;
   const dot = (x, z, r) => { mm.beginPath(); mm.arc(X(x), Z(z), r, 0, Math.PI * 2); mm.fill(); };
   mm.clearRect(0, 0, W, W);
-  mm.fillStyle = I.id ? '#3f8f7f' : '#69b34c'; dot(I.x, I.z, I.R * s);
+  mm.fillStyle = I.id === 2 ? '#dbe4ff' : I.id ? '#3f8f7f' : '#69b34c'; dot(I.x, I.z, I.R * s);
   if (I.id === 0) {
     mm.fillStyle = '#e6d6ae'; dot(0, 0, 13 * s);
     mm.fillStyle = '#5fc1ff'; dot(0, 0, 3 * s);
     for (const h of houses) { mm.fillStyle = h.color; mm.fillRect(X(h.x) - 4, Z(h.z) - 4, 8, 8); }
-  } else { mm.fillStyle = '#e599f7'; for (const sh of LAYOUT.shrooms) dot(sh.x, sh.z, 2); }
+  } else if (I.id === 2) { mm.fillStyle = '#74c0fc'; for (const t of LAYOUT.iceRocks) dot(t.x, t.z, 2.5); mm.fillStyle = '#5c8f7f'; for (const t of LAYOUT.frostTrees) dot(t.x, t.z, 1.6); }
+  else { mm.fillStyle = '#e599f7'; for (const sh of LAYOUT.shrooms) dot(sh.x, sh.z, 2); }
   mm.strokeStyle = '#c5f6fa'; mm.lineWidth = 2;
   for (const u of UPDRAFTS) if (on(u.x, u.z, 8)) { mm.beginPath(); mm.arc(X(u.x), Z(u.z), 4, 0, Math.PI * 2); mm.stroke(); }
   mm.fillStyle = '#a0723a';
   for (const e of decos.values()) if (on(e.d.x, e.d.z)) mm.fillRect(X(e.d.x) - 1.5, Z(e.d.z) - 1.5, 3, 3);
   for (const mo of monsters.values()) {
     if (mo.dying || !on(mo.av.position.x, mo.av.position.z)) continue;
-    mm.fillStyle = mo.kind === 'golem' ? '#9c36b5' : mo.kind === 'turtle' ? '#7a3b00' : '#e03131';
-    dot(mo.av.position.x, mo.av.position.z, mo.kind === 'golem' ? 6 : mo.kind === 'turtle' ? 3.5 : 2);
+    mm.fillStyle = mo.kind === 'golem' ? '#9c36b5' : mo.kind === 'turtle' || mo.kind === 'giant' ? '#7a3b00' : '#e03131';
+    dot(mo.av.position.x, mo.av.position.z, mo.kind === 'golem' ? 6 : mo.kind === 'giant' ? 5 : mo.kind === 'turtle' ? 3.5 : 2);
   }
   for (const [id, o] of others) {
     if (!on(o.av.position.x, o.av.position.z)) continue;
@@ -1987,6 +2067,12 @@ function frame(now) {
     updateMerchant(dt);
     updateElder(dt);
     updateLeisure(dt);
+    snowFx.visible = curIsle.id === 2;
+    if (snowFx.visible) {
+      const sp = snowFx.geometry.attributes.position;
+      for (let i = 0; i < sp.count; i++) { let y = sp.getY(i) - dt * 3.5; if (y < 0) y += 22; sp.setY(i, y); }
+      sp.needsUpdate = true; snowFx.position.set(me.x, me.y - 4, me.z);
+    }
     updatePet(me, dt); for (const o of others.values()) updatePet(o, dt);
     updateDecos(dt);
     placeTag(me.tag, me.av, dt, me.a === ANIM.sit ? 2.05 : me.a === ANIM.dead ? 1.2 : 2.5);

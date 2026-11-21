@@ -270,6 +270,7 @@ function handleLeisure(p, m) {
     const table = isNight() ? A.FISH_NIGHT : A.FISH_DAY;
     let r = Math.random(), id = table[0][0];
     for (const [k, w] of table) { if (r < w) { id = k; break; } r -= w; }
+    if (id === 'cloudfish' && (A.islandOf(p.x, p.z) || {}).id === 2) id = 'icefish'; // 서리봉우리에서는 얼음새우가 낚임
     const n = addItem(inv, id, 1);
     sendInv(p);
     return send(p.ws, n ? { t: 'caught', item: id } : { t: 'caught', fail: `${A.ITEMS[id].name}을(를) 낚았지만 가방이 꽉 차서 놓아줬어요` });
@@ -814,7 +815,7 @@ wss.on('connection', (ws) => {
       me.z = Math.max(-200, Math.min(200, z));
       me.ry = ry;
       me.a = Math.max(0, Math.min(15, Math.floor(num(m.a))));
-      if (me.x > 90) { const I = A.islandOf(me.x, me.z); if (I && I.id === 1) questEvent(me, 'visit', '1'); }
+      if (Math.hypot(me.x, me.z) > A.R) { const I = A.islandOf(me.x, me.z); if (I && I.id) questEvent(me, 'visit', String(I.id)); }
     } else if (m.t === 'atk') {
       playerAttack(me.ch, me, Math.floor(num(m.k, -1)), num(m.ry, me.ry));
     } else if (m.t === 'use' || m.t === 'equip' || m.t === 'buy' || m.t === 'sell') {
