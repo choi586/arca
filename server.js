@@ -82,7 +82,7 @@ function broadcast(ch, msg, exceptId) {
   const s = JSON.stringify(msg);
   for (const p of channels.get(ch).players.values()) if (p.id !== exceptId && p.ws.readyState === 1) p.ws.send(s);
 }
-function publicInfo(p) { return { id: p.id, name: p.name, color: p.color, hat: p.hat, x: p.x, y: p.y, z: p.z, ry: p.ry, lv: p.lv, w: p.inv.equip, title: titleName(p), pet: p.inv.pet }; }
+function publicInfo(p) { return { id: p.id, name: p.name, color: p.color, hat: p.hat, x: p.x, y: p.y, z: p.z, ry: p.ry, lv: p.lv, w: p.inv.equip, title: titleName(p), pet: p.inv.pet, cos: p.inv.wear }; }
 function cleanText(s, max) { return String(s || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, max); }
 const num = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
 const r2 = (v) => Math.round(v * 100) / 100;
@@ -244,6 +244,57 @@ function playerAttack(ch, p, k, ry) {
   broadcast(ch, fxMsg, p.id);
 }
 
+// ---------- 뽑기 상자 · 장식 ----------
+function rollGacha(p, box, forceTier) {
+  const inv = p.inv;
+  let tier = box.tiers[0], r = Math.random() * 100;
+  for (const t of box.tiers) { if (r < t.w) { tier = t; break; } r -= t.w; }
+  if (forceTier !== undefined && A.RARITY.indexOf(tier.r) < forceTier) { // 천장: 영웅 이상 확정
+    const hi = box.tiers.filter((t) => A.RARITY.indexOf(t.r) >= forceTier), sum = hi.reduce((a, t) => a + t.w, 0);
+    let x = Math.random() * sum; tier = hi[0];
+    for (const t of hi) { if (x < t.w) { tier = t; break; } x -= t.w; }
+  }
+  const [kind, a, b] = tier.pool[Math.floor(Math.random() * tier.pool.length)];
+  const res = { r: tier.r };
+  if (kind === 'gold') { inv.gold = Math.min(999999, inv.gold + a); res.icon = '💰'; res.text = `${a}G`; }
+  else if (kind === 'item') {
+    const it = A.ITEMS[a], n = addItem(inv, a, b);
+    res.icon = it.icon; res.text = `${it.name} ×${b}`;
+    if (n < b) { const back = (b - n) * (it.sell || 20); inv.gold = Math.min(999999, inv.gold + back); res.text += ` (가방이 꽉 차서 ${back}G로)`; }
+  } else {
+    const list = kind === 'cos' ? inv.cos : inv.pets, def = (kind === 'cos' ? A.COSMETICS : A.PETS)[a];
+    res.icon = def.icon; res.text = def.name;
+    if (list.includes(a)) { inv.gold = Math.min(999999, inv.gold + box.dup); res.text += ` (이미 있어서 ${box.dup}G로)`; }
+    else { list.push(a); res.isNew = true; if (kind === 'pet') { inv.pet = a; broadcast(p.ch, { t: 'pet', id: p.id, pet: a }); } } // 새 펫은 바로 따라옴
+  }
+  return res;
+}
+function handleGacha(p, m) {
+  const inv = p.inv;
+  if (m.t === 'wear') {
+    if (m.id && !inv.cos.includes(m.id)) return;
+    inv.wear = m.id || '';
+    sendInv(p);
+    return broadcast(p.ch, { t: 'cos', id: p.id, cos: inv.wear });
+  }
+  const box = A.GACHA[m.box]; if (!box) return;
+  if (!nearShop(p)) return notice(p, '상인 모모 가까이에서만 뽑을 수 있어요');
+  const n = m.n === 10 ? 10 : 1;
+  if (inv.gold < box.price * n) return notice(p, '골드가 모자라요');
+  inv.gold -= box.price * n;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    let force;
+    if (box.pity) { inv.pity++; if (inv.pity >= box.pity) force = 3; }
+    const res = rollGacha(p, box, force);
+    if (box.pity && A.RARITY.indexOf(res.r) >= 3) inv.pity = 0;
+    out.push(res);
+    if (res.r === '전설') broadcast(p.ch, { t: 'notice', text: `🎉 ${p.name} 님이 ${box.name}에서 전설 ${res.icon} ${res.text.split(' (')[0]}을(를) 뽑았어요!` });
+  }
+  sendInv(p);
+  send(p.ws, { t: 'gacha', box: m.box, res: out });
+}
+
 // ---------- 구름 낚시 · 요리 · 펫 ----------
 function handleLeisure(p, m) {
   const inv = p.inv, now = Date.now();
@@ -380,7 +431,7 @@ function handleShop(p, m) {
       notice(p, `샀어요: ${w.icon} ${w.name} — 가방(I)에서 바꿔 들 수 있어요`);
     } else if (A.PETS[m.id]) {
       const pet = A.PETS[m.id];
-      if (!pet.price) return notice(p, `${pet.name}은(는) 살 수 없어요. 낚시로만 만날 수 있어요`);
+      if (!pet.price) return notice(p, `${pet.name}은(는) 살 수 없어요. ${pet.gacha ? '뽑기 상자에서만 나와요' : '낚시로만 만날 수 있어요'}`);
       if (inv.pets.includes(m.id)) return notice(p, '이미 함께하고 있어요');
       if (inv.gold < pet.price) return notice(p, '골드가 모자라요');
       inv.gold -= pet.price; inv.pets.push(m.id); inv.pet = m.id;
@@ -447,8 +498,15 @@ function handleQuest(p, m) {
     for (const id in cost.mats) if ((inv.items[id] || 0) < cost.mats[id]) return notice(p, `${A.ITEMS[id].name}이(가) 모자라요`);
     inv.gold -= cost.gold;
     for (const id in cost.mats) removeItem(inv, id, cost.mats[id]);
+    if (cost.chance && Math.random() >= cost.chance) { // +6부터는 실패할 수 있음 (단계는 그대로)
+      sendInv(p);
+      send(p.ws, { t: 'upres', ok: false, w: m.w, lv });
+      return notice(p, `💨 ${w.name} +${lv + 1} 강화에 실패했어요… 골드와 재료만 사라졌어요`);
+    }
     inv.up[m.w] = lv + 1;
     sendInv(p);
+    send(p.ws, { t: 'upres', ok: true, w: m.w, lv: lv + 1 });
+    if (lv + 1 >= 8) broadcast(p.ch, { t: 'notice', text: `🔨 ${p.name} 님이 ${w.name} +${lv + 1} 강화에 성공했어요!` });
     notice(p, `🔨 ${w.name} +${lv + 1} 강화 성공! 피해가 ${Math.round(A.UP_BONUS * (lv + 1) * 100)}% 늘었어요`);
     return;
   }
@@ -821,6 +879,8 @@ wss.on('connection', (ws) => {
       playerAttack(me.ch, me, Math.floor(num(m.k, -1)), num(m.ry, me.ry));
     } else if (m.t === 'use' || m.t === 'equip' || m.t === 'buy' || m.t === 'sell') {
       handleShop(me, m);
+    } else if (m.t === 'gacha' || m.t === 'wear') {
+      handleGacha(me, m);
     } else if (m.t === 'fish' || m.t === 'reel' || m.t === 'cook' || m.t === 'pet') {
       handleLeisure(me, m);
     } else if (m.t === 'title' || m.t === 'rank') {

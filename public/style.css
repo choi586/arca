@@ -248,3 +248,14 @@ body.touch #recordBtn { display: none; }
 #cookHint button { background: #ffc9c9; }
 .recstats { grid-template-columns: repeat(5, 1fr); }
 #bagPets { margin-bottom: 4px; }
+
+/* ---------- 뽑기 상자 ---------- */
+.odds { font-size: 12px; background: #f6f8fb; border-radius: 10px; padding: 8px 10px; margin: 2px 0 10px; display: grid; gap: 3px; line-height: 1.45; }
+.gres { display: grid; gap: 3px; margin-bottom: 8px; padding: 8px 10px; border-radius: 10px; background: #1d2b3a; font-size: 13px; font-weight: 700; }
+.gres b { color: #ffd43b; }
+.odds .r0 b, .gres .r0 { color: #868e96; } .gres .r0 { color: #ced4da; }
+.odds .r1 b { color: #2f9e44; } .gres .r1 { color: #8ce99a; }
+.odds .r2 b { color: #1c7ed6; } .gres .r2 { color: #74c0fc; }
+.odds .r3 b { color: #9c36b5; } .gres .r3 { color: #e599f7; }
+.odds .r4 b { color: #e67700; } .gres .r4 { color: #ffd43b; }
+#shop .tabs button { padding: 8px 4px; font-size: 13px; }
