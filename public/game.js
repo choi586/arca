@@ -525,6 +525,55 @@ function makeMonster(kind) {
     for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; const d = monsterMesh(new THREE.SphereGeometry(0.13, 6, 5), '#ffffff', mats); d.position.set(Math.cos(a) * 0.62, 1.42, Math.sin(a) * 0.62); body.add(d); }
     const top = monsterMesh(new THREE.SphereGeometry(0.15, 6, 5), '#ffffff', mats); top.position.y = 1.78; body.add(top);
     [-0.25, 0.25].forEach((x) => { const f = monsterMesh(new THREE.SphereGeometry(0.18, 6, 5), '#d9c9a8', mats); f.position.set(x, 0.1, 0.1); f.scale.y = 0.6; body.add(f); });
+  } else if (kind === 'queen') { // 버섯숲 보스: 버섯 여왕
+    const stem = monsterMesh(new THREE.CylinderGeometry(1.0, 1.3, 2.6, 10), '#f8f0dc', mats); stem.position.y = 1.3;
+    const cap = monsterMesh(new THREE.SphereGeometry(2.4, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), '#ae3ec9', mats, { emissive: '#862e9c', emissiveIntensity: 0.4 }); cap.position.y = 2.5; cap.scale.y = 0.7;
+    body.add(stem, cap, eye(-0.4, 1.7, 1.02, 2), eye(0.4, 1.7, 1.02, 2));
+    for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; const d = monsterMesh(new THREE.SphereGeometry(0.3, 6, 5), '#fff9db', mats, { emissive: '#ffe066', emissiveIntensity: 0.6 }); d.position.set(Math.cos(a) * 1.5, 3.55, Math.sin(a) * 1.5); body.add(d); }
+    const band = monsterMesh(new THREE.CylinderGeometry(0.75, 0.75, 0.35, 10, 1, true), '#fcc419', mats, { metalness: 0.6, roughness: 0.3, side: THREE.DoubleSide }); band.position.y = 4.35;
+    body.add(band);
+    for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; const sp = monsterMesh(new THREE.ConeGeometry(0.16, 0.45, 4), '#fcc419', mats, { metalness: 0.6, roughness: 0.3 }); sp.position.set(Math.cos(a) * 0.7, 4.7, Math.sin(a) * 0.7); body.add(sp); }
+    const mouth = monsterMesh(new THREE.BoxGeometry(0.5, 0.12, 0.1), '#862e9c', mats); mouth.position.set(0, 1.25, 1.15); body.add(mouth);
+  } else if (kind === 'bee') { // 포근언덕: 붕붕 꿀벌
+    const b = monsterMesh(new THREE.SphereGeometry(0.42, 10, 8), '#ffd43b', mats); b.scale.z = 1.3; b.position.y = 1.2;
+    for (const z of [-0.2, 0.15]) { const st = monsterMesh(new THREE.TorusGeometry(0.4, 0.06, 5, 12), '#343a40', mats); st.position.set(0, 1.2, z); body.add(st); }
+    const sting = monsterMesh(new THREE.ConeGeometry(0.08, 0.3, 5), '#343a40', mats); sting.rotation.x = -Math.PI / 2; sting.position.set(0, 1.2, -0.65);
+    body.add(b, sting, eye(-0.15, 1.3, 0.48), eye(0.15, 1.3, 0.48));
+    for (const x of [-1, 1]) { const w = monsterMesh(new THREE.SphereGeometry(0.3, 6, 5), '#e7f5ff', mats, { transparent: true, opacity: 0.6 }); w.scale.set(1, 0.15, 0.6); w.position.set(x * 0.4, 1.6, 0); w.rotation.z = x * 0.4; body.add(w); }
+  } else if (kind === 'scarecrow') { // 포근언덕: 심술 허수아비
+    const pole = monsterMesh(new THREE.CylinderGeometry(0.08, 0.08, 2.2, 6), '#7a4b2a', mats); pole.position.y = 1.1;
+    const arms = monsterMesh(new THREE.CylinderGeometry(0.07, 0.07, 2.0, 6), '#7a4b2a', mats); arms.rotation.z = Math.PI / 2; arms.position.y = 1.7;
+    const shirt = monsterMesh(new THREE.BoxGeometry(0.9, 0.9, 0.45), '#e8590c', mats); shirt.position.y = 1.55;
+    const head = monsterMesh(new THREE.SphereGeometry(0.42, 10, 8), '#e9c46a', mats); head.position.y = 2.35;
+    const hat = monsterMesh(new THREE.ConeGeometry(0.6, 0.55, 10), '#5c3d1e', mats); hat.position.y = 2.85;
+    body.add(pole, arms, shirt, head, hat, eye(-0.15, 2.4, 0.38, 1.3), eye(0.15, 2.4, 0.38, 1.3));
+    for (const x of [-1, 1]) { const hnd = monsterMesh(new THREE.ConeGeometry(0.16, 0.4, 5), '#e9c46a', mats); hnd.rotation.z = x * Math.PI / 2; hnd.position.set(x * 1.1, 1.7, 0); body.add(hnd); }
+  } else if (kind === 'bat') { // 버섯숲: 포자 박쥐
+    const b = monsterMesh(new THREE.SphereGeometry(0.36, 9, 7), '#5f3dc4', mats); b.position.y = 1.5;
+    body.add(b, eye(-0.13, 1.56, 0.3), eye(0.13, 1.56, 0.3));
+    for (const x of [-1, 1]) {
+      const w = monsterMesh(new THREE.ConeGeometry(0.5, 0.9, 3), '#7048e8', mats, { emissive: '#5f3dc4', emissiveIntensity: 0.3 }); w.scale.z = 0.12; w.rotation.z = x * 1.9; w.position.set(x * 0.6, 1.6, 0); body.add(w);
+      const ear = monsterMesh(new THREE.ConeGeometry(0.1, 0.26, 4), '#5f3dc4', mats); ear.position.set(x * 0.2, 1.9, 0); body.add(ear);
+    }
+  } else if (kind === 'treant') { // 버섯숲: 고목 나무지기
+    const trunk = monsterMesh(new THREE.CylinderGeometry(0.75, 1.0, 2.8, 8), '#6b4a2f', mats); trunk.position.y = 1.4;
+    const crown = monsterMesh(new THREE.IcosahedronGeometry(1.6, 0), '#2b8a3e', mats); crown.position.y = 3.5;
+    const crown2 = monsterMesh(new THREE.IcosahedronGeometry(1.0, 0), '#37b24d', mats); crown2.position.set(0.9, 3.0, 0.4);
+    body.add(trunk, crown, crown2, eye(-0.3, 1.9, 0.78, 1.8), eye(0.3, 1.9, 0.78, 1.8));
+    const mouth = monsterMesh(new THREE.BoxGeometry(0.5, 0.14, 0.1), '#2b1a0c', mats); mouth.position.set(0, 1.35, 0.9); body.add(mouth);
+    for (const x of [-1, 1]) { const arm = monsterMesh(new THREE.CylinderGeometry(0.16, 0.22, 1.6, 6), '#6b4a2f', mats); arm.position.set(x * 1.2, 1.8, 0.1); arm.rotation.z = x * 0.9; body.add(arm); }
+  } else if (kind === 'penguin') { // 서리봉우리: 펭귄 병사
+    const b = monsterMesh(new THREE.SphereGeometry(0.6, 10, 8), '#343a40', mats); b.scale.y = 1.35; b.position.y = 0.95;
+    const belly = monsterMesh(new THREE.SphereGeometry(0.46, 9, 7), '#f8f9fa', mats); belly.scale.set(1, 1.3, 0.6); belly.position.set(0, 0.9, 0.3);
+    const beak = monsterMesh(new THREE.ConeGeometry(0.1, 0.3, 5), '#ff922b', mats); beak.rotation.x = Math.PI / 2; beak.position.set(0, 1.4, 0.62);
+    const helm = monsterMesh(new THREE.SphereGeometry(0.42, 9, 6, 0, Math.PI * 2, 0, Math.PI / 2), '#74c0fc', mats, { metalness: 0.5, roughness: 0.3 }); helm.position.y = 1.5;
+    body.add(b, belly, beak, helm, eye(-0.2, 1.48, 0.5), eye(0.2, 1.48, 0.5));
+    for (const x of [-1, 1]) { const fl = monsterMesh(new THREE.BoxGeometry(0.12, 0.7, 0.4), '#343a40', mats); fl.position.set(x * 0.62, 1.0, 0); fl.rotation.z = x * 0.3; const ft = monsterMesh(new THREE.BoxGeometry(0.28, 0.1, 0.4), '#ff922b', mats); ft.position.set(x * 0.25, 0.06, 0.2); body.add(fl, ft); }
+  } else if (kind === 'icewisp') { // 서리봉우리: 눈보라 정령
+    const core = monsterMesh(new THREE.IcosahedronGeometry(0.6, 0), '#d0ebff', mats, { emissive: '#4dabf7', emissiveIntensity: 0.9, roughness: 0.2 }); core.position.y = 1.7;
+    body.add(core, eye(-0.2, 1.78, 0.5, 1.2), eye(0.2, 1.78, 0.5, 1.2));
+    for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; const sh = monsterMesh(new THREE.OctahedronGeometry(0.2, 0), '#a5d8ff', mats, { emissive: '#74c0fc', emissiveIntensity: 0.6 }); sh.position.set(Math.cos(a) * 1.0, 1.7 + Math.sin(a * 2) * 0.3, Math.sin(a) * 1.0); body.add(sh); }
+    const tail = monsterMesh(new THREE.ConeGeometry(0.4, 1.0, 6), '#e7f5ff', mats, { transparent: true, opacity: 0.7 }); tail.rotation.x = Math.PI; tail.position.y = 0.8; body.add(tail);
   } else if (kind === 'yeti') { // 서리봉우리: 눈덩이 도깨비 (눈사람처럼 생김)
     const lo = monsterMesh(new THREE.SphereGeometry(0.85, 10, 8), '#f1f3f5', mats); lo.position.y = 0.8;
     const hi = monsterMesh(new THREE.SphereGeometry(0.6, 10, 8), '#ffffff', mats); hi.position.y = 1.9;
@@ -881,7 +930,7 @@ function connect() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   ws = new WebSocket(`${proto}://${location.host}`);
   ws.onopen = () => ws.send(JSON.stringify({ t: 'join', name: profile.name, color: profile.color, hat: profile.hat,
-    lv: Number(store.get('arca.lv')) || 1, xp: Number(store.get('arca.xp')) || 0, inv: loadInv(), deco: loadDeco(), q: loadQ(), uid: myUid(), st: loadSt(), title: store.get('arca.title') || '' }));
+    lv: Number(store.get('arca.lv')) || 1, xp: Number(store.get('arca.xp')) || 0, inv: loadInv(), deco: loadDeco(), q: loadQ(), uid: myUid(), st: loadSt(), title: store.get('arca.title') || '', v: ARCA.VERSION }));
   ws.onmessage = (ev) => {
     let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
     const h = handlers[m.t]; if (h) h(m);
@@ -898,6 +947,9 @@ function connect() {
 }
 const handlers = {
   welcome(m) {
+    if (m.v && m.v > (ARCA.VERSION || 0) && !$('newVer')) { // 서버가 더 새 버전이면 새로고침을 권함
+      const b = el('button', '', '🆕 새 버전이 나왔어요! 눌러서 새로고침'); b.id = 'newVer'; b.onclick = () => location.reload(); document.body.appendChild(b);
+    }
     clearOthers();
     setChest(m.chest || null);
     statsReady = false; // 접속 직후 받은 레벨은 '레벨 업'이 아님
@@ -939,7 +991,7 @@ const handlers = {
       seen.add(id);
       let mo = monsters.get(id);
       if (mo && mo.dying) continue;
-      if (!mo) mo = addMonster(id, MONSTER_KINDS[ki], x, z, ry);
+      if (!mo) { if (!MONSTERS[MONSTER_KINDS[ki]]) continue; mo = addMonster(id, MONSTER_KINDS[ki], x, z, ry); } // 모르는 몬스터(새 버전)는 건너뜀
       mo.tx = x; mo.tz = z; mo.tr = ry; mo.st = st; mo.slow = slow;
       if (mo.kind === 'golem') bossHp = hp;
       if (mo.hp !== hp) { mo.hp = hp; setTagHp(mo.tag, hp); }
@@ -1985,8 +2037,8 @@ addEventListener('keydown', (e) => {
       if (e.isComposing) return; // 한글 입력 중 Enter 는 글자 확정
       const text = sayEl.value.trim(); sayEl.value = '';
       if (text) net({ t: 'chat', text });
-      sayEl.blur();
-    } else if (e.key === 'Escape') sayEl.blur();
+      closeChat();
+    } else if (e.key === 'Escape') closeChat();
     return;
   }
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || !$('codeBox').hidden) return; // 글자를 치는 중에는 게임 키로 치지 않음
@@ -2017,7 +2069,10 @@ addEventListener('keydown', (e) => {
 });
 addEventListener('keyup', (e) => keys.delete(e.code));
 addEventListener('blur', () => keys.clear());
-sayEl.addEventListener('focus', () => keys.clear());
+sayEl.addEventListener('focus', () => { keys.clear(); document.body.classList.add('chatting'); });
+sayEl.addEventListener('blur', () => document.body.classList.remove('chatting'));
+function closeChat() { sayEl.blur(); document.body.classList.remove('chatting'); }
+function openChat() { document.body.classList.add('chatting'); sayEl.focus(); }
 
 // 마우스 / 손가락으로 끌면 시점 돌리기, 짧게 누르면 공격
 let lookId = null, lastX = 0, lastY = 0, downX = 0, downY = 0, downT = 0;
@@ -2025,7 +2080,7 @@ canvas.addEventListener('pointerdown', (e) => {
   if (lookId !== null) return;
   lookId = e.pointerId; lastX = downX = e.clientX; lastY = downY = e.clientY; downT = performance.now();
   canvas.setPointerCapture(e.pointerId);
-  if (document.activeElement === sayEl) sayEl.blur();
+  if (document.activeElement === sayEl || document.body.classList.contains('chatting')) closeChat();
 });
 canvas.addEventListener('pointermove', (e) => {
   if (e.pointerId !== lookId) return;
@@ -2067,7 +2122,7 @@ if (('ontouchstart' in window) || navigator.maxTouchPoints > 0 && matchMedia('(p
     if (act === 'jump') jumpQueued = true;
     else if (act === 'attack') tryAttack(0);
     else if (act === 'run') { runToggle = !runToggle; b.classList.toggle('on', runToggle); }
-    else if (act === 'chat') sayEl.focus();
+    else if (act === 'chat') { if (document.body.classList.contains('chatting')) closeChat(); else openChat(); }
     else if (act === 'bag') openPanel('bag');
     else if (act === 'people') openPanel('people');
     else if (act === 'potion') drinkPotion();
@@ -2241,8 +2296,8 @@ function drawMinimap() { // 내가 있는 섬을 보여 줌
   for (const e of decos.values()) if (on(e.d.x, e.d.z)) mm.fillRect(X(e.d.x) - 1.5, Z(e.d.z) - 1.5, 3, 3);
   for (const mo of monsters.values()) {
     if (mo.dying || !on(mo.av.position.x, mo.av.position.z)) continue;
-    mm.fillStyle = mo.kind === 'golem' ? '#9c36b5' : mo.kind === 'turtle' || mo.kind === 'giant' ? '#7a3b00' : '#e03131';
-    dot(mo.av.position.x, mo.av.position.z, mo.kind === 'golem' ? 6 : mo.kind === 'giant' ? 5 : mo.kind === 'turtle' ? 3.5 : 2);
+    mm.fillStyle = mo.kind === 'golem' ? '#9c36b5' : mo.kind === 'turtle' || mo.kind === 'giant' || mo.kind === 'queen' ? '#7a3b00' : '#e03131';
+    dot(mo.av.position.x, mo.av.position.z, mo.kind === 'golem' ? 6 : mo.kind === 'giant' || mo.kind === 'queen' ? 5 : mo.kind === 'turtle' ? 3.5 : 2);
   }
   for (const [id, o] of others) {
     if (!on(o.av.position.x, o.av.position.z)) continue;

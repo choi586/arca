@@ -284,3 +284,54 @@ body.touch #codeBtn { display: none; }
 .grid { grid-template-columns: repeat(6, 1fr); }
 #shop .tabs { flex-wrap: wrap; }
 #shop .tabs button { flex: 1 1 30%; }
+
+/* ========== 휴대폰 화면 정리: 꼭 필요한 것만 작게 ========== */
+body.touch #info { display: none; }                         /* 섬 이름·시각·채널 줄은 숨김 (도착하면 알림으로 나옴) */
+body.touch #stat { left: 8px; top: 8px; bottom: auto; transform: none; width: 132px; padding: 4px 7px 5px; border-radius: 10px; background: rgba(255,255,255,.7); box-shadow: none; }
+body.touch #stat .lvrow { font-size: 10px; margin-bottom: 2px; }
+body.touch #stat .lv b { font-size: 12px; }
+body.touch #hpText { display: none; }
+body.touch #stat .bar { height: 6px; }
+body.touch #stat .bar.xp { height: 3px; margin-top: 2px; }
+body.touch #minimap { width: 78px; height: 78px; right: 8px; top: 8px; }
+body.touch #bossTimer { top: 88px; right: 8px; width: 78px; font-size: 9px; }
+body.touch #qtrack { top: 102px; right: 8px; width: 104px; gap: 2px; }
+body.touch #qtrack div { font-size: 9px; padding: 2px 5px; border-radius: 6px; background: rgba(20,30,50,.38); }
+body.touch #qtrack div.w { display: none; }                 /* 바람의 돌 현황은 촌장 창에서 볼 수 있음 */
+body.touch #qtrack div:nth-child(n+5) { display: none; }    /* 의뢰는 3개까지만 */
+body.touch #partyBox { top: 80px; left: 8px; width: 96px; gap: 3px; }
+body.touch #hints { top: 50px; gap: 4px; }
+body.touch #hints button { padding: 7px 12px; font-size: 12px; border-radius: 10px; }
+body.touch #toast { top: 96px; font-size: 12px; padding: 6px 12px; max-width: 78%; border-radius: 10px; }
+body.touch #bossBar { left: 8px; top: 44px; transform: none; width: 132px; min-width: 0; padding: 3px 7px 5px; font-size: 10px; border-radius: 10px; }
+body.touch #bossBar .bar { height: 6px; margin-top: 2px; }
+/* 채팅: 최근 두 줄만 잠깐 보였다 사라지고, 입력 칸은 💬 를 눌렀을 때만 */
+body.touch #chat { left: 8px; bottom: 150px; width: 56%; pointer-events: none; }
+body.touch #log { max-height: none; overflow: visible; margin-bottom: 4px; }
+body.touch #log div { font-size: 10px; padding: 2px 6px; border-radius: 6px; background: rgba(20,30,50,.32); animation: mfade .6s 7s forwards; }
+body.touch #log div:nth-last-child(n+3) { display: none; }
+@keyframes mfade { to { opacity: 0; visibility: hidden; } }
+body.touch #say { opacity: 0; height: 0; padding: 0; border: 0; pointer-events: none; font-size: 14px; }
+body.touch.chatting #say { opacity: 1; height: auto; padding: 7px 10px; border: 2px solid #4dabf7; pointer-events: auto; background: #fff; }
+body.touch.chatting #log div { animation: none; }
+body.touch.chatting #log div:nth-last-child(n+3) { display: block; }
+body.touch.chatting #log div:nth-last-child(n+7) { display: none; }
+/* 아래 조작 버튼을 두 줄로 */
+body.touch #stick { left: 14px; bottom: 16px; width: 112px; height: 112px; }
+body.touch #knob { left: 31px; top: 31px; width: 46px; height: 46px; }
+body.touch #tbtns { right: 10px; bottom: 16px; grid-template-columns: repeat(4, 42px); gap: 6px; }
+body.touch #tbtns button { height: 42px; font-size: 18px; border-radius: 12px; background: rgba(255,255,255,.78); box-shadow: none; }
+body.touch #tbtns button.wide { grid-column: span 1; font-size: 11px; }
+body.touch #tbtns button.atk { grid-column: span 2; height: 42px; font-size: 14px; }
+body.touch #skills { right: 10px; bottom: 118px; gap: 6px; flex-direction: row; left: auto; transform: none; }
+body.touch .sk { width: 42px; height: 42px; font-size: 19px; border-radius: 12px; background: rgba(255,255,255,.78); box-shadow: none; }
+body.touch .sk .key { display: none; }
+body.touch .tag .nm { font-size: 10px; padding: 1px 6px; }
+body.touch .tag .ttl { font-size: 8px; }
+body.touch #deadView { font-size: 16px; padding: 12px 18px; }
+body.touch .panel { max-height: calc(100% - 40px); width: calc(100% - 16px); padding: 12px; }
+body.touch #tbtns button.atk { background: rgba(250,82,82,.88); color: #fff; }
+body.touch #tbtns button.on { background: #4dabf7; color: #fff; }
+body.touch #toast { max-width: 60%; }
+
+#newVer { position: fixed; left: 50%; top: 10px; transform: translateX(-50%); z-index: 25; padding: 10px 18px; border: 0; border-radius: 14px; background: #1c7ed6; color: #fff; font-size: 14px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,.3); white-space: nowrap; }

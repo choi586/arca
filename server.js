@@ -628,7 +628,7 @@ function stepToward(m, tx, tz, speed, dt) {
 function startAttack(ch, m, pat) {
   const def = m.def, now = Date.now();
   let wind = def.windup;
-  if (pat === 1) { wind = 1900; m.circles = [{ x: m.x, z: m.z, r: 10 }]; }
+  if (pat === 1) { wind = 1900; m.circles = [{ x: m.x, z: m.z, r: def.ringR || 10 }]; }
   else if (pat === 2) {
     wind = 1500; m.circles = [];
     for (const p of channels.get(ch).players.values()) {
@@ -721,7 +721,7 @@ function updateMonsters(ch, dt) {
         else { m.st = 1; stepToward(m, tgt.x, tgt.z, def.speed * (now < m.slowUntil ? 0.45 : 1), dt); }
       } else {
         m.st = 0; m.ry = Math.atan2(tgt.x - m.x, tgt.z - m.z);
-        if (now >= m.nextAtk) startAttack(ch, m, def.boss ? (m.pat = (m.pat + 1) % 3) : 0);
+        if (now >= m.nextAtk) startAttack(ch, m, def.boss ? (m.pat = (m.pat + 1) % 3) : def.elite ? (m.pat = (m.pat + 1) % 2) : 0);
       }
     } else { // 집 근처를 어슬렁어슬렁
       if (now >= m.nextWander) { m.wanderX = m.hx + (Math.random() - 0.5) * 8; m.wanderZ = m.hz + (Math.random() - 0.5) * 8; m.nextWander = now + 3000 + Math.random() * 4000; }
@@ -893,6 +893,8 @@ wss.on('connection', (ws) => {
     if (me) { me.lastAct = Date.now(); me.hiddenAt = m.t === 'hide' ? Date.now() : 0; }
 
     if (m.t === 'join' && !me) {
+      // 새로고침을 안 한 예전 화면은 새 몬스터·아이템을 몰라서 오류가 나므로, 다시 들어오게 안내함
+      if (num(m.v) < A.VERSION) { send(ws, { t: 'kicked', text: '🆕 새 버전이 나왔어요! 아래 버튼을 누르면 새 버전으로 다시 들어가요. 캐릭터는 그대로예요.' }); return ws.close(); }
       // 같은 브라우저가 또 들어오면 먼저 있던 캐릭터를 내보냄 (창을 두 개 열었거나, 끊긴 접속이 남은 경우)
       const uid = cleanText(m.uid, 40);
       if (uid) for (const c of channels.values()) for (const q of c.players.values()) if (q.uid === uid) kick(q, '다른 창에서 다시 접속해서 이 창은 섬에서 나왔어요');
@@ -923,7 +925,7 @@ wss.on('connection', (ws) => {
         const d = raw && cleanDeco(me, raw, num(raw.x, 999), num(raw.z, 999), raw.ry);
         if (d) { c.decos.set(d.id, d); broadcast(ch, { t: 'decoadd', d }, me.id); }
       }
-      send(ws, { t: 'welcome', id: me.id, ch, players: [...c.players.values()].filter((q) => q !== me).map(publicInfo), me: publicInfo(me), decos: [...c.decos.values()], phase: phaseNow(), dayMs: DAY_MS, chest: c.chest });
+      send(ws, { t: 'welcome', id: me.id, ch, players: [...c.players.values()].filter((q) => q !== me).map(publicInfo), me: publicInfo(me), decos: [...c.decos.values()], phase: phaseNow(), dayMs: DAY_MS, chest: c.chest, v: A.VERSION });
       sendStats(me); sendInv(me); sendQuests(me); sendSt(me); send(ws, windMsg());
       send(ws, { t: 'bossinfo', alive: c.boss.alive, in: c.boss.alive ? 0 : Math.max(0, c.boss.deadUntil - Date.now()) });
       broadcast(ch, { t: 'join', p: publicInfo(me) }, me.id);

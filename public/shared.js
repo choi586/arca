@@ -126,7 +126,18 @@ MONSTERS.wisp = { name: '숲의 정령', lv: 13, hp: 460, atk: 38, speed: 3.8, x
 MONSTERS.yeti = { name: '눈덩이 도깨비', lv: 16, hp: 720, atk: 46, speed: 3.0, xp: 130, aggro: 10, reach: 2.8, hitR: 3.0, hitAt: 1.2, windup: 800, cd: 2000, size: 1.3, respawn: 22000 };
 MONSTERS.wolf = { name: '서리 늑대', lv: 19, hp: 900, atk: 58, speed: 4.6, xp: 190, aggro: 13, reach: 2.6, hitR: 2.2, hitAt: 2.0, windup: 600, cd: 1500, size: 1.1, respawn: 26000 };
 MONSTERS.giant = { name: '서리 거인', lv: 24, hp: 3200, atk: 85, speed: 2.2, xp: 700, aggro: 12, reach: 4.2, hitR: 5.0, hitAt: 2.0, windup: 1300, cd: 2600, size: 2.4, respawn: 90000 };
-const MONSTER_KINDS = ['slime', 'shroom', 'turtle', 'golem', 'toad', 'wisp', 'yeti', 'wolf', 'giant'];
+// 섬마다 두 종씩 더 (14단계)
+MONSTERS.bee = { name: '붕붕 꿀벌', lv: 3, hp: 70, atk: 10, speed: 4.2, xp: 11, aggro: 10, reach: 1.8, hitR: 1.6, hitAt: 1.0, windup: 600, cd: 1500, size: 0.6, respawn: 12000 };
+MONSTERS.scarecrow = { name: '심술 허수아비', lv: 6, hp: 260, atk: 20, speed: 2.4, xp: 34, aggro: 9, reach: 2.8, hitR: 3.2, hitAt: 0.0, windup: 1000, cd: 2400, size: 1.3, respawn: 20000 };
+MONSTERS.bat = { name: '포자 박쥐', lv: 11, hp: 300, atk: 32, speed: 4.6, xp: 55, aggro: 12, reach: 2.0, hitR: 1.9, hitAt: 1.2, windup: 550, cd: 1400, size: 0.7, respawn: 18000 };
+MONSTERS.treant = { name: '고목 나무지기', lv: 14, hp: 950, atk: 46, speed: 1.9, xp: 125, aggro: 9, reach: 3.6, hitR: 4.2, hitAt: 0.0, windup: 1200, cd: 2800, size: 2.0, respawn: 32000 };
+MONSTERS.penguin = { name: '펭귄 병사', lv: 17, hp: 760, atk: 48, speed: 3.6, xp: 150, aggro: 10, reach: 2.4, hitR: 2.6, hitAt: 1.4, windup: 700, cd: 1800, size: 1.0, respawn: 22000 };
+MONSTERS.icewisp = { name: '눈보라 정령', lv: 21, hp: 1100, atk: 64, speed: 3.4, xp: 260, aggro: 12, reach: 3.0, hitR: 3.0, hitAt: 2.4, windup: 750, cd: 1900, size: 1.1, respawn: 30000 };
+// 버섯숲 섬의 보스. elite: 앞 내려찍기와 자기 주변 큰 원(ringR)을 번갈아 씀
+MONSTERS.queen = { name: '버섯 여왕', lv: 16, hp: 2600, atk: 56, speed: 2.3, xp: 520, aggro: 11, reach: 3.8, hitR: 4.4, hitAt: 2.0, windup: 1200, cd: 2500, size: 2.2, respawn: 120000, elite: true, ringR: 7.5 };
+MONSTERS.giant.elite = true; MONSTERS.giant.ringR = 8;
+// 새 종류는 반드시 맨 뒤에 붙임 (번호가 바뀌면 새로고침 안 한 화면에서 몬스터가 뒤바뀜)
+const MONSTER_KINDS = ['slime', 'shroom', 'turtle', 'golem', 'toad', 'wisp', 'yeti', 'wolf', 'giant', 'bee', 'scarecrow', 'bat', 'treant', 'penguin', 'icewisp', 'queen'];
 const BOSS = { x: -30, z: -26 };
 const PARTY_MAX = 4, PARTY_SHARE_RANGE = 30;
 
@@ -170,6 +181,24 @@ function monsterHomes(obstacles) {
   place3('yeti', 7);
   place3('wolf', 5);
   homes.push({ kind: 'giant', x: F.x, z: F.z, isl: 2 });
+  // 14단계에서 늘어난 몬스터. 앞의 자리들이 바뀌지 않게 따로 뽑고 맨 뒤에 붙임
+  const r4 = rng(1414);
+  const placeMore = (kind, n, isl, minR, maxR, ok) => {
+    const C = ISLANDS[isl];
+    for (let i = 0, made = 0; i < 500 && made < n; i++) {
+      const a = r4() * Math.PI * 2, r = minR + r4() * (maxR - minR), x = C.x + Math.cos(a) * r, z = C.z + Math.sin(a) * r;
+      if (!free(x, z, 1.5) || UPDRAFTS.some((u) => Math.hypot(u.x - x, u.z - z) < u.r + 6) || (ok && !ok(x, z))) continue;
+      if (homes.some((h) => Math.hypot(h.x - x, h.z - z) < 3.5)) continue; // 다른 몬스터 집과 너무 붙지 않게
+      homes.push({ kind, x, z, isl }); made++;
+    }
+  };
+  placeMore('bee', 6, 0, 22, 40, (x, z) => Math.hypot(x - 20, z + 30) > 14);
+  placeMore('scarecrow', 4, 0, 32, 52, (x, z) => Math.hypot(x - 20, z + 30) > 14 && Math.hypot(x - BOSS.x, z - BOSS.z) > 12);
+  placeMore('bat', 5, 1, 5, I.R - 7, (x, z) => Math.abs(z - I.z) > 8);
+  placeMore('treant', 2, 1, 8, I.R - 9, (x, z) => Math.abs(z - I.z) > 9);
+  placeMore('penguin', 5, 2, 10, F.R - 7, (x, z) => !(Math.abs(x - F.x) < 9 && z > F.z + 8));
+  placeMore('icewisp', 3, 2, 8, F.R - 12, (x, z) => !(Math.abs(x - F.x) < 9 && z > F.z + 8));
+  placeMore('queen', 1, 1, 15, 19, (x, z) => z < I.z - 13); // 버섯숲 북쪽 깊은 곳
   return homes;
 }
 
@@ -259,6 +288,13 @@ const ITEMS = {
   fang: { name: '서리 송곳니', icon: '🦷', type: 'mat', sell: 65, desc: '서리 늑대의 날카로운 이빨' },
   heart: { name: '거인의 심장', icon: '💙', type: 'mat', sell: 300, desc: '서리 거인이 남긴 얼지 않는 심장. 아주 비싸요' },
   icefish: { name: '얼음새우', icon: '🦐', type: 'fish', sell: 24, desc: '서리봉우리에서만 낚여요. 모닥불에 구울 수 있어요' },
+  crown: { name: '여왕의 왕관 조각', icon: '👑', type: 'mat', sell: 220, desc: '버섯 여왕이 남긴 반짝이는 조각. 비싸요' },
+  honey: { name: '달콤한 꿀', icon: '🍯', type: 'mat', sell: 6, desc: '붕붕 꿀벌이 떨어뜨려요' },
+  straw: { name: '바삭한 밀짚', icon: '🌾', type: 'mat', sell: 14, desc: '심술 허수아비의 속' },
+  batwing: { name: '박쥐 날개', icon: '🦇', type: 'mat', sell: 26, desc: '포자 박쥐의 얇은 날개' },
+  bark: { name: '오래된 나무껍질', icon: '🪵', type: 'mat', sell: 55, desc: '고목 나무지기의 단단한 껍질' },
+  feather: { name: '펭귄 깃털', icon: '🪶', type: 'mat', sell: 50, desc: '펭귄 병사의 매끈한 깃털' },
+  frostflower: { name: '서리꽃', icon: '❄️', type: 'mat', sell: 75, desc: '눈보라 정령이 남기는 얼음 꽃' },
   windstone: { name: '바람의 돌', icon: '🌀', type: 'key', sell: 0, desc: '광장 분수의 수정에 바치면 바람의 다리가 가까워져요' },
   shard: { name: '폭풍의 조각', icon: '💎', type: 'mat', sell: 120, desc: '폭풍 골렘을 쓰러뜨린 증표. 비싸게 팔려요' },
 };
@@ -305,6 +341,13 @@ const LOOT = {
   yeti: { gold: [30, 45], drops: [['icecrystal', 0.6], ['bigpotion', 0.1]] },
   wolf: { gold: [40, 60], drops: [['fang', 0.55], ['bigpotion', 0.12]] },
   giant: { gold: [150, 220], drops: [['heart', 1], ['bigpotion', 0.5]] },
+  queen: { gold: [120, 180], drops: [['crown', 1], ['bigpotion', 0.5]] },
+  bee: { gold: [3, 6], drops: [['honey', 0.6], ['potion', 0.08]] },
+  scarecrow: { gold: [10, 18], drops: [['straw', 0.6], ['potion', 0.15]] },
+  bat: { gold: [16, 26], drops: [['batwing', 0.55], ['potion', 0.15]] },
+  treant: { gold: [30, 45], drops: [['bark', 0.7], ['bigpotion', 0.15]] },
+  penguin: { gold: [32, 48], drops: [['feather', 0.6], ['bigpotion', 0.1]] },
+  icewisp: { gold: [50, 70], drops: [['frostflower', 0.55], ['bigpotion', 0.12]] },
 };
 // ---------- 구름 낚시 · 요리 · 펫 ----------
 // 섬 가장자리(끝에서 FISH.edge 걸음 안)에서 구름 속으로 낚싯줄을 던짐. 찌가 흔들린 뒤 window 안에 당겨야 잡힘
@@ -370,6 +413,10 @@ const QUESTS = {
   q8: { name: '설산 정찰', type: 'visit', key: '2', n: 1, gold: 300, xp: 400, stones: 2, lv: 15, desc: '포근언덕 북쪽 끝의 바람 기둥을 타고 서리봉우리에 발을 디뎌 봐요.' },
   q9: { name: '늑대 무리', type: 'kill', key: 'wolf', n: 5, gold: 500, xp: 700, stones: 2, lv: 18, desc: '서리봉우리의 서리 늑대를 5마리 잡아 줘요.' },
   q10: { name: '산꼭대기의 주인', type: 'kill', key: 'giant', n: 1, gold: 800, xp: 1000, stones: 3, lv: 22, desc: '서리봉우리 꼭대기의 서리 거인을 쓰러뜨려요.' },
+  q11: { name: '꿀단지 채우기', type: 'collect', key: 'honey', n: 4, gold: 45, xp: 35, stones: 0, lv: 2, desc: '붕붕 꿀벌이 떨어뜨리는 달콤한 꿀 4개를 가져다줘요.' },
+  q12: { name: '박쥐 소탕', type: 'kill', key: 'bat', n: 5, gold: 260, xp: 260, stones: 1, lv: 11, desc: '버섯숲 섬의 포자 박쥐를 5마리 잡아 줘요.' },
+  q13: { name: '펭귄 부대 해산', type: 'kill', key: 'penguin', n: 5, gold: 450, xp: 600, stones: 2, lv: 17, desc: '서리봉우리의 펭귄 병사를 5마리 잡아 줘요.' },
+  q14: { name: '버섯 여왕 알현', type: 'kill', key: 'queen', n: 1, gold: 500, xp: 600, stones: 2, lv: 14, desc: '버섯숲 섬 북쪽 깊은 곳의 버섯 여왕을 쓰러뜨려요.' },
   q7: { name: '폭풍을 잠재워라', type: 'kill', key: 'golem', n: 1, gold: 300, xp: 300, stones: 3, lv: 10, desc: '월드 보스 폭풍 골렘을 함께 쓰러뜨려요. 한 대라도 때리면 돼요.' },
 };
 const QUEST_IDS = Object.keys(QUESTS), QUEST_ACTIVE_MAX = 3;
@@ -457,7 +504,8 @@ const MAX_LV = 30;
 const needXp = (lv) => 10 * lv * lv + 10;
 const statsFor = (lv) => ({ maxHp: 80 + (lv - 1) * 15, atk: 10 + (lv - 1) * 3 });
 
-const api = { SLOTS, ACCS, ACC_IDS, CHEST, GACHA, RARITY, SAFE_R, inSafe, FISH, FISH_DAY, FISH_NIGHT, canFish, FOOD_BUFF, COOK_RANGE, PETS, PET_IDS, TITLES, TITLE_IDS, cleanStats, DUEL, ELDER, TALK_RANGE, ALTAR_RANGE, BRIDGE, world, onBridge, MAX_UP, UP_BONUS, UPGRADES, QUESTS, QUEST_IDS, QUEST_ACTIVE_MAX, cleanQuests, ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
+const VERSION = 14; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
+const api = { VERSION, SLOTS, ACCS, ACC_IDS, CHEST, GACHA, RARITY, SAFE_R, inSafe, FISH, FISH_DAY, FISH_NIGHT, canFish, FOOD_BUFF, COOK_RANGE, PETS, PET_IDS, TITLES, TITLE_IDS, cleanStats, DUEL, ELDER, TALK_RANGE, ALTAR_RANGE, BRIDGE, world, onBridge, MAX_UP, UP_BONUS, UPGRADES, QUESTS, QUEST_IDS, QUEST_ACTIVE_MAX, cleanQuests, ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
   UNLOCK, KEYS, WEAPONS, WEAPON_IDS, ITEMS, ITEM_IDS, SHOP_ITEMS, MAX_STACK, BAG_SLOTS, LOOT, cleanInv, MAX_LV, needXp, statsFor };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ARCA = api;
 })(this);
