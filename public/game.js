@@ -843,7 +843,12 @@ function toast(text) { const t = $('toast'); t.textContent = text; t.classList.a
 // ================= 서버 연결 =================
 let ws = null, joined = false, everJoined = false, statsReady = false;
 function loadDeco() { try { return JSON.parse(store.get('arca.deco') || '[]'); } catch (e) { return []; } }
-let kickedOut = false, lastActSent = 0;
+let kickedOut = false, lastActSent = 0, waitVisible = false;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { net({ t: 'hide' }); return; }
+  if (waitVisible && !kickedOut) { waitVisible = false; connect(); }
+  else net({ t: 'act' });
+});
 function myUid() { // 이 브라우저의 이름표 (같은 브라우저로 두 번 들어오면 서버가 알아봄)
   let u = store.get('arca.uid');
   if (!u) { u = Math.random().toString(36).slice(2) + Date.now().toString(36); store.set('arca.uid', u); }
@@ -871,6 +876,8 @@ function connect() {
     if (kickedOut) return; // 서버가 내보낸 창은 스스로 다시 들어가지 않음
     if (!everJoined) { $('status').textContent = '서버에 연결하지 못했어요. 잠시 뒤 다시 눌러 주세요.'; $('start').disabled = false; return; }
     if (wasJoined) { toast('연결이 끊겼어요. 다시 연결하는 중…'); addLog('연결이 끊겨서 다시 연결하는 중이에요'); }
+    // 화면이 가려진 창(다른 탭, 꺼진 화면)은 다시 접속하지 않고, 다시 볼 때 접속함 → 안 보는 창이 유령 캐릭터로 남지 않게
+    if (document.hidden) { waitVisible = true; return; }
     setTimeout(connect, 2000);
   };
 }

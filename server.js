@@ -21,6 +21,7 @@ const dayStart = Date.now() - DAY_MS * 0.1;              // 서버가 켜질 때
 const phaseNow = () => ((Date.now() - dayStart) % DAY_MS) / DAY_MS;
 const isNight = () => A.isNightPhase(phaseNow());
 const AFK_MS = Number(process.env.AFK_MS) || 10 * 60000; // 이만큼 아무것도 안 하면 섬에서 내보냄
+const HIDDEN_MS = Number(process.env.HIDDEN_MS) || 2 * 60000; // 화면을 가린 채(다른 탭·다른 앱) 이만큼 지나면 내보냄
 const ASK_MS = 30000;            // 초대·거래 요청이 살아 있는 시간
 const LEASH = 18;               // 몬스터가 집에서 이만큼 멀어지면 돌아감
 const COLORS = ['#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#38d9a9', '#4dabf7', '#748ffc', '#da77f2', '#f783ac', '#f8f9fa'];
@@ -764,7 +765,7 @@ wss.on('connection', (ws) => {
     let m;
     try { m = JSON.parse(raw); } catch (e) { return; }
     if (!m || typeof m.t !== 'string') return;
-    if (me) me.lastAct = Date.now();
+    if (me) { me.lastAct = Date.now(); me.hiddenAt = m.t === 'hide' ? Date.now() : 0; }
 
     if (m.t === 'join' && !me) {
       // 같은 브라우저가 또 들어오면 먼저 있던 캐릭터를 내보냄 (창을 두 개 열었거나, 끊긴 접속이 남은 경우)
@@ -778,7 +779,7 @@ wss.on('connection', (ws) => {
         name: cleanText(m.name, 12) || '바람잡이',
         color: COLORS.includes(m.color) ? m.color : COLORS[(nextId * 3) % COLORS.length],
         hat: Math.max(0, Math.min(3, Math.floor(num(m.hat)))),
-        x: (Math.random() - 0.5) * 6, y: 3, z: 6 + Math.random() * 3, ry: Math.PI, a: 0,
+        x: (Math.random() - 0.5) * 6, y: 2, z: 6 + Math.random() * 3, ry: Math.PI, a: 0, // 광장 바닥 높이(공중에 떠 보이지 않게)
         lastChat: 0, lv, xp: Math.max(0, Math.min(A.needXp(lv) - 1, Math.floor(num(m.xp)))),
         hp: 0, maxHp: 0, atk: 0, dead: false, deadAt: 0, lastHurt: 0, lastAtk: 0, cds: {}, guard: 0, guardUntil: 0, potionAt: 0,
         inv: A.cleanInv(m.inv), // 가방도 브라우저에 저장된 것을 이어받음
@@ -883,7 +884,10 @@ function kick(p, text) {
 }
 setInterval(() => {
   const now = Date.now();
-  for (const c of channels.values()) for (const p of [...c.players.values()]) if (now - p.lastAct > AFK_MS) kick(p, '오랫동안 움직임이 없어서 섬에서 나왔어요');
+  for (const c of channels.values()) for (const p of [...c.players.values()]) {
+    if (now - p.lastAct > AFK_MS) kick(p, '오랫동안 움직임이 없어서 섬에서 나왔어요');
+    else if (p.hiddenAt && now - p.hiddenAt > HIDDEN_MS) kick(p, '게임 화면을 오래 가려 두어서 섬에서 나왔어요');
+  }
 }, 15000);
 
 // 쓰러진 사람을 광장에서 다시 일으킴
