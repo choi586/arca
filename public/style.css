@@ -275,3 +275,12 @@ body.touch #codeBtn { display: none; }
 #codeBox .btns { display: flex; gap: 8px; flex-wrap: wrap; }
 #codeBox .btns button { flex: 1; padding: 11px 10px; border: 0; border-radius: 12px; background: #edf1f6; font-size: 14px; font-weight: 800; cursor: pointer; white-space: nowrap; }
 #codeBox .btns button.main { background: #1c7ed6; color: #fff; }
+
+/* ---------- 부위별 장신구 ---------- */
+.slotrow { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 5px; }
+.slotrow .sl { flex: 0 0 34px; font-size: 12px; font-weight: 800; color: #4a5b70; padding-top: 8px; }
+.slotrow .chips button { padding: 5px 9px; font-size: 13px; }
+.recstats { grid-template-columns: repeat(3, 1fr); }
+.grid { grid-template-columns: repeat(6, 1fr); }
+#shop .tabs { flex-wrap: wrap; }
+#shop .tabs button { flex: 1 1 30%; }

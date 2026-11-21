@@ -263,8 +263,38 @@ const ITEMS = {
   shard: { name: '폭풍의 조각', icon: '💎', type: 'mat', sell: 120, desc: '폭풍 골렘을 쓰러뜨린 증표. 비싸게 팔려요' },
 };
 const ITEM_IDS = Object.keys(ITEMS);
-const SHOP_ITEMS = ['potion', 'bigpotion'];
-const MAX_STACK = 99, BAG_SLOTS = 20;
+// ---------- 장신구 (부위별로 하나씩 달 수 있는 아이템. 가방에 들어가고 거래·판매 가능) ----------
+const SLOTS = [['head', '머리'], ['face', '얼굴'], ['neck', '목'], ['back', '등'], ['side', '옆']];
+const ACCS = {
+  a_flower: { name: '꽃 머리핀', icon: '🌸', slot: 'head', buy: 150 },
+  a_horns: { name: '도깨비 뿔', icon: '😈', slot: 'head', buy: 400 },
+  a_propeller: { name: '프로펠러', icon: '🚁', slot: 'head', buy: 600 },
+  a_star: { name: '머리 위 별', icon: '⭐', slot: 'head', buy: 0, sell: 60 },
+  a_halo: { name: '천사 고리', icon: '😇', slot: 'head', buy: 0, sell: 300 },
+  a_glasses: { name: '선글라스', icon: '🕶️', slot: 'face', buy: 250 },
+  a_mustache: { name: '콧수염', icon: '🥸', slot: 'face', buy: 200 },
+  a_blush: { name: '빨간 코', icon: '🤡', slot: 'face', buy: 120 },
+  a_bowtie: { name: '나비넥타이', icon: '🎀', slot: 'neck', buy: 150 },
+  a_medal: { name: '금메달', icon: '🥇', slot: 'neck', buy: 500 },
+  a_scarf: { name: '빨간 목도리', icon: '🧣', slot: 'neck', buy: 0, sell: 60 },
+  a_cape: { name: '영웅 망토', icon: '🦸', slot: 'back', buy: 600 },
+  a_tshell: { name: '거북 등껍질', icon: '🐢', slot: 'back', buy: 450 },
+  a_wings: { name: '작은 날개', icon: '🪽', slot: 'back', buy: 0, sell: 300 },
+  a_orb: { name: '떠다니는 구슬', icon: '🔮', slot: 'side', buy: 700 },
+  a_flag: { name: '작은 깃발', icon: '🚩', slot: 'side', buy: 200 },
+  a_balloon: { name: '분홍 풍선', icon: '🎈', slot: 'side', buy: 0, sell: 60 },
+};
+const ACC_IDS = Object.keys(ACCS);
+for (const id of ACC_IDS) { // 가방에 들어가는 아이템으로도 등록
+  const a = ACCS[id], slotName = SLOTS.find((x) => x[0] === a.slot)[1];
+  ITEMS[id] = { name: a.name, icon: a.icon, type: 'acc', slot: a.slot, buy: a.buy, sell: a.sell || Math.round(a.buy * 0.4), desc: `${slotName}에 다는 장신구${a.buy ? '' : ' (뽑기 상자에서만 나와요)'}. 눌러서 달고 떼요` };
+}
+ITEMS.firework = { name: '폭죽', icon: '🎆', type: 'fun', buy: 30, sell: 5, desc: '눌러서 쏘면 하늘에서 터져요. 모두에게 보여요' };
+ITEM_IDS.push(...ACC_IDS, 'firework');
+// ---------- 보물 상자 (가끔 섬 어딘가에 나타남. 먼저 찾아서 닿는 사람이 가짐) ----------
+const CHEST = { everyMs: 150000, lifeMs: 150000, reach: 2.6 };
+const SHOP_ITEMS = ['potion', 'bigpotion', 'firework'];
+const MAX_STACK = 99, BAG_SLOTS = 30;
 // 몬스터를 잡으면 나오는 것
 const LOOT = {
   slime: { gold: [2, 5], drops: [['jelly', 0.6], ['potion', 0.06]] },
@@ -292,29 +322,20 @@ const PETS = {
   goldie: { name: '황금 슬라임', icon: '🟡', price: 0, gacha: true, desc: '뽑기 상자에서만 나오는 번쩍이는 슬라임', perk: { gold: 0.25 }, perkText: '몬스터가 주는 골드 +25%' },
   ghosty: { name: '꼬마 유령', icon: '👻', price: 0, gacha: true, desc: '고급 뽑기 상자에서만 나오는 둥둥 유령', perk: { crit: 0.08 }, perkText: '치명타 확률 +8%' },
 };
-// ---------- 장식 (뽑기로만 얻어 몸에 다는 꾸밈) ----------
-const COSMETICS = {
-  scarf: { name: '빨간 목도리', icon: '🧣' },
-  balloon: { name: '분홍 풍선', icon: '🎈' },
-  star: { name: '머리 위 별', icon: '⭐' },
-  halo: { name: '천사 고리', icon: '😇' },
-  wings: { name: '작은 날개', icon: '🪽' },
-};
-const COS_IDS = Object.keys(COSMETICS);
 // ---------- 뽑기 상자 ----------
 // tiers: 등급 이름 r, 확률 w(%), pool 에서 하나를 고름. 이미 가진 장식·펫이 나오면 dup 골드로 돌려줌
-// pool 항목: ['item', id, 개수] · ['gold', 양] · ['cos', id] · ['pet', id]
+// pool 항목: ['item', id, 개수] · ['gold', 양] · ['pet', id]  (장신구도 아이템)
 const GACHA = {
   n: { name: '나무 상자', icon: '📦', price: 100, dup: 60, tiers: [
     { r: '흔함', w: 60, pool: [['item', 'potion', 2], ['item', 'grilled', 2], ['item', 'jelly', 4], ['item', 'spore', 3], ['gold', 40]] },
     { r: '좋음', w: 30, pool: [['item', 'bigpotion', 2], ['item', 'shell', 2], ['item', 'glowcap', 2], ['item', 'icecrystal', 1], ['gold', 180]] },
-    { r: '희귀', w: 9, pool: [['cos', 'scarf'], ['cos', 'balloon'], ['cos', 'star'], ['item', 'shard', 1], ['item', 'fang', 2]] },
+    { r: '희귀', w: 9, pool: [['item', 'a_scarf', 1], ['item', 'a_balloon', 1], ['item', 'a_star', 1], ['item', 'shard', 1], ['item', 'fang', 2]] },
     { r: '전설', w: 1, pool: [['pet', 'goldie']] },
   ] },
   p: { name: '황금 상자', icon: '🎁', price: 500, dup: 300, pity: 10, tiers: [
     { r: '좋음', w: 45, pool: [['item', 'bigpotion', 4], ['item', 'icecrystal', 3], ['item', 'fang', 3], ['item', 'dust', 3], ['gold', 350]] },
-    { r: '희귀', w: 40, pool: [['cos', 'scarf'], ['cos', 'balloon'], ['cos', 'star'], ['item', 'shard', 2], ['item', 'heart', 1], ['gold', 800]] },
-    { r: '영웅', w: 13, pool: [['cos', 'halo'], ['cos', 'wings'], ['item', 'windstone', 2], ['item', 'heart', 2]] },
+    { r: '희귀', w: 40, pool: [['item', 'a_scarf', 1], ['item', 'a_balloon', 1], ['item', 'a_star', 1], ['item', 'shard', 2], ['item', 'heart', 1], ['gold', 800]] },
+    { r: '영웅', w: 13, pool: [['item', 'a_halo', 1], ['item', 'a_wings', 1], ['item', 'windstone', 2], ['item', 'heart', 2]] },
     { r: '전설', w: 2, pool: [['pet', 'ghosty'], ['pet', 'goldie']] },
   ] },
 };
@@ -365,7 +386,7 @@ function cleanQuests(raw) {
 }
 
 function cleanInv(raw) { // 저장된 가방을 안전하게 정리
-  const inv = { gold: 0, items: {}, weapons: ['sword'], equip: 'sword', up: {}, pets: [], pet: '', cos: [], wear: '', pity: 0, wp: 0 };
+  const inv = { gold: 0, items: {}, weapons: ['sword'], equip: 'sword', up: {}, pets: [], pet: '', wear: {}, pity: 0, wp: 0 };
   if (!raw || typeof raw !== 'object') return inv;
   const n = (v, max) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)));
   inv.gold = n(raw.gold, 999999);
@@ -377,8 +398,10 @@ function cleanInv(raw) { // 저장된 가방을 안전하게 정리
   if (inv.weapons.includes(raw.equip)) inv.equip = raw.equip;
   if (Array.isArray(raw.pets)) for (const k of raw.pets) if (PETS[k] && !inv.pets.includes(k)) inv.pets.push(k);
   if (inv.pets.includes(raw.pet)) inv.pet = raw.pet;
-  if (Array.isArray(raw.cos)) for (const k of raw.cos) if (COSMETICS[k] && !inv.cos.includes(k)) inv.cos.push(k);
-  if (inv.cos.includes(raw.wear)) inv.wear = raw.wear;
+  // 예전 방식(장식 목록)으로 저장된 것은 가방 아이템으로 옮김
+  if (Array.isArray(raw.cos)) for (const k of raw.cos) { const id = 'a_' + k; if (ACCS[id] && !inv.items[id]) inv.items[id] = 1; }
+  const wearRaw = typeof raw.wear === 'string' ? (ACCS['a_' + raw.wear] ? { [ACCS['a_' + raw.wear].slot]: 'a_' + raw.wear } : {}) : (raw.wear && typeof raw.wear === 'object' ? raw.wear : {});
+  for (const [slot] of SLOTS) { const id = wearRaw[slot]; if (ACCS[id] && ACCS[id].slot === slot && inv.items[id]) inv.wear[slot] = id; }
   inv.pity = n(raw.pity, 9);
   inv.wp = n(raw.wp, FISH.whalePity - 1); // 고래를 못 만난 채 낚시에 성공한 횟수
   if (raw.up && typeof raw.up === 'object') for (const w of inv.weapons) { const u = n(raw.up[w], MAX_UP); if (u) inv.up[w] = u; }
@@ -417,6 +440,7 @@ const TITLES = {
   duelist: { name: '결투가', how: '결투 3번 승리', ok: (s) => s.wins >= 3 },
   champion: { name: '광장의 챔피언', how: '결투 10번 승리', ok: (s) => s.wins >= 10 },
   legend: { name: '전설의 대장장이', how: '무기 하나를 +10까지 강화', ok: (s) => s.maxUp >= 10 },
+  treasure: { name: '보물 사냥꾼', how: '보물 상자 10개 열기', ok: (s) => s.chests >= 10 },
   angler: { name: '구름 강태공', how: '낚시 30번 성공', ok: (s) => s.fish >= 30 },
   sky: { name: '하늘의 주인', how: 'Lv 20 달성', ok: (s) => s.lv >= 20 },
 };
@@ -424,7 +448,7 @@ const TITLE_IDS = Object.keys(TITLES);
 function cleanStats(raw) {
   const n = (v) => Math.max(0, Math.min(9999999, Math.floor(Number(v) || 0)));
   raw = raw && typeof raw === 'object' ? raw : {};
-  return { kills: n(raw.kills), boss: n(raw.boss), wins: n(raw.wins), loses: n(raw.loses), quests: n(raw.quests), fish: n(raw.fish) };
+  return { kills: n(raw.kills), boss: n(raw.boss), wins: n(raw.wins), loses: n(raw.loses), quests: n(raw.quests), fish: n(raw.fish), chests: n(raw.chests) };
 }
 // ---------- 결투 ----------
 const DUEL = { countdown: 3000, maxMs: 90000, range: 12, leave: 45, dmg: 0.5, loserHp: 0.3 };
@@ -433,7 +457,7 @@ const MAX_LV = 30;
 const needXp = (lv) => 10 * lv * lv + 10;
 const statsFor = (lv) => ({ maxHp: 80 + (lv - 1) * 15, atk: 10 + (lv - 1) * 3 });
 
-const api = { COSMETICS, COS_IDS, GACHA, RARITY, SAFE_R, inSafe, FISH, FISH_DAY, FISH_NIGHT, canFish, FOOD_BUFF, COOK_RANGE, PETS, PET_IDS, TITLES, TITLE_IDS, cleanStats, DUEL, ELDER, TALK_RANGE, ALTAR_RANGE, BRIDGE, world, onBridge, MAX_UP, UP_BONUS, UPGRADES, QUESTS, QUEST_IDS, QUEST_ACTIVE_MAX, cleanQuests, ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
+const api = { SLOTS, ACCS, ACC_IDS, CHEST, GACHA, RARITY, SAFE_R, inSafe, FISH, FISH_DAY, FISH_NIGHT, canFish, FOOD_BUFF, COOK_RANGE, PETS, PET_IDS, TITLES, TITLE_IDS, cleanStats, DUEL, ELDER, TALK_RANGE, ALTAR_RANGE, BRIDGE, world, onBridge, MAX_UP, UP_BONUS, UPGRADES, QUESTS, QUEST_IDS, QUEST_ACTIVE_MAX, cleanQuests, ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
   UNLOCK, KEYS, WEAPONS, WEAPON_IDS, ITEMS, ITEM_IDS, SHOP_ITEMS, MAX_STACK, BAG_SLOTS, LOOT, cleanInv, MAX_LV, needXp, statsFor };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ARCA = api;
 })(this);

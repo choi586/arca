@@ -145,7 +145,7 @@ code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size:
     <h1>구름섬 아르카</h1>
     <div class="tools"><a href="#fn-1" title="즐겨찾기는 브라우저의 것을 쓰자">★ 13</a><a href="#fn-1" id="rfn-1" title="진짜 위키가 아니라서 아무도 고칠 수 없다.">편집</a><a href="#s-14">토론</a><a href="#s-12">역사</a></div>
   </div>
-  <div class="modified">최근 수정 시각: 2026-11-21 (11단계 "새 무기와 펫 능력" 기준) · 기여자 2명<sup><a href="#fn-5" id="rfn-5" title="사람 한 명과 인공지능 하나.">[5]</a></sup></div>
+  <div class="modified">최근 수정 시각: 2026-11-21 (13단계 "꾸미고 나누기" 기준) · 기여자 2명<sup><a href="#fn-5" id="rfn-5" title="사람 한 명과 인공지능 하나.">[5]</a></sup></div>
   <div class="cat">분류: <a href="#top">브라우저 게임</a><a href="#top">멀티플레이 RPG</a><a href="#top">2026년 게임</a><a href="#top">이틀 만에 만들어진 것</a><a href="#top">울타리가 없는 곳</a><a href="#top">서버가 자는 게임</a></div>
 
   <div class="tmpl sleep"><span class="em">🛌</span><div><b>이 게임의 서버는 잠꾸러기입니다.</b><br>한동안 아무도 안 오면 잠들고, 깨우는 데 50초쯤 걸립니다. 고장이 아니라 무료 요금제입니다.</div></div>
@@ -162,8 +162,8 @@ code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size:
     <tr><th>인원</th><td>섬 하나에 최대 40명<br>넘치면 채널이 새로 열림</td></tr>
     <tr><th>가격</th><td>무료. 현금 결제 없음<br><del>결제 기능을 만들 줄 몰라서가 아니다</del></td></tr>
     <tr><th>최대 레벨</th><td>Lv 30</td></tr>
-    <tr><th>현재 버전</th><td>11단계 "새 무기와 펫 능력"</td></tr>
-    <tr><th>출시</th><td>2026년 11월 20일<br><small>(1~6단계는 전부 같은 날, 7~11단계는 다음 날)</small></td></tr>
+    <tr><th>현재 버전</th><td>13단계 "꾸미고 나누기"</td></tr>
+    <tr><th>출시</th><td>2026년 11월 20일<br><small>(1~6단계는 전부 같은 날, 7~13단계는 다음 날)</small></td></tr>
     <tr><th>개발</th><td>사람 1명 + Claude<br><del>말로 시키는 쪽과 만드는 쪽</del></td></tr>
     <tr><th>엔진</th><td>Three.js · WebSocket</td></tr>
     <tr><th>서버</th><td>Render 무료 요금제<br><small>(취침 가능)</small></td></tr>
@@ -212,6 +212,8 @@ code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size:
         <ol><li><a href="#s-20-1">20.1.</a> 도전 강화</li><li><a href="#s-20-2">20.2.</a> 모모의 뽑기 상자</li><li><a href="#s-20-3">20.3.</a> 장식과 뽑기 펫</li></ol></li>
       <li><a href="#s-21">21.</a> 이어하기 코드
         <ol><li><a href="#s-21-1">21.1.</a> 언제 필요한가</li><li><a href="#s-21-2">21.2.</a> 코드 받기</li><li><a href="#s-21-3">21.3.</a> 코드로 불러오기</li><li><a href="#s-21-4">21.4.</a> 알아 둘 것</li></ol></li>
+      <li><a href="#s-22">22.</a> 13단계: 꾸미고 나누기
+        <ol><li><a href="#s-22-1">22.1.</a> 부위별 장신구</li><li><a href="#s-22-2">22.2.</a> 거래로 나누기</li><li><a href="#s-22-3">22.3.</a> 보물 상자 찾기</li><li><a href="#s-22-4">22.4.</a> 폭죽</li></ol></li>
     </ol>
   </div>
 
@@ -511,7 +513,7 @@ code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size:
   </ul>
 
   <h2 id="s-9"><a href="#top">9.</a> 아이템과 상점</h2>
-  <p>가방은 <b>20칸</b>이고 같은 물건은 한 칸에 99개까지 겹친다. 가방이 꽉 차면 새 종류의 물건은 줍지 못한다. 거래는 광장 분수 남서쪽 <b>상인 모모</b>의 가게 가까이에서 <kbd>B</kbd>로 한다.</p>
+  <p>가방은 <b>30칸</b>이고(13단계에서 20칸에서 늘었다) 같은 물건은 한 칸에 99개까지 겹친다. 가방이 꽉 차면 새 종류의 물건은 줍지 못한다. 거래는 광장 분수 남서쪽 <b>상인 모모</b>의 가게 가까이에서 <kbd>B</kbd>로 한다.</p>
   <div class="tw"><table class="wiki">
     <tr><th colspan="2">물건</th><th>사는 값</th><th>파는 값</th><th>설명</th></tr>
     <tr><td class="ic">🧪</td><td>빨간 물약</td><td class="n">20G</td><td class="n">5G</td><td>체력을 절반 채운다. 마신 뒤 1초 동안은 또 못 마신다</td></tr>
@@ -588,7 +590,8 @@ code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size:
     <li>단, <b>월드 보스는 예외</b>다. 골렘 보상은 직접 한 대라도 때린 사람만 받는다.</li>
     <li>두 명 중 한 명이 나가서 혼자 남으면 파티는 저절로 없어진다.</li>
     <li><b>거래</b>는 서로 10걸음 안에 있어야 신청할 수 있다. 골드와 가방 속 물건을 올리고, <b>둘 다 확인</b>을 눌러야 바뀐다. 한쪽이 내용을 바꾸면 양쪽 확인이 풀리니 바꿔치기 걱정은 없다.</li>
-    <li>무기는 거래할 수 없다. <del>활 하나 사서 넷이 돌려 쓰려던 계획은 여기서 끝난다.</del> 받는 쪽 가방이 꽉 차 있으면 거래가 되지 않는다.</li>
+    <li>가방에 들어가는 것은 전부 거래된다. 물약, 재료, 물고기, 바람의 돌, 폭죽, 그리고 <a href="#s-22-1">장신구</a>까지. 뽑기에서 겹친 장신구를 친구와 바꾸는 것이 대표적인 쓰임새다.</li>
+    <li>무기와 펫은 거래할 수 없다. <del>활 하나 사서 넷이 돌려 쓰려던 계획은 여기서 끝난다.</del> 받는 쪽 가방이 꽉 차 있으면 거래가 되지 않는다.</li>
     <li>레벨 높은 친구가 물약이나 골드를 나눠 주면 새로 온 친구가 훨씬 빨리 자리를 잡는다.</li>
   </ul>
 
@@ -623,6 +626,7 @@ code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size:
     <tr><td class="c">10</td><td>돈 쓸 곳</td><td>도전 강화(+6~+10), 모모의 뽑기 상자, 장식 5종, 뽑기 전용 펫 2종</td><td class="c">✅ 완료</td></tr>
     <tr><td class="c">11</td><td>새 무기와 펫 능력</td><td>무기 3종(쌍단검·창·낫), 펫 6종에 능력 추가, 고래 100번 보장</td><td class="c">✅ 완료</td></tr>
     <tr><td class="c">12</td><td>이어하기 코드</td><td>캐릭터를 글자 코드로 받아 다른 컴퓨터에서 불러오기</td><td class="c">✅ 완료</td></tr>
+    <tr><td class="c">13</td><td>꾸미고 나누기</td><td>부위별 장신구 17종(상점 판매·거래 가능), 보물 상자 찾기, 폭죽, 가방 30칸</td><td class="c">✅ 완료</td></tr>
   </table></div>
 
   <h2 id="s-13"><a href="#top">13.</a> 여담</h2>
@@ -754,6 +758,7 @@ code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size:
     <tr><td>결투가</td><td>결투 3번 승리</td><td></td></tr>
     <tr><td>광장의 챔피언</td><td>결투 10번 승리</td><td>같은 친구를 10번 이겨도 된다. 그 친구와의 사이는 책임지지 않는다</td></tr>
     <tr><td>구름 강태공</td><td>낚시 30번 성공</td><td>8단계에서 추가. 장화를 낚아도 센다</td></tr>
+    <tr><td>보물 사냥꾼</td><td>보물 상자 10개 열기</td><td>13단계에서 추가. 남이 찾은 상자 옆에 서 있는 것은 안 센다</td></tr>
     <tr><td>하늘의 주인</td><td>Lv 20 달성</td><td></td></tr>
   </table></div>
   <ul>
@@ -950,7 +955,7 @@ code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size:
   </table></div>
   <ul>
     <li><b>천장</b>: 황금 상자는 10번 안에 영웅 이상이 한 번은 반드시 나온다. 영웅 이상이 나오면 다시 0부터 센다. 지금 몇 번째인지 탭에 보인다.</li>
-    <li>이미 가진 장식이나 펫이 또 나오면 골드로 돌려받는다(나무 상자 60G, 황금 상자 300G).</li>
+    <li>장신구는 겹쳐 나와도 가방에 그대로 쌓인다(13단계부터). 남는 것은 친구와 거래하거나 판다. 이미 가진 <b>펫</b>이 또 나오면 골드로 돌려받는다(나무 상자 60G, 황금 상자 300G).</li>
     <li>가방이 꽉 차서 못 받는 물건은 판 값만큼 골드로 받는다.</li>
     <li>전설이 나오면 채널 모두에게 알려진다.</li>
     <li>평균으로 따지면 <b>넣은 골드의 절반쯤만 돌아온다.</b> 돈을 벌려고 여는 상자가 아니다. 날개가 갖고 싶어서 여는 상자다.</li>
@@ -967,8 +972,8 @@ code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size:
     <tr><td class="ic">🪽</td><td>작은 날개</td><td class="c">영웅</td><td>등에 단다. <b>날 수는 없다.</b> 나는 것은 글라이더가 한다</td></tr>
   </table></div>
   <ul>
-    <li>가방(<kbd>I</kbd>)의 "장식" 칸에서 단다. 한 번에 하나만. 모자, 칭호, 펫과는 같이 할 수 있다.</li>
-    <li>장식에는 능력이 없다. 다른 사람에게 보인다. 거래는 안 된다.</li>
+    <li>13단계부터 장식은 <b>부위별 장신구</b>가 되어, 부위마다 하나씩 여러 개를 함께 단다. 자세한 것은 <a href="#s-22-1">22.1</a> 참고. 아래 표는 뽑기에서만 나오는 다섯 가지다.</li>
+    <li>장신구에는 능력이 없다. 다른 사람에게 보인다. 13단계부터 <b>거래도 된다.</b></li>
     <li>뽑기 펫 🟡 황금 슬라임(골드 +25%)과 👻 꼬마 유령(치명타 확률 +8%)은 상점에서 살 수 없다. 새로 뽑으면 바로 따라온다.</li>
     <li>칭호 + 모자 + 날개 + 유령 + 강화 무기를 다 갖추면 누가 봐도 오래 한 사람이다. <del>또는 운이 좋은 사람이다.</del></li>
   </ul>
@@ -1007,6 +1012,78 @@ code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size:
     <li>이 기능이 생긴 이유는 "서버가 꺼지면 레벨이 아깝다"는 걱정이었다. 알고 보니 서버는 범인이 아니었고, 진짜 위험은 초기화되는 컴퓨터였다. <a href="#s-14-7">'테스트' 님</a>에 이어 이 게임의 규칙을 바꾼 두 번째 오해.</li>
   </ul>
 
+  <h2 id="s-22"><a href="#top">22.</a> 13단계: 꾸미고 나누기</h2>
+  <h3 id="s-22-1"><a href="#s-22">22.1.</a> 부위별 장신구</h3>
+  <p>장신구가 <b>머리 · 얼굴 · 목 · 등 · 옆</b> 다섯 부위로 나뉘었다. 부위마다 하나씩, <b>최대 다섯 개를 한꺼번에</b> 단다. 상인 모모의 <b>장신구</b> 탭에서 팔고, 산 것은 가방에 들어가는 <b>아이템</b>이라 되팔거나 친구와 거래할 수 있다.</p>
+  <div class="tw"><table class="wiki">
+    <tr><th>부위</th><th colspan="2">장신구</th><th>값</th><th>모양</th></tr>
+    <tr><td class="c" rowspan="5">머리</td><td class="ic">🌸</td><td>꽃 머리핀</td><td class="n">150G</td><td>머리 옆의 작은 꽃</td></tr>
+    <tr><td class="ic">😈</td><td>도깨비 뿔</td><td class="n">400G</td><td>빨간 뿔 두 개</td></tr>
+    <tr><td class="ic">🚁</td><td>프로펠러</td><td class="n">600G</td><td>머리 위에서 계속 돈다. <b>날 수는 없다</b></td></tr>
+    <tr><td class="ic">⭐</td><td>머리 위 별</td><td class="n">뽑기</td><td>빙글빙글 도는 별</td></tr>
+    <tr><td class="ic">😇</td><td>천사 고리</td><td class="n">뽑기</td><td>빛나는 고리</td></tr>
+    <tr><td class="c" rowspan="3">얼굴</td><td class="ic">🕶️</td><td>선글라스</td><td class="n">250G</td><td>밤에도 벗지 않는다</td></tr>
+    <tr><td class="ic">🥸</td><td>콧수염</td><td class="n">200G</td><td></td></tr>
+    <tr><td class="ic">🤡</td><td>빨간 코</td><td class="n">120G</td><td>가장 싼 장신구</td></tr>
+    <tr><td class="c" rowspan="3">목</td><td class="ic">🎀</td><td>나비넥타이</td><td class="n">150G</td><td></td></tr>
+    <tr><td class="ic">🥇</td><td>금메달</td><td class="n">500G</td><td>아무 대회에서도 우승하지 않았어도 살 수 있다</td></tr>
+    <tr><td class="ic">🧣</td><td>빨간 목도리</td><td class="n">뽑기</td><td></td></tr>
+    <tr><td class="c" rowspan="3">등</td><td class="ic">🦸</td><td>영웅 망토</td><td class="n">600G</td><td>빨간 망토</td></tr>
+    <tr><td class="ic">🐢</td><td>거북 등껍질</td><td class="n">450G</td><td>방어력은 오르지 않는다. 기분만 든든하다</td></tr>
+    <tr><td class="ic">🪽</td><td>작은 날개</td><td class="n">뽑기</td><td></td></tr>
+    <tr><td class="c" rowspan="3">옆</td><td class="ic">🔮</td><td>떠다니는 구슬</td><td class="n">700G</td><td>몸 둘레를 빙빙 돈다. 가장 비싼 장신구</td></tr>
+    <tr><td class="ic">🚩</td><td>작은 깃발</td><td class="n">200G</td><td>등 뒤에 꽂는 노란 깃발</td></tr>
+    <tr><td class="ic">🎈</td><td>분홍 풍선</td><td class="n">뽑기</td><td></td></tr>
+  </table></div>
+  <ul>
+    <li><b>다는 법</b>: 가방(<kbd>I</kbd>)의 "장신구" 칸에 부위별로 나온다. 눌러서 달고, 다시 눌러서 뗀다. 같은 부위의 다른 것을 누르면 바꿔 단다.</li>
+    <li>상점에서 사면 그 부위가 비어 있을 때는 바로 달아 준다.</li>
+    <li>상점에서 산 것은 산 값의 <b>40%</b>에 되팔 수 있다. 뽑기 전용은 희귀 60G, 영웅 300G.</li>
+    <li>달고 있는 장신구를 팔거나 거래로 넘기면 몸에서도 떨어진다. 같은 것을 두 개 가지고 있으면 하나를 넘겨도 계속 달고 있다.</li>
+    <li>가방 칸을 하나씩 차지한다. 그래서 가방이 30칸으로 늘었다.</li>
+    <li>전부 사면 <b>4,320G</b>. 능력은 하나도 없다. <del>그래서 더 갖고 싶다.</del></li>
+    <li>예전에 뽑아 둔 장식(목도리 · 풍선 · 별 · 고리 · 날개)은 저절로 가방 아이템으로 옮겨졌다. 사라진 것이 아니니 가방을 열어 보자.</li>
+    <li>모자(처음 고르는 고깔 · 밀짚 · 왕관)와 머리 장신구는 따로다. 왕관 위에 프로펠러를 얹는 것도 된다. <del>말리는 사람이 없다.</del></li>
+  </ul>
+  <h3 id="s-22-2"><a href="#s-22">22.2.</a> 거래로 나누기</h3>
+  <p>거래 자체는 4단계부터 있었다(<a href="#s-10-5">10.5</a>). 달라진 것은 <b>장신구가 거래된다</b>는 점이다.</p>
+  <ul>
+    <li><kbd>P</kbd> → 이름 옆 <b>거래</b> → 상대가 수락 → 내 가방에서 올릴 것을 누르고 골드를 적는다 → <b>둘 다 확인</b>을 누르면 바뀐다.</li>
+    <li>뽑기에서 목도리만 세 번 나온 사람과 풍선만 세 번 나온 사람이 만나면 둘 다 행복해진다. 이 기능은 그러라고 있다.</li>
+    <li>골드로 사고파는 것도 된다. 값은 둘이 정한다. 천사 고리와 날개는 황금 상자에서만 나오니 시세가 높을 것이다. <del>이 섬에 처음으로 경제가 생겼다.</del></li>
+    <li>한쪽이 내용을 바꾸면 양쪽 확인이 풀린다. 확인을 누르기 전에 상대가 올린 것을 다시 보자.</li>
+    <li>서로 14걸음 넘게 멀어지면 취소된다. 몬스터가 있는 곳에서 거래하다 한 명이 쓰러져 광장으로 가도 취소된다. 거래는 광장에서 하자. <del>이 문서를 쓰던 사람이 실제로 겪었다.</del></li>
+  </ul>
+  <h3 id="s-22-3"><a href="#s-22">22.3.</a> 보물 상자 찾기</h3>
+  <p>누군가 접속해 있으면 <b>2분 30초쯤마다</b> 섬 어딘가에 보물 상자(🧰)가 하나 나타난다. 채팅 창에 <b>어느 섬인지</b>만 알려 준다. 정확한 자리는 직접 찾아야 한다. 상자 위로 노란 빛기둥이 솟아 있어서 멀리서도 보인다.</p>
+  <ul>
+    <li>상자에 <b>먼저 닿는 사람</b>이 가진다. 닿기만 하면 열린다. 이것만은 나눠 갖지 않는다. <a href="#s-15">한 대 계</a>가 통하지 않는 유일한 보상.</li>
+    <li>나오는 것: 골드(포근언덕 100~250G, 버섯숲은 1.6배, 서리봉우리는 2.6배) + 폭죽 2개 + 아래 중 하나.</li>
+  </ul>
+  <div class="tw"><table class="wiki">
+    <tr><th>확률</th><th>덤으로 나오는 것</th></tr>
+    <tr><td class="n">25%</td><td>상점 장신구 아무거나 1개</td></tr>
+    <tr><td class="n">35%</td><td>큰 물약 2개</td></tr>
+    <tr><td class="n">20%</td><td>폭풍의 조각 1개 (서리봉우리 상자는 거인의 심장 1개)</td></tr>
+    <tr><td class="n">20%</td><td>바람의 돌 1개</td></tr>
+  </table></div>
+  <ul>
+    <li>상자가 나타나는 곳은 포근언덕이 절반쯤, 나머지가 버섯숲과 서리봉우리다. 광장 안에는 나타나지 않는다.</li>
+    <li>2분 30초 동안 아무도 못 찾으면 사라지고, 다시 2분 30초쯤 뒤에 새로 나타난다.</li>
+    <li>누가 열면 모두에게 누가 무엇을 얻었는지 알려진다.</li>
+    <li>상자는 몬스터를 가리지 않고 나타난다. 두꺼비 세 마리 한가운데 놓여 있기도 하다. 이 문서를 쓰던 사람은 그런 상자를 열고 바로 쓰러졌다. 상자는 가졌다.</li>
+    <li>10개를 열면 칭호 〈보물 사냥꾼〉.</li>
+    <li>수업 시간에 "버섯숲에 상자!"가 뜨면 반 전체가 글라이더를 편다. <del>선생님 말씀은 그다음이다.</del></li>
+  </ul>
+  <h3 id="s-22-4"><a href="#s-22">22.4.</a> 폭죽</h3>
+  <ul>
+    <li>상점의 "사기" 탭에서 <b>30G</b>. 가방에서 누르면 그 자리에서 솟아올라 하늘에서 터진다. 색은 여섯 가지 중 아무거나.</li>
+    <li><b>모두에게 보인다.</b> 능력은 없다. 몬스터도 다치지 않는다.</li>
+    <li>보물 상자를 열 때마다 2개씩 덤으로 받는다.</li>
+    <li>쓸 만한 때: 골렘을 잡았을 때, 누가 +10 강화에 성공했을 때, 결투에서 이겼을 때, 아무 일도 없을 때.</li>
+    <li>밤에 쏘면 더 잘 보인다. 광장에서 열 명이 한꺼번에 쏘면 볼 만하다. <del>골드가 가장 빨리 사라지는 방법이기도 하다.</del></li>
+  </ul>
+
   <h2 id="s-15"><a href="#top">15.</a> 은어</h2>
   <p>아래 말들은 아직 <b>아무도 쓰지 않는다.</b> 이 문서가 처음 써 보는 것이며, 퍼지기를 바라고 적어 둔다.</p>
   <div class="tw"><table class="wiki">
@@ -1024,7 +1101,7 @@ code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size:
     <tr><th>섬</th><td><a href="#s-4">포근언덕</a><a href="#s-4-2">버섯숲</a><a href="#s-19">서리봉우리</a><a href="#s-4-1">바람 기둥</a></td></tr>
     <tr><th>몬스터</th><td><a href="#s-5-1">말랑 슬라임</a><a href="#s-5-2">버섯돌이</a><a href="#s-5-3">이끼 돌거북</a><a href="#s-5-5">독버섯 두꺼비</a><a href="#s-5-5">숲의 정령</a><a href="#s-19-3">눈덩이 도깨비</a><a href="#s-19-3">서리 늑대</a><a href="#s-19-3">서리 거인</a><a href="#s-5-4">폭풍 골렘</a></td></tr>
     <tr><th>무기</th><td><a href="#s-8-1">바람검</a><a href="#s-8-2">참나무 활</a><a href="#s-8-3">별빛 지팡이</a><a href="#s-8-4">바위 망치와 방패</a><a href="#s-8-5">반딧불 등불</a><a href="#s-8-6">그림자 쌍단검</a><a href="#s-8-7">천둥 창</a><a href="#s-8-8">달빛 낫</a></td></tr>
-    <tr><th>시스템</th><td><a href="#s-6">전투</a><a href="#s-7">성장</a><a href="#s-9">가방과 상점</a><a href="#s-10-5">파티와 거래</a><a href="#s-4-3">낮과 밤</a><a href="#s-4-4">꾸미기</a><a href="#s-16-1">의뢰</a><a href="#s-16-2">바람의 다리</a><a href="#s-16-3">강화</a><a href="#s-17-1">결투</a><a href="#s-17-2">칭호</a><a href="#s-17-3">순위판</a><a href="#s-18-1">낚시</a><a href="#s-18-2">요리</a><a href="#s-18-3">펫</a><a href="#s-20-1">도전 강화</a><a href="#s-20-2">뽑기 상자</a><a href="#s-20-3">장식</a><a href="#s-21">이어하기 코드</a></td></tr>
+    <tr><th>시스템</th><td><a href="#s-6">전투</a><a href="#s-7">성장</a><a href="#s-9">가방과 상점</a><a href="#s-10-5">파티와 거래</a><a href="#s-4-3">낮과 밤</a><a href="#s-4-4">꾸미기</a><a href="#s-16-1">의뢰</a><a href="#s-16-2">바람의 다리</a><a href="#s-16-3">강화</a><a href="#s-17-1">결투</a><a href="#s-17-2">칭호</a><a href="#s-17-3">순위판</a><a href="#s-18-1">낚시</a><a href="#s-18-2">요리</a><a href="#s-18-3">펫</a><a href="#s-20-1">도전 강화</a><a href="#s-20-2">뽑기 상자</a><a href="#s-20-3">장식</a><a href="#s-21">이어하기 코드</a><a href="#s-22-1">부위별 장신구</a><a href="#s-22-3">보물 상자</a><a href="#s-22-4">폭죽</a></td></tr>
     <tr><th>인물</th><td><a href="#s-9">상인 모모</a><a href="#s-16-1">촌장 루루</a><a href="#s-14-3">'테스트' 님</a></td></tr>
   </table>
 
@@ -1035,11 +1112,12 @@ code { background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size:
     <div><a href="#rfn-4" id="fn-4">[4]</a> 나눠 갖는 게 아니라 각자 전부 받는다. 그래서 이 게임에는 "스틸"이라는 말이 없다.</div>
     <div><a href="#rfn-5" id="fn-5">[5]</a> 사람 한 명과 인공지능(Claude) 하나. 사람은 "만들어 줘"를 맡았고 나머지는 나머지가 맡았다.</div>
   </div>
-  <div class="license">이 문서는 구름섬 아르카 11단계 기준으로 쓰였습니다. 게임이 업데이트되면 숫자가 달라질 수 있습니다. 아르카위키는 게임 안내를 위한 설명서이며 실제 위키 사이트가 아닙니다. 옆 칸의 "최근 변경"과 "실시간 검색어"는 꾸며 낸 장식이고, 본문의 숫자와 "사건 사고"는 사실입니다.</div>
+  <div class="license">이 문서는 구름섬 아르카 13단계 기준으로 쓰였습니다. 게임이 업데이트되면 숫자가 달라질 수 있습니다. 아르카위키는 게임 안내를 위한 설명서이며 실제 위키 사이트가 아닙니다. 옆 칸의 "최근 변경"과 "실시간 검색어"는 꾸며 낸 장식이고, 본문의 숫자와 "사건 사고"는 사실입니다.</div>
 </main>
 <aside id="side">
   <div class="card"><h5>최근 변경</h5><ul>
-    <li><a href="#s-8-6">그림자 쌍단검/마우스 수명</a><span>방금</span></li>
+    <li><a href="#s-22-3">보물 상자/수업 중 소란</a><span>방금</span></li>
+    <li><a href="#s-8-6">그림자 쌍단검/마우스 수명</a><span>4분 전</span></li>
     <li><a href="#s-18-4">아기 하늘고래/확률 항의</a><span>1분 전</span></li>
     <li><a href="#s-20-1">도전 강화/+10 실패담</a><span>2분 전</span></li>
     <li><a href="#s-19-2">서리봉우리/미끄러져 떨어진 사람 목록</a><span>3분 전</span></li>

@@ -65,7 +65,7 @@ function makeChannel() {
   const boss = make({ kind: 'golem', x: A.BOSS.x, z: A.BOSS.z });
   boss.alive = false; boss.deadUntil = Date.now() + BOSS_FIRST_MS;
   monsters.push(boss);
-  return { players: new Map(), monsters, boss, decos: new Map() };
+  return { players: new Map(), monsters, boss, decos: new Map(), chest: null, nextChest: Date.now() + 60000 };
 }
 function pickChannel() {
   for (let n = 1; ; n++) {
@@ -82,16 +82,22 @@ function broadcast(ch, msg, exceptId) {
   const s = JSON.stringify(msg);
   for (const p of channels.get(ch).players.values()) if (p.id !== exceptId && p.ws.readyState === 1) p.ws.send(s);
 }
-function publicInfo(p) { return { id: p.id, name: p.name, color: p.color, hat: p.hat, x: p.x, y: p.y, z: p.z, ry: p.ry, lv: p.lv, w: p.inv.equip, title: titleName(p), pet: p.inv.pet, cos: p.inv.wear }; }
+function publicInfo(p) { return { id: p.id, name: p.name, color: p.color, hat: p.hat, x: p.x, y: p.y, z: p.z, ry: p.ry, lv: p.lv, w: p.inv.equip, title: titleName(p), pet: p.inv.pet, cos: p.inv.wear }; } // cos: { 부위: 장신구 }
 function cleanText(s, max) { return String(s || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, max); }
 const num = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
 const r2 = (v) => Math.round(v * 100) / 100;
 function sendStats(p) { send(p.ws, { t: 'stats', hp: Math.ceil(p.hp), maxHp: p.maxHp, lv: p.lv, xp: p.xp, need: A.needXp(p.lv), atk: p.atk }); }
 function titleName(p) { return p.title && A.TITLES[p.title] ? A.TITLES[p.title].name : ''; }
-function statsOf(p) { return { lv: p.lv, gold: p.inv.gold, kills: p.st.kills, boss: p.st.boss, wins: p.st.wins, quests: p.st.quests, fish: p.st.fish, maxUp: Math.max(0, ...Object.values(p.inv.up)) }; }
+function statsOf(p) { return { lv: p.lv, gold: p.inv.gold, kills: p.st.kills, boss: p.st.boss, wins: p.st.wins, quests: p.st.quests, fish: p.st.fish, chests: p.st.chests, maxUp: Math.max(0, ...Object.values(p.inv.up)) }; }
 function sendSt(p) { send(p.ws, { t: 'st', st: p.st, title: p.title }); }
 function perk(p) { const pet = A.PETS[p.inv.pet]; return (pet && pet.perk) || {}; } // 데리고 있는 펫의 능력
-function sendInv(p) { send(p.ws, { t: 'inv', ...p.inv }); }
+function sendInv(p) {
+  // 가방에서 사라진 장신구(팔았거나 거래로 넘김)는 몸에서도 떼어 냄
+  let changed = false;
+  for (const slot in p.inv.wear) if (!p.inv.items[p.inv.wear[slot]]) { delete p.inv.wear[slot]; changed = true; }
+  if (changed && channels.has(p.ch)) broadcast(p.ch, { t: 'cos', id: p.id, cos: p.inv.wear });
+  send(p.ws, { t: 'inv', ...p.inv });
+}
 function bagSlots(inv) { return Object.keys(inv.items).length; }
 function addItem(inv, id, n) { // 가방이 꽉 차면 못 넣음
   if (!inv.items[id] && bagSlots(inv) >= A.BAG_SLOTS) return 0;
@@ -251,6 +257,41 @@ function playerAttack(ch, p, k, ry) {
   broadcast(ch, fxMsg, p.id);
 }
 
+// ---------- 보물 상자 ----------
+let nextChestId = 1;
+function spawnChest(ch) {
+  const c = channels.get(ch);
+  const I = A.ISLANDS[Math.random() < 0.55 ? 0 : Math.random() < 0.6 ? 1 : 2];
+  for (let i = 0; i < 60; i++) {
+    const a = Math.random() * Math.PI * 2, r = (I.id ? 5 : A.SAFE_R + 4) + Math.random() * (I.R - (I.id ? 11 : A.SAFE_R + 10));
+    const x = I.x + Math.cos(a) * r, z = I.z + Math.sin(a) * r;
+    if (LAYOUT.obstacles.some((o) => Math.hypot(o.x - x, o.z - z) < o.r + 1.5) || A.UPDRAFTS.some((u) => Math.hypot(u.x - x, u.z - z) < u.r + 2)) continue;
+    c.chest = { id: nextChestId++, x: r2(x), z: r2(z), isl: I.id, until: Date.now() + A.CHEST.lifeMs };
+    broadcast(ch, { t: 'chest', chest: c.chest });
+    broadcast(ch, { t: 'notice', text: `🧰 ${I.icon} ${I.name} 어딘가에 보물 상자가 나타났어요! 먼저 찾는 사람이 임자예요` });
+    return;
+  }
+}
+function openChest(p) {
+  const c = channels.get(p.ch), ch = c.chest;
+  if (!ch || p.dead || Math.hypot(p.x - ch.x, p.z - ch.z) > A.CHEST.reach + 1) return;
+  c.chest = null; c.nextChest = Date.now() + A.CHEST.everyMs;
+  const mult = [1, 1.6, 2.6][ch.isl], inv = p.inv;
+  const gold = Math.round((100 + Math.random() * 150) * mult);
+  inv.gold = Math.min(999999, inv.gold + gold);
+  const got = [];
+  const give = (id, n) => { const added = addItem(inv, id, n); if (added) got.push(`${A.ITEMS[id].icon} ${A.ITEMS[id].name}${A.ITEMS[id].type === 'acc' ? '' : ' ×' + added}`); };
+  give('firework', 2);
+  const r = Math.random();
+  if (r < 0.25) { const shop = A.ACC_IDS.filter((id) => A.ACCS[id].buy); give(shop[Math.floor(Math.random() * shop.length)], 1); }
+  else if (r < 0.6) give('bigpotion', 2);
+  else if (r < 0.8) give(ch.isl === 2 ? 'heart' : 'shard', 1);
+  else give('windstone', 1);
+  p.st.chests++; sendSt(p); sendInv(p);
+  broadcast(p.ch, { t: 'chest', chest: null, by: p.id });
+  broadcast(p.ch, { t: 'notice', text: `🧰 ${p.name} 님이 보물 상자를 열었어요! ${gold}G${got.length ? ' · ' + got.join(', ') : ''}` });
+}
+
 // ---------- 뽑기 상자 · 장식 ----------
 function rollGacha(p, box, forceTier) {
   const inv = p.inv;
@@ -265,11 +306,12 @@ function rollGacha(p, box, forceTier) {
   const res = { r: tier.r };
   if (kind === 'gold') { inv.gold = Math.min(999999, inv.gold + a); res.icon = '💰'; res.text = `${a}G`; }
   else if (kind === 'item') {
-    const it = A.ITEMS[a], n = addItem(inv, a, b);
-    res.icon = it.icon; res.text = `${it.name} ×${b}`;
+    const it = A.ITEMS[a], had = inv.items[a] || 0, n = addItem(inv, a, b);
+    res.icon = it.icon; res.text = it.type === 'acc' ? it.name : `${it.name} ×${b}`;
+    if (it.type === 'acc' && !had && n) res.isNew = true;
     if (n < b) { const back = (b - n) * (it.sell || 20); inv.gold = Math.min(999999, inv.gold + back); res.text += ` (가방이 꽉 차서 ${back}G로)`; }
   } else {
-    const list = kind === 'cos' ? inv.cos : inv.pets, def = (kind === 'cos' ? A.COSMETICS : A.PETS)[a];
+    const list = inv.pets, def = A.PETS[a];
     res.icon = def.icon; res.text = def.name;
     if (list.includes(a)) { inv.gold = Math.min(999999, inv.gold + box.dup); res.text += ` (이미 있어서 ${box.dup}G로)`; }
     else { list.push(a); res.isNew = true; if (kind === 'pet') { inv.pet = a; broadcast(p.ch, { t: 'pet', id: p.id, pet: a }); } } // 새 펫은 바로 따라옴
@@ -278,9 +320,10 @@ function rollGacha(p, box, forceTier) {
 }
 function handleGacha(p, m) {
   const inv = p.inv;
-  if (m.t === 'wear') {
-    if (m.id && !inv.cos.includes(m.id)) return;
-    inv.wear = m.id || '';
+  if (m.t === 'wear') { // { slot, id } id 가 비면 그 부위를 뗌
+    const slotOk = A.SLOTS.some((x) => x[0] === m.slot); if (!slotOk) return;
+    if (!m.id) delete inv.wear[m.slot];
+    else { const acc = A.ACCS[m.id]; if (!acc || acc.slot !== m.slot || !inv.items[m.id]) return; inv.wear[m.slot] = m.id; }
     sendInv(p);
     return broadcast(p.ch, { t: 'cos', id: p.id, cos: inv.wear });
   }
@@ -406,6 +449,12 @@ function handleShop(p, m) {
   const inv = p.inv;
   if (m.t === 'use') {
     const it = A.ITEMS[m.item];
+    if (it && it.type === 'fun' && !p.dead) { // 폭죽: 모두에게 보이는 불꽃
+      if (Date.now() < (p.funAt || 0) || !removeItem(inv, m.item, 1)) return;
+      p.funAt = Date.now() + 700;
+      broadcast(p.ch, { t: 'firework', x: r2(p.x), y: r2(p.y), z: r2(p.z), c: Math.floor(Math.random() * 6) });
+      return sendInv(p);
+    }
     if (it && it.type === 'food' && !p.dead) { // 구운 생선: 회복 + 잠깐 공격력 증가
       if (Date.now() < (p.potionAt || 0) || !removeItem(inv, m.item, 1)) return;
       p.potionAt = Date.now() + 1000;
@@ -446,6 +495,15 @@ function handleShop(p, m) {
       inv.gold -= pet.price; inv.pets.push(m.id); inv.pet = m.id;
       broadcast(p.ch, { t: 'pet', id: p.id, pet: m.id });
       notice(p, `${pet.icon} ${pet.name}이(가) 따라오기 시작했어요! 가방(I)에서 바꿀 수 있어요`);
+    } else if (A.ACCS[m.id]) {
+      const it = A.ITEMS[m.id];
+      if (!it.buy) return notice(p, `${it.name}은(는) 상점에서 팔지 않아요. 뽑기 상자에서 나와요`);
+      if (inv.gold < it.buy) return notice(p, '골드가 모자라요');
+      if (!addItem(inv, m.id, 1)) return notice(p, '가방이 꽉 찼어요');
+      inv.gold -= it.buy;
+      const slot = it.slot;
+      if (!inv.wear[slot]) { inv.wear[slot] = m.id; broadcast(p.ch, { t: 'cos', id: p.id, cos: inv.wear }); } // 그 부위가 비어 있으면 바로 달아 줌
+      notice(p, `${it.icon} ${it.name}을(를) 샀어요! 가방(I)에서 달고 뗄 수 있어요`);
     } else if (A.SHOP_ITEMS.includes(m.id)) {
       const it = A.ITEMS[m.id], n = Math.max(1, Math.min(10, Math.floor(num(m.n, 1))));
       if (inv.gold < it.buy * n) return notice(p, '골드가 모자라요');
@@ -865,7 +923,7 @@ wss.on('connection', (ws) => {
         const d = raw && cleanDeco(me, raw, num(raw.x, 999), num(raw.z, 999), raw.ry);
         if (d) { c.decos.set(d.id, d); broadcast(ch, { t: 'decoadd', d }, me.id); }
       }
-      send(ws, { t: 'welcome', id: me.id, ch, players: [...c.players.values()].filter((q) => q !== me).map(publicInfo), me: publicInfo(me), decos: [...c.decos.values()], phase: phaseNow(), dayMs: DAY_MS });
+      send(ws, { t: 'welcome', id: me.id, ch, players: [...c.players.values()].filter((q) => q !== me).map(publicInfo), me: publicInfo(me), decos: [...c.decos.values()], phase: phaseNow(), dayMs: DAY_MS, chest: c.chest });
       sendStats(me); sendInv(me); sendQuests(me); sendSt(me); send(ws, windMsg());
       send(ws, { t: 'bossinfo', alive: c.boss.alive, in: c.boss.alive ? 0 : Math.max(0, c.boss.deadUntil - Date.now()) });
       broadcast(ch, { t: 'join', p: publicInfo(me) }, me.id);
@@ -890,6 +948,8 @@ wss.on('connection', (ws) => {
       playerAttack(me.ch, me, Math.floor(num(m.k, -1)), num(m.ry, me.ry));
     } else if (m.t === 'use' || m.t === 'equip' || m.t === 'buy' || m.t === 'sell') {
       handleShop(me, m);
+    } else if (m.t === 'chestopen') {
+      openChest(me);
     } else if (m.t === 'gacha' || m.t === 'wear') {
       handleGacha(me, m);
     } else if (m.t === 'fish' || m.t === 'reel' || m.t === 'cook' || m.t === 'pet') {
@@ -969,6 +1029,16 @@ function revive(p) {
   broadcast(p.ch, { t: 'revived', id: p.id }, p.id);
   sendStats(p);
 }
+
+// 보물 상자: 사람이 있는 채널에 가끔 나타나고, 오래 안 찾으면 사라짐
+setInterval(() => {
+  const now = Date.now();
+  for (const [ch, c] of channels) {
+    if (!c.players.size) continue;
+    if (c.chest && now > c.chest.until) { c.chest = null; c.nextChest = now + A.CHEST.everyMs; broadcast(ch, { t: 'chest', chest: null }); broadcast(ch, { t: 'notice', text: '🧰 아무도 찾지 못한 보물 상자가 사라졌어요…' }); }
+    else if (!c.chest && now > c.nextChest) spawnChest(ch);
+  }
+}, 2000);
 
 // 싸우지 않을 때 체력이 조금씩 차오름 (+ 너무 멀어진 거래는 취소)
 setInterval(() => {
