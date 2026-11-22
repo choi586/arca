@@ -1172,7 +1172,7 @@ const handlers = {
   fx(m) { const o = others.get(m.id); if (o && WEAPONS[m.w]) { setWeapon(o.av, m.w); skillFx(o.av, m.w, m.k, m.tg); } },
   inv(m) {
     const prevEquip = me.inv.equip;
-    me.inv = { gold: m.gold, items: m.items, weapons: m.weapons, equip: m.equip, up: m.up || {}, upf: m.upf || {}, pets: m.pets || [], pet: m.pet || '', wear: m.wear && typeof m.wear === 'object' ? m.wear : {}, pity: m.pity || 0, wp: m.wp || 0 };
+    me.inv = { gold: m.gold, items: m.items, weapons: m.weapons, equip: m.equip, up: m.up || {}, upf: m.upf || {}, pets: m.pets || [], pet: m.pet || '', wear: m.wear && typeof m.wear === 'object' ? m.wear : {}, pity: m.pity || 0, pl: m.pl || 0, wp: m.wp || 0 };
     setPet(me, me.inv.pet); setCos(me, me.inv.wear);
     store.set('arca.inv', JSON.stringify(me.inv));
     if (me.av) {
@@ -1366,6 +1366,7 @@ function drinkPotion() {
 
 // ================= 상인 / 가방 / 상점 =================
 let merchantAv = null, merchantTag = null, nearMerchant = false, shopTab = 'buy', lastGacha = null;
+const openOdds = new Set(); // 확률표를 펼쳐 둔 상자
 {
   const stall = new THREE.Group();
   const table = mesh(new THREE.BoxGeometry(2.6, 0.9, 1.1), '#a0723a'); table.position.set(0, 0.45, 1.1);
@@ -1502,19 +1503,21 @@ function renderShop() {
     }
     for (const k in ARCA.GACHA) {
       const bx = ARCA.GACHA[k];
-      const sub = bx.pity ? `${bx.pity}번 안에 영웅 이상 확정 · 지금 ${me.inv.pity}/${bx.pity}번째` : '가볍게 한 번';
+      const mats = Object.entries(bx.mats || {}), has = (n) => g >= bx.price * n && mats.every(([m, c]) => (me.inv.items[m] || 0) >= c * n);
+      const sub = bx.pity ? `${bx.pity}번 안에 ${ARCA.RARITY[bx.pityTier || 3]}${bx.pityTier === 4 ? '' : ' 이상'} 확정 · 지금 ${me.inv[bx.pityKey || 'pity'] || 0}/${bx.pity}번째`
+        : mats.length ? '재료: ' + mats.map(([m, c]) => `${ITEMS[m].icon} ${ITEMS[m].name} ${me.inv.items[m] || 0}/${c}`).join(' · ') : k === 'pet' ? '펫만 나와요. 이미 있는 펫은 골드로' : '가볍게 한 번';
       list.appendChild(shopRow(bx.icon, bx.name, sub, `${bx.price}G`, [
-        ['1번', g >= bx.price, () => net({ t: 'gacha', box: k, n: 1 })],
-        ['10번', g >= bx.price * 10, () => net({ t: 'gacha', box: k, n: 10 })],
+        ['1번', has(1), () => net({ t: 'gacha', box: k, n: 1 })],
+        ['10번', has(10), () => net({ t: 'gacha', box: k, n: 10 })],
       ]));
-      const odds = el('div', 'odds');
+      const odds = el('details', 'odds'); odds.appendChild(el('summary', '', '확률 보기')); odds.open = openOdds.has(k); odds.ontoggle = () => { if (odds.open) openOdds.add(k); else openOdds.delete(k); };
       for (const t of bx.tiers) {
-        const names = t.pool.map(([kind, a, b]) => kind === 'gold' ? `${a}G` : kind === 'item' ? `${ITEMS[a].icon}${ITEMS[a].name}${ITEMS[a].type === 'acc' ? '' : '×' + b}` : `${ARCA.PETS[a].icon}${ARCA.PETS[a].name}`);
+        const names = [...new Set(t.pool.map(String))].map((s2) => t.pool.find((x) => String(x) === s2)).map(([kind, a, b]) => kind === 'gold' ? `${a}G` : kind === 'item' ? `${ITEMS[a].icon}${ITEMS[a].name}${ITEMS[a].type === 'acc' ? '' : '×' + b}` : `${ARCA.PETS[a].icon}${ARCA.PETS[a].name}`);
         const row = el('div', 'r' + ARCA.RARITY.indexOf(t.r)); row.append(el('b', '', `${t.r} ${t.w}%`), document.createTextNode(' ' + names.join(', '))); odds.appendChild(row);
       }
       list.appendChild(odds);
     }
-    list.appendChild(el('div', 'tip', '장신구는 여러 개 나와도 가방에 쌓여요. 남는 건 친구와 거래하거나 팔 수 있어요. 이미 가진 펫이 나오면 골드로 돌려받아요.'));
+    list.appendChild(el('div', 'tip', '섬 상자는 골드와 그 섬 몬스터의 재료로 열어요. 그 섬 상자에서만 나오는 장신구와 펫이 있어요. 장신구는 여러 개 나와도 가방에 쌓여요. 남는 건 친구와 거래하거나 팔 수 있어요. 이미 가진 펫이 나오면 골드로 돌려받아요.'));
   } else if (shopTab === 'up') { // 무기 강화
     list.appendChild(el('div', 'tip', `재료와 골드로 무기를 강화해요. 한 단계마다 그 무기의 피해가 ${ARCA.UP_BONUS * 100}%씩 늘어요 (최대 +${ARCA.MAX_UP}). +6부터는 실패할 수 있어요. 실패하면 골드와 재료만 사라지고 단계는 그대로예요. 대신 실패할 때마다 그 무기의 다음 성공 확률이 ${ARCA.UP_PITY * 100}%p씩 올라요.`));
     for (const id of me.inv.weapons) {
@@ -1790,6 +1793,46 @@ function updateLeisure(dt) {
 // 펫: 주인 뒤를 따라다니는 작은 친구 (꾸밈용)
 function makePet(kind) {
   const g = new THREE.Group();
+  const eyes = (y, z, dx, r) => { for (const x of [-dx, dx]) { const e = mesh(new THREE.SphereGeometry(r || 0.04, 5, 5), '#222', null, false); e.position.set(x, y, z); g.add(e); } };
+  const P = (geo, color, opts, x, y, z) => { const m = mesh(geo, color, opts, false); m.position.set(x, y, z); g.add(m); return m; };
+  if (kind === 'bunny') {
+    P(new THREE.SphereGeometry(0.3, 10, 8), '#ffdeeb', null, 0, 0.28, 0); P(new THREE.SphereGeometry(0.2, 8, 7), '#fff0f6', null, 0, 0.52, 0.16);
+    for (const x of [-0.08, 0.08]) { const e = P(new THREE.CylinderGeometry(0.045, 0.045, 0.34, 6), '#ffdeeb', null, x, 0.82, 0.12); e.rotation.z = -x * 2; }
+    P(new THREE.SphereGeometry(0.09, 6, 5), '#ffffff', null, 0, 0.3, -0.3); eyes(0.56, 0.34, 0.08, 0.03); return g;
+  }
+  if (kind === 'sporeling') {
+    P(new THREE.CylinderGeometry(0.16, 0.2, 0.34, 8), '#fff4e6', null, 0, 0.17, 0);
+    const cap = P(new THREE.SphereGeometry(0.34, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), '#e03131', null, 0, 0.32, 0); cap.scale.y = 0.8;
+    for (const [x, z] of [[0.15, 0.12], [-0.17, 0.02], [0.02, -0.2], [-0.02, 0.22]]) P(new THREE.SphereGeometry(0.05, 5, 4), '#ffffff', null, x, 0.53, z);
+    eyes(0.2, 0.19, 0.07, 0.03); return g;
+  }
+  if (kind === 'pengu') {
+    const b = P(new THREE.SphereGeometry(0.26, 10, 8), '#343a40', null, 0, 0.32, 0); b.scale.y = 1.25;
+    const belly = P(new THREE.SphereGeometry(0.2, 8, 7), '#f8f9fa', null, 0, 0.28, 0.1); belly.scale.y = 1.2;
+    const beak = P(new THREE.ConeGeometry(0.05, 0.12, 5), '#ff922b', null, 0, 0.46, 0.27); beak.rotation.x = Math.PI / 2;
+    for (const x of [-0.1, 0.1]) P(new THREE.BoxGeometry(0.1, 0.03, 0.16), '#ff922b', null, x, 0.02, 0.08);
+    for (const x of [-1, 1]) { const w = P(new THREE.BoxGeometry(0.05, 0.26, 0.14), '#343a40', null, x * 0.27, 0.32, 0); w.rotation.z = x * 0.35; }
+    eyes(0.52, 0.22, 0.08, 0.03); return g;
+  }
+  if (kind === 'drake') {
+    const b = P(new THREE.SphereGeometry(0.26, 10, 8), '#e8590c', null, 0, 0, 0); b.scale.set(0.9, 0.85, 1.2);
+    P(new THREE.SphereGeometry(0.18, 8, 7), '#f76707', null, 0, 0.16, 0.3);
+    for (const x of [-0.08, 0.08]) P(new THREE.ConeGeometry(0.035, 0.14, 4), '#ffe066', null, x, 0.36, 0.26);
+    for (const x of [-1, 1]) { const w = P(new THREE.ConeGeometry(0.2, 0.42, 3), '#c92a2a', { emissive: '#e03131', emissiveIntensity: 0.4 }, x * 0.34, 0.14, -0.05); w.scale.z = 0.2; w.rotation.z = -x * 1.1; }
+    const tail = P(new THREE.ConeGeometry(0.09, 0.4, 5), '#e8590c', null, 0, -0.02, -0.45); tail.rotation.x = -Math.PI / 2;
+    P(new THREE.IcosahedronGeometry(0.07, 0), '#ffe066', { emissive: '#ff922b', emissiveIntensity: 1.6 }, 0, -0.02, -0.68);
+    eyes(0.2, 0.45, 0.08, 0.03); return g;
+  }
+  if (kind === 'starcat') {
+    const glow = { emissive: '#7950f2', emissiveIntensity: 0.45 };
+    const b = P(new THREE.SphereGeometry(0.26, 10, 8), '#3b2f6b', glow, 0, 0.26, 0); b.scale.set(0.9, 0.9, 1.2);
+    P(new THREE.SphereGeometry(0.2, 9, 8), '#3b2f6b', glow, 0, 0.5, 0.26);
+    for (const x of [-0.12, 0.12]) P(new THREE.ConeGeometry(0.07, 0.15, 4), '#3b2f6b', glow, x, 0.72, 0.24);
+    const tail = P(new THREE.CylinderGeometry(0.03, 0.04, 0.42, 5), '#3b2f6b', glow, 0, 0.5, -0.36); tail.rotation.x = -0.6;
+    g.userData.spin = P(new THREE.OctahedronGeometry(0.09, 0), '#ffe066', { emissive: '#fab005', emissiveIntensity: 1.6 }, 0, 0.74, -0.5);
+    for (const x of [-0.08, 0.08]) P(new THREE.SphereGeometry(0.035, 5, 5), '#ffe066', { emissive: '#ffd43b', emissiveIntensity: 1.5 }, x, 0.53, 0.44);
+    return g;
+  }
   if (kind === 'slimy') {
     const b = mesh(new THREE.SphereGeometry(0.32, 10, 8), '#8ce99a', { transparent: true, opacity: 0.9, roughness: 0.3 }); b.scale.y = 0.75; b.position.y = 0.24; g.add(b);
     for (const x of [-0.1, 0.1]) { const e = mesh(new THREE.SphereGeometry(0.04, 5, 5), '#222', null, false); e.position.set(x, 0.3, 0.27); g.add(e); }
@@ -1820,7 +1863,30 @@ function makePet(kind) {
 function makeCos(id) {
   const g = new THREE.Group();
   const M = (geo, color, opts, x, y, z) => { const m = mesh(geo, color, opts, false); m.position.set(x, y, z); g.add(m); return m; };
-  if (id === 'a_scarf') {
+  if (id === 'a_wreath') {
+    const r = M(new THREE.TorusGeometry(0.33, 0.05, 5, 14), '#69db7c', null, 0, 2.22, 0); r.rotation.x = Math.PI / 2;
+    for (let i = 0; i < 7; i++) { const a2 = i / 7 * Math.PI * 2; M(new THREE.SphereGeometry(0.075, 6, 5), ['#ffe066', '#ffa8c5', '#ffffff'][i % 3], null, Math.cos(a2) * 0.33, 2.25, Math.sin(a2) * 0.33); }
+  } else if (id === 'a_shroomcap') {
+    const cap = M(new THREE.SphereGeometry(0.5, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), '#e03131', null, 0, 2.12, 0); cap.scale.y = 0.75;
+    for (const [x, z] of [[0.24, 0.2], [-0.26, 0.08], [0.02, -0.3], [-0.05, 0.34], [0.3, -0.14]]) M(new THREE.SphereGeometry(0.07, 6, 5), '#ffffff', null, x, 2.4, z);
+  } else if (id === 'a_icescarf') {
+    const ring = M(new THREE.TorusGeometry(0.36, 0.11, 6, 12), '#d0ebff', { emissive: '#74c0fc', emissiveIntensity: 0.35 }, 0, 1.44, 0); ring.rotation.x = Math.PI / 2;
+    const tail = M(new THREE.BoxGeometry(0.16, 0.5, 0.07), '#a5d8ff', null, -0.2, 1.2, 0.38); tail.rotation.z = 0.2;
+    g.userData.spin = M(new THREE.OctahedronGeometry(0.1, 0), '#ffffff', { emissive: '#a5d8ff', emissiveIntensity: 1.2 }, 0.22, 1.5, 0.42);
+  } else if (id === 'a_flamewings') {
+    for (const x of [-1, 1]) {
+      const w = M(new THREE.ConeGeometry(0.38, 1.1, 4), '#ff922b', { emissive: '#f76707', emissiveIntensity: 1.1 }, x * 0.8, 1.8, -0.5); w.scale.z = 0.2; w.rotation.z = -x * 0.9;
+      const w2 = M(new THREE.ConeGeometry(0.26, 0.75, 4), '#ffe066', { emissive: '#fab005', emissiveIntensity: 1.2 }, x * 0.78, 1.3, -0.5); w2.scale.z = 0.2; w2.rotation.z = -x * 1.5;
+    }
+  } else if (id === 'a_goldcape') {
+    const gold = { metalness: 0.6, roughness: 0.3, emissive: '#f08c00', emissiveIntensity: 0.3 };
+    const c = M(new THREE.BoxGeometry(0.9, 1.2, 0.05), '#fcc419', gold, 0, 0.9, -0.62); c.rotation.x = 0.18;
+    M(new THREE.BoxGeometry(0.84, 0.13, 0.13), '#ffffff', null, 0, 1.45, -0.42);
+  } else if (id === 'a_comet') {
+    const orb = M(new THREE.IcosahedronGeometry(0.17, 1), '#fff3bf', { emissive: '#ffd43b', emissiveIntensity: 1.6 }, 0, 0, 0);
+    const t1 = mesh(new THREE.ConeGeometry(0.11, 0.5, 6), '#74c0fc', { emissive: '#4dabf7', emissiveIntensity: 1.2, transparent: true, opacity: 0.8 }, false); t1.rotation.z = Math.PI / 2; t1.position.x = 0.3; orb.add(t1);
+    g.userData.orbit = orb;
+  } else if (id === 'a_scarf') {
     const ring = M(new THREE.TorusGeometry(0.36, 0.11, 6, 12), '#e03131', null, 0, 1.44, 0); ring.rotation.x = Math.PI / 2;
     const tail = M(new THREE.BoxGeometry(0.16, 0.5, 0.07), '#c92a2a', null, 0.2, 1.2, 0.38); tail.rotation.z = -0.2;
   } else if (id === 'a_bowtie') {
@@ -1905,7 +1971,8 @@ function updatePet(o, dt) {
   updateCos(o, dt);
   const m = o.petMesh; if (!m || !o.av) return;
   o.petT += dt;
-  const av = o.av, k = o.petKind, fly = k === 'firefly' || k === 'whale' || k === 'ghosty';
+  const av = o.av, k = o.petKind, fly = k === 'firefly' || k === 'whale' || k === 'ghosty' || k === 'drake';
+  if (m.userData.spin) m.userData.spin.rotation.y += dt * 3;
   let tx, tz, ty;
   if (k === 'firefly') { tx = av.position.x + Math.cos(o.petT * 1.6) * 0.9; tz = av.position.z + Math.sin(o.petT * 1.6) * 0.9; ty = av.position.y + 2.3 + Math.sin(o.petT * 3) * 0.15; }
   else {
@@ -1916,7 +1983,7 @@ function updatePet(o, dt) {
   if (d > 25) m.position.set(tx, ty, tz);
   const sp = Math.min(1, dt * (k === 'shelly' ? 2.2 : 5));
   m.position.x += dx * sp; m.position.z += dz * sp;
-  const hop = (k === 'slimy' || k === 'goldie') && d > 0.25 ? Math.abs(Math.sin(o.petT * 9)) * 0.35 : 0;
+  const hop = (k === 'slimy' || k === 'goldie' || k === 'bunny') && d > 0.25 ? Math.abs(Math.sin(o.petT * 9)) * 0.35 : 0;
   m.position.y += (ty + hop - m.position.y) * Math.min(1, dt * 8);
   if (d > 0.1 && k !== 'firefly') m.rotation.y = lerpAngle(m.rotation.y, Math.atan2(dx, dz), Math.min(1, dt * 8));
 }

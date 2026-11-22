@@ -518,10 +518,18 @@ sup a { cursor: pointer; }
     <tr><td><b>🎁 뽑기</b></td><td><a href="#gacha">뽑기 상자</a></td></tr>
   </table></div>
   <h3 id="gacha">뽑기 상자</h3>
-  <p>1번 또는 10번을 한꺼번에 열 수 있다. <b>확률은 게임 안에도 전부 적혀 있다.</b> 현금으로 사는 것은 없다. 골드로만 연다.</p>
+  <p>상자는 모두 <b>8가지</b>다. 1번 또는 10번을 한꺼번에 열 수 있다. <b>확률은 게임 안에도 전부 적혀 있다</b>("확률 보기"를 누르면 펼쳐진다). 현금으로 사는 것은 없다. 골드와 재료로만 연다.</p>
+  <div class="tw"><table class="wiki"><tr><th>종류</th><th>상자</th><th>누구에게 맞나</th></tr>
+    <tr><td>기본</td><td>📦 나무 상자, 🎁 황금 상자</td><td>가볍게 열어 보고 싶은 사람</td></tr>
+    <tr><td>전설</td><td>👑 전설 상자</td><td>골드가 남아도는 고레벨. 전설 12%, <b>15번째에는 전설 확정</b></td></tr>
+    <tr><td>펫</td><td>🐾 펫 상자</td><td>펫만 나온다. 섬 상자의 펫도 낮은 확률로 여기서 나온다</td></tr>
+    <tr><td>섬</td><td>🌼 포근 · 🍄 버섯 · ❄️ 서리 · 🌋 불꽃 상자</td><td><b>골드에 더해 그 섬 몬스터의 재료</b>가 든다. 그 섬 상자에서만 나오는 장신구와 펫이 있다</td></tr>
+  </table></div>
   <div data-auto="gacha"></div>
   <ul>
-    <li><b>천장</b>: 황금 상자는 10번 안에 영웅 이상이 한 번은 반드시 나온다. 지금 몇 번째인지 탭에 보인다.</li>
+    <li><b>천장</b>: 황금 상자는 10번 안에 영웅 이상이, 전설 상자는 15번 안에 전설이 한 번은 반드시 나온다. 지금 몇 번째인지 탭에 보인다. 두 상자는 따로 센다.</li>
+    <li><b>섬 상자</b>는 재료가 모자라면 못 연다. 10번을 열려면 재료도 10배가 든다. 팔던 꿀과 젤리를 이제 아껴야 하는 이유다.</li>
+    <li><b>펫 상자</b>는 이미 가진 펫이 나오면 400G를 돌려준다. 상점 펫 셋을 다 가진 뒤라면 절반 넘게 400G가 돌아오는 셈이라, 사실상 반값에 희귀 펫을 노리는 상자가 된다. 아기 하늘고래는 여기서도 안 나온다. <del>고래는 낚는 것이다.</del></li>
     <li>장신구는 겹쳐 나와도 가방에 쌓인다. 남는 것은 친구와 거래하거나 판다. 이미 가진 <b>펫</b>이 또 나오면 골드로 돌려받는다.</li>
     <li>전설이 나오면 채널 모두에게 알려진다.</li>
     <li>평균으로 따지면 <b>넣은 골드의 절반쯤만 돌아온다.</b> 돈을 벌려고 여는 상자가 아니다. 날개가 갖고 싶어서 여는 상자다.</li>
@@ -782,7 +790,8 @@ sup a { cursor: pointer; }
     <tr><td class="c">14</td><td>북적이는 섬</td><td>섬마다 몬스터 2종씩, 버섯 여왕, 휴대폰 화면 정리, 새 버전 안내</td></tr>
     <tr><td class="c">15</td><td>다듬기</td><td>아이패드 확대 막기, 내보내는 시간 늘림, 레벨 상한 60, 이 문서 전면 개정</td></tr>
     <tr><td class="c">16</td><td>불꽃마루</td><td>Lv 30이 되면 나타나는 네 번째 섬, 몬스터 3종과 분화구의 용, 의뢰 3가지</td></tr>
-    <tr><td class="c">17</td><td>공정한 거래</td><td>강화에 실패할 때마다 다음 확률 +5%p, "가져오기" 의뢰는 맡은 뒤에 새로 얻은 재료만 인정</td></tr>
+    <tr><td class="c">17</td><td>공정한 거래</td><td>강화에 실패할 때마다 다음 확률 +5%p, "가져오기" 의뢰는 맡은 뒤에 새로 얻은 재료만 인정</td><td class="c" rowspan="2">11월 22일</td></tr>
+    <tr><td class="c">18</td><td>상자 대방출</td><td>전설 상자, 펫 상자, 섬별 상자 4가지. 새 펫 5종, 새 장신구 6종</td></tr>
   </table></div>
   <p>1단계부터 5단계까지가 처음 기획이었다. 6단계부터는 그때그때 들어온 요청으로 만들어졌다. <del>기획서는 5단계에서 끝났는데 게임은 끝나지 않았다.</del></p>
 
@@ -961,9 +970,9 @@ sup a { cursor: pointer; }
       var h = '';
       Object.keys(A.GACHA).forEach(function (k) {
         var b = A.GACHA[k];
-        h += '<div class="tw"><table class="wiki"><tr class="head"><th colspan="3">' + b.icon + ' ' + b.name + ' (' + N(b.price) + 'G)</th></tr><tr><th>등급</th><th>확률</th><th>나오는 것 (하나)</th></tr>';
+        h += '<div class="tw"><table class="wiki"><tr class="head"><th colspan="3">' + b.icon + ' ' + b.name + ' (' + N(b.price) + 'G' + Object.keys(b.mats || {}).map(function (m) { return ' + ' + A.ITEMS[m].icon + ' ' + A.ITEMS[m].name + ' ' + b.mats[m]; }).join('') + ')</th></tr><tr><th>등급</th><th>확률</th><th>나오는 것 (하나)</th></tr>';
         b.tiers.forEach(function (t) {
-          h += '<tr><td class="c">' + t.r + '</td><td class="n">' + t.w + '%</td><td>' + t.pool.map(function (p) { return p[0] === 'gold' ? p[1] + 'G' : p[0] === 'item' ? item(p[1]) + (A.ITEMS[p[1]].type === 'acc' ? '' : ' ' + p[2]) : A.PETS[p[1]].icon + ' ' + A.PETS[p[1]].name + ' (펫)'; }).join(', ') + '</td></tr>';
+          h += '<tr><td class="c">' + t.r + '</td><td class="n">' + t.w + '%</td><td>' + t.pool.filter(function (p, i) { return t.pool.findIndex(function (q) { return String(q) === String(p); }) === i; }).map(function (p) { return p[0] === 'gold' ? p[1] + 'G' : p[0] === 'item' ? item(p[1]) + (A.ITEMS[p[1]].type === 'acc' ? '' : ' ' + p[2]) : A.PETS[p[1]].icon + ' ' + A.PETS[p[1]].name + ' (펫)'; }).join(', ') + '</td></tr>';
         });
         h += '</table></div>';
       });
@@ -976,7 +985,7 @@ sup a { cursor: pointer; }
       return table(['부위', '', '장신구', '얻는 법', '파는 값'], rows, ['c', 'ic', '', 'n', 'n']) + '<p>상점에서 파는 것을 전부 사면 <b>' + N(sum) + 'G</b>다. 능력은 하나도 없다. <del>그래서 더 갖고 싶다.</del></p>';
     },
     pets: function () {
-      return table(['', '펫', '얻는 법', '능력', '특징'], A.PET_IDS.map(function (id) { var p = A.PETS[id]; return [p.icon, p.name, p.price ? N(p.price) + 'G' : p.gacha ? '뽑기 상자' : '낚시 (1%, 100번째 확정)', '<b>' + esc(p.perkText) + '</b>', esc(p.desc)]; }), ['ic', '', 'n', '', '']);
+      return table(['', '펫', '얻는 법', '능력', '특징'], A.PET_IDS.map(function (id) { var p = A.PETS[id]; return [p.icon, p.name, p.price ? N(p.price) + 'G' : p.gacha ? Object.keys(A.GACHA).filter(function (k) { return A.GACHA[k].tiers.some(function (t) { return t.pool.some(function (x) { return x[0] === 'pet' && x[1] === id; }); }); }).map(function (k) { return A.GACHA[k].name; }).join(', ') : '낚시 (1%, 100번째 확정)', '<b>' + esc(p.perkText) + '</b>', esc(p.desc)]; }), ['ic', '', 'n', '', '']);
     },
     decos: function () {
       return table(['', '물건', '값'], Object.keys(A.DECOS).map(function (k) { var d = A.DECOS[k]; return [d.icon, d.name + (d.text ? ' <small>(' + A.DECO_TEXT + '글자까지 쓴 말이 모두에게 보인다)</small>' : ''), d.price + 'G']; }), ['ic', '', 'n']);

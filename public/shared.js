@@ -358,6 +358,12 @@ const ACCS = {
   a_orb: { name: '떠다니는 구슬', icon: '🔮', slot: 'side', buy: 700 },
   a_flag: { name: '작은 깃발', icon: '🚩', slot: 'side', buy: 200 },
   a_balloon: { name: '분홍 풍선', icon: '🎈', slot: 'side', buy: 0, sell: 60 },
+  a_wreath: { name: '들꽃 화관', icon: '🌼', slot: 'head', buy: 0, sell: 80 },
+  a_shroomcap: { name: '버섯 갓', icon: '🍄', slot: 'head', buy: 0, sell: 150 },
+  a_icescarf: { name: '눈꽃 목도리', icon: '❄️', slot: 'neck', buy: 0, sell: 300 },
+  a_flamewings: { name: '불꽃 날개', icon: '🔥', slot: 'back', buy: 0, sell: 600 },
+  a_goldcape: { name: '황금 망토', icon: '👑', slot: 'back', buy: 0, sell: 800 },
+  a_comet: { name: '꼬마 혜성', icon: '☄️', slot: 'side', buy: 0, sell: 800 },
 };
 const ACC_IDS = Object.keys(ACCS);
 for (const id of ACC_IDS) { // 가방에 들어가는 아이템으로도 등록
@@ -406,11 +412,17 @@ const PETS = {
   shelly: { name: '아기 돌거북', icon: '🐢', price: 500, desc: '느릿느릿 열심히 따라와요', perk: { def: 0.1 }, perkText: '몬스터에게 받는 피해 -10%' },
   whale: { name: '아기 하늘고래', icon: '🐳', price: 0, desc: '낚시로만 만날 수 있는 아주 드문 친구', perk: { fish: 0.3, xp: 0.05 }, perkText: '낚시 기다리는 시간 -30%, 경험치 +5%' },
   goldie: { name: '황금 슬라임', icon: '🟡', price: 0, gacha: true, desc: '뽑기 상자에서만 나오는 번쩍이는 슬라임', perk: { gold: 0.25 }, perkText: '몬스터가 주는 골드 +25%' },
-  ghosty: { name: '꼬마 유령', icon: '👻', price: 0, gacha: true, desc: '고급 뽑기 상자에서만 나오는 둥둥 유령', perk: { crit: 0.08 }, perkText: '치명타 확률 +8%' },
+  ghosty: { name: '꼬마 유령', icon: '👻', price: 0, gacha: true, desc: '뽑기 상자에서만 나오는 둥둥 유령', perk: { crit: 0.08 }, perkText: '치명타 확률 +8%' },
+  bunny: { name: '솜사탕 토끼', icon: '🐰', price: 0, gacha: true, desc: '포근 상자에 사는 폭신한 토끼. 깡충깡충 따라와요', perk: { gold: 0.12, xp: 0.12 }, perkText: '골드 +12%, 경험치 +12%' },
+  sporeling: { name: '꼬마 버섯', icon: '🍄', price: 0, gacha: true, desc: '버섯 상자에 사는 아기 버섯. 뒤뚱뒤뚱 걸어요', perk: { def: 0.2 }, perkText: '몬스터에게 받는 피해 -20%' },
+  pengu: { name: '아기 펭귄', icon: '🐧', price: 0, gacha: true, desc: '서리 상자에 사는 펭귄. 병사는 아니에요', perk: { xp: 0.2 }, perkText: '몬스터가 주는 경험치 +20%' },
+  drake: { name: '아기 용', icon: '🐲', price: 0, gacha: true, desc: '불꽃 상자에 사는 새끼 용. 분화구의 용과는 남남이에요', perk: { crit: 0.12, gold: 0.1 }, perkText: '치명타 확률 +12%, 골드 +10%' },
+  starcat: { name: '별고양이', icon: '🐱', price: 0, gacha: true, desc: '전설 상자에서만 나오는 별빛 고양이', perk: { gold: 0.15, xp: 0.15, crit: 0.05 }, perkText: '골드 +15%, 경험치 +15%, 치명타 +5%' },
 };
 // ---------- 뽑기 상자 ----------
 // tiers: 등급 이름 r, 확률 w(%), pool 에서 하나를 고름. 이미 가진 장식·펫이 나오면 dup 골드로 돌려줌
 // pool 항목: ['item', id, 개수] · ['gold', 양] · ['pet', id]  (장신구도 아이템)
+// mats: 골드와 함께 드는 재료(섬 상자) · pity/pityKey/pityTier: 가방의 pityKey 칸으로 세어 pity 번째에 pityTier 등급 이상 확정
 const GACHA = {
   n: { name: '나무 상자', icon: '📦', price: 100, dup: 60, tiers: [
     { r: '흔함', w: 60, pool: [['item', 'potion', 2], ['item', 'grilled', 2], ['item', 'jelly', 4], ['item', 'spore', 3], ['gold', 40]] },
@@ -423,6 +435,40 @@ const GACHA = {
     { r: '희귀', w: 40, pool: [['item', 'a_scarf', 1], ['item', 'a_balloon', 1], ['item', 'a_star', 1], ['item', 'shard', 2], ['item', 'heart', 1], ['gold', 800]] },
     { r: '영웅', w: 13, pool: [['item', 'a_halo', 1], ['item', 'a_wings', 1], ['item', 'windstone', 2], ['item', 'heart', 2]] },
     { r: '전설', w: 2, pool: [['pet', 'ghosty'], ['pet', 'goldie']] },
+  ] },
+  l: { name: '전설 상자', icon: '👑', price: 2000, dup: 1200, pity: 15, pityKey: 'pl', pityTier: 4, tiers: [
+    { r: '희귀', w: 40, pool: [['item', 'heart', 2], ['item', 'shard', 3], ['item', 'emberscale', 4], ['item', 'a_halo', 1], ['item', 'a_wings', 1], ['gold', 1500]] },
+    { r: '영웅', w: 48, pool: [['item', 'a_goldcape', 1], ['item', 'a_comet', 1], ['item', 'heart', 4], ['item', 'phoenixfeather', 3], ['item', 'windstone', 3], ['gold', 3000]] },
+    { r: '전설', w: 12, pool: [['pet', 'starcat'], ['pet', 'ghosty'], ['pet', 'goldie'], ['item', 'dragonheart', 1]] },
+  ] },
+  pet: { name: '펫 상자', icon: '🐾', price: 800, dup: 400, tiers: [
+    { r: '좋음', w: 62, pool: [['pet', 'slimy'], ['pet', 'firefly'], ['pet', 'shelly']] },
+    { r: '영웅', w: 30, pool: [['pet', 'goldie'], ['pet', 'ghosty']] },
+    { r: '전설', w: 8, pool: [['pet', 'bunny'], ['pet', 'sporeling'], ['pet', 'pengu'], ['pet', 'drake']] },
+  ] },
+  i0: { name: '포근 상자', icon: '🌼', price: 150, dup: 100, mats: { jelly: 5, honey: 3 }, tiers: [
+    { r: '흔함', w: 55, pool: [['item', 'potion', 3], ['item', 'grilled', 3], ['gold', 120]] },
+    { r: '좋음', w: 30, pool: [['item', 'bigpotion', 2], ['item', 'shell', 3], ['gold', 300]] },
+    { r: '희귀', w: 12, pool: [['item', 'a_wreath', 1]] },
+    { r: '전설', w: 3, pool: [['pet', 'bunny']] },
+  ] },
+  i1: { name: '버섯 상자', icon: '🍄', price: 300, dup: 200, mats: { spore: 5, batwing: 3 }, tiers: [
+    { r: '좋음', w: 55, pool: [['item', 'bigpotion', 3], ['item', 'glowcap', 4], ['item', 'dust', 2], ['gold', 350]] },
+    { r: '희귀', w: 30, pool: [['item', 'bark', 3], ['item', 'dust', 4], ['gold', 700]] },
+    { r: '영웅', w: 12, pool: [['item', 'a_shroomcap', 1]] },
+    { r: '전설', w: 3, pool: [['pet', 'sporeling']] },
+  ] },
+  i2: { name: '서리 상자', icon: '❄️', price: 600, dup: 400, mats: { icecrystal: 3, feather: 3 }, tiers: [
+    { r: '좋음', w: 50, pool: [['item', 'bigpotion', 4], ['item', 'fang', 3], ['item', 'frostflower', 3], ['gold', 600]] },
+    { r: '희귀', w: 32, pool: [['item', 'heart', 1], ['item', 'shard', 1], ['gold', 1200]] },
+    { r: '영웅', w: 14, pool: [['item', 'a_icescarf', 1]] },
+    { r: '전설', w: 4, pool: [['pet', 'pengu']] },
+  ] },
+  i3: { name: '불꽃 상자', icon: '🌋', price: 1200, dup: 800, mats: { emberscale: 3, magmastone: 2 }, tiers: [
+    { r: '좋음', w: 45, pool: [['item', 'bigpotion', 5], ['item', 'heart', 1], ['gold', 1200]] },
+    { r: '희귀', w: 35, pool: [['item', 'phoenixfeather', 2], ['item', 'heart', 2], ['item', 'shard', 2], ['gold', 2200]] },
+    { r: '영웅', w: 15, pool: [['item', 'a_flamewings', 1]] },
+    { r: '전설', w: 5, pool: [['pet', 'drake']] },
   ] },
 };
 const RARITY = ['흔함', '좋음', '희귀', '영웅', '전설'];
@@ -482,7 +528,7 @@ function cleanQuests(raw) {
 }
 
 function cleanInv(raw) { // 저장된 가방을 안전하게 정리
-  const inv = { gold: 0, items: {}, weapons: ['sword'], equip: 'sword', up: {}, upf: {}, pets: [], pet: '', wear: {}, pity: 0, wp: 0 };
+  const inv = { gold: 0, items: {}, weapons: ['sword'], equip: 'sword', up: {}, upf: {}, pets: [], pet: '', wear: {}, pity: 0, pl: 0, wp: 0 };
   if (!raw || typeof raw !== 'object') return inv;
   const n = (v, max) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)));
   inv.gold = n(raw.gold, 999999);
@@ -499,6 +545,7 @@ function cleanInv(raw) { // 저장된 가방을 안전하게 정리
   const wearRaw = typeof raw.wear === 'string' ? (ACCS['a_' + raw.wear] ? { [ACCS['a_' + raw.wear].slot]: 'a_' + raw.wear } : {}) : (raw.wear && typeof raw.wear === 'object' ? raw.wear : {});
   for (const [slot] of SLOTS) { const id = wearRaw[slot]; if (ACCS[id] && ACCS[id].slot === slot && inv.items[id]) inv.wear[slot] = id; }
   inv.pity = n(raw.pity, 9);
+  inv.pl = n(raw.pl, GACHA.l.pity - 1); // 전설 상자에서 전설을 못 본 횟수
   inv.wp = n(raw.wp, FISH.whalePity - 1); // 고래를 못 만난 채 낚시에 성공한 횟수
   if (raw.up && typeof raw.up === 'object') for (const w of inv.weapons) { const u = n(raw.up[w], MAX_UP); if (u) inv.up[w] = u; }
   if (raw.upf && typeof raw.upf === 'object') for (const w of inv.weapons) { const f = n(raw.upf[w], 20); if (f) inv.upf[w] = f; }
@@ -556,7 +603,7 @@ const MAX_LV = 60; // 처음에는 30이었는데 하루 만에 끝까지 간 �
 const needXp = (lv) => 10 * lv * lv + 10;
 const statsFor = (lv) => ({ maxHp: 80 + (lv - 1) * 15, atk: 10 + (lv - 1) * 3 });
 
-const VERSION = 17; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
+const VERSION = 18; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
 const api = { UP_PITY, upChance, unlocked, VERSION, SLOTS, ACCS, ACC_IDS, CHEST, GACHA, RARITY, SAFE_R, inSafe, FISH, FISH_DAY, FISH_NIGHT, canFish, FOOD_BUFF, COOK_RANGE, PETS, PET_IDS, TITLES, TITLE_IDS, cleanStats, DUEL, ELDER, TALK_RANGE, ALTAR_RANGE, BRIDGE, world, onBridge, MAX_UP, UP_BONUS, UPGRADES, QUESTS, QUEST_IDS, QUEST_ACTIVE_MAX, cleanQuests, ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
   UNLOCK, KEYS, WEAPONS, WEAPON_IDS, ITEMS, ITEM_IDS, SHOP_ITEMS, MAX_STACK, BAG_SLOTS, LOOT, cleanInv, MAX_LV, needXp, statsFor };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ARCA = api;

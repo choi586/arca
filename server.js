@@ -331,13 +331,16 @@ function handleGacha(p, m) {
   if (!nearShop(p)) return notice(p, '상인 모모 가까이에서만 뽑을 수 있어요');
   const n = m.n === 10 ? 10 : 1;
   if (inv.gold < box.price * n) return notice(p, '골드가 모자라요');
+  for (const id in box.mats || {}) if ((inv.items[id] || 0) < box.mats[id] * n) return notice(p, `${A.ITEMS[id].name}이(가) 모자라요 (${box.mats[id] * n}개 필요)`);
   inv.gold -= box.price * n;
+  for (const id in box.mats || {}) removeItem(inv, id, box.mats[id] * n);
+  const pk = box.pityKey || 'pity', pt = box.pityTier || 3;
   const out = [];
   for (let i = 0; i < n; i++) {
     let force;
-    if (box.pity) { inv.pity++; if (inv.pity >= box.pity) force = 3; }
+    if (box.pity) { inv[pk]++; if (inv[pk] >= box.pity) force = pt; }
     const res = rollGacha(p, box, force);
-    if (box.pity && A.RARITY.indexOf(res.r) >= 3) inv.pity = 0;
+    if (box.pity && A.RARITY.indexOf(res.r) >= pt) inv[pk] = 0;
     out.push(res);
     if (res.r === '전설') broadcast(p.ch, { t: 'notice', text: `🎉 ${p.name} 님이 ${box.name}에서 전설 ${res.icon} ${res.text.split(' (')[0]}을(를) 뽑았어요!` });
   }
