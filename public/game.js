@@ -2487,6 +2487,35 @@ function drawMinimap() { // 내가 있는 섬을 보여 줌
   mm.restore();
 }
 
+// ================= 화질 (느린 기기를 위한 낮은 화질) =================
+// 설정: auto(느리면 저절로 낮춤) · high · low. 낮음 = 그림자 끔, 흐릿하게(해상도↓), 먼 풍경·구름 줄임, 1초 30번
+let gfxPref = store.get('arca.gfx') || 'auto', gfxLow = false;
+if (!['auto', 'high', 'low'].includes(gfxPref)) gfxPref = 'auto';
+function applyGfx(low, why) {
+  if (low === gfxLow && why !== 'init') return;
+  gfxLow = low;
+  renderer.setPixelRatio(low ? Math.min(window.devicePixelRatio || 1, 1) * (Math.max(innerWidth, innerHeight) > 1100 ? 0.75 : 1) : Math.min(window.devicePixelRatio || 1, 2));
+  renderer.shadowMap.enabled = !low; sun.castShadow = !low;
+  for (const k in mats) mats[k].needsUpdate = true;
+  camera.far = low ? 320 : 800; camera.updateProjectionMatrix();
+  scene.fog.near = low ? 90 : 130; scene.fog.far = low ? 250 : 340;
+  for (const f of farIslands) f.visible = !low;
+  clouds.forEach((c, i) => { c.visible = !low || i % 3 === 0; });
+  resize();
+  const b = $('gfxBtn'); if (b) b.textContent = `⚙️ 화질: ${gfxPref === 'auto' ? '자동' + (low ? '(낮음)' : '') : low ? '낮음' : '높음'}`;
+  for (const c of document.querySelectorAll('#gfxChips button')) c.classList.toggle('on', c.dataset.gfx === gfxPref);
+  if (why === 'auto') { toast('🐢 화면이 느려서 화질을 낮췄어요'); addLog('화면이 느려서 화질을 낮췄어요. ⚙️ 화질 버튼으로 바꿀 수 있어요'); }
+}
+function setGfx(pref) { gfxPref = pref; store.set('arca.gfx', pref); slowT = 0; applyGfx(pref === 'low', 'init'); }
+// 자동: 3초 넘게 1초에 24번도 못 그리면 낮은 화질로 (한 번 낮추면 그대로 둠)
+let slowT = 0, fpsAvg = 16;
+function watchFps(ms) {
+  if (gfxPref !== 'auto' || gfxLow || document.hidden || ms > 1000) return;
+  fpsAvg += (ms - fpsAvg) * 0.05;
+  slowT = fpsAvg > 42 ? slowT + ms : 0;
+  if (slowT > 3000) applyGfx(true, 'auto');
+}
+
 // ================= 매 프레임 =================
 function resize() {
   const w = innerWidth, h = innerHeight;
@@ -2498,6 +2527,8 @@ let last = performance.now(), mmT = 0, time = 0;
 camera.position.set(30, 25, 50); camera.lookAt(0, 2, 0);
 function frame(now) {
   requestAnimationFrame(frame);
+  if (gfxLow && now - last < 30) return; // 낮은 화질에서는 1초에 30번쯤만 그려서 기기가 덜 힘들게
+  watchFps(now - last);
   const dt = Math.min(0.05, (now - last) / 1000); last = now; time += dt;
 
   for (const c of clouds) { c.position.x += c.userData.speed * dt; if (c.position.x > 260) c.position.x = -260; }
@@ -2539,6 +2570,11 @@ function frame(now) {
   }
   updateEffects(dt);
   renderer.render(scene, camera);
+}
+{ // 화질 버튼: 접속 화면의 칩 + 게임 안 버튼(누를 때마다 자동 → 높음 → 낮음)
+  const b = el('button', '', ''); b.id = 'gfxBtn'; b.onclick = () => setGfx({ auto: 'high', high: 'low', low: 'auto' }[gfxPref]); $('hud').appendChild(b);
+  for (const c of document.querySelectorAll('#gfxChips button')) c.onclick = () => setGfx(c.dataset.gfx);
+  applyGfx(gfxPref === 'low', 'init');
 }
 requestAnimationFrame(frame);
 refreshStats();
