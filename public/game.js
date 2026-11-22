@@ -1172,7 +1172,7 @@ const handlers = {
   fx(m) { const o = others.get(m.id); if (o && WEAPONS[m.w]) { setWeapon(o.av, m.w); skillFx(o.av, m.w, m.k, m.tg); } },
   inv(m) {
     const prevEquip = me.inv.equip;
-    me.inv = { gold: m.gold, items: m.items, weapons: m.weapons, equip: m.equip, up: m.up || {}, pets: m.pets || [], pet: m.pet || '', wear: m.wear && typeof m.wear === 'object' ? m.wear : {}, pity: m.pity || 0, wp: m.wp || 0 };
+    me.inv = { gold: m.gold, items: m.items, weapons: m.weapons, equip: m.equip, up: m.up || {}, upf: m.upf || {}, pets: m.pets || [], pet: m.pet || '', wear: m.wear && typeof m.wear === 'object' ? m.wear : {}, pity: m.pity || 0, wp: m.wp || 0 };
     setPet(me, me.inv.pet); setCos(me, me.inv.wear);
     store.set('arca.inv', JSON.stringify(me.inv));
     if (me.av) {
@@ -1516,13 +1516,13 @@ function renderShop() {
     }
     list.appendChild(el('div', 'tip', '장신구는 여러 개 나와도 가방에 쌓여요. 남는 건 친구와 거래하거나 팔 수 있어요. 이미 가진 펫이 나오면 골드로 돌려받아요.'));
   } else if (shopTab === 'up') { // 무기 강화
-    list.appendChild(el('div', 'tip', `재료와 골드로 무기를 강화해요. 한 단계마다 그 무기의 피해가 ${ARCA.UP_BONUS * 100}%씩 늘어요 (최대 +${ARCA.MAX_UP}). +6부터는 실패할 수 있어요. 실패하면 골드와 재료만 사라지고 단계는 그대로예요.`));
+    list.appendChild(el('div', 'tip', `재료와 골드로 무기를 강화해요. 한 단계마다 그 무기의 피해가 ${ARCA.UP_BONUS * 100}%씩 늘어요 (최대 +${ARCA.MAX_UP}). +6부터는 실패할 수 있어요. 실패하면 골드와 재료만 사라지고 단계는 그대로예요. 대신 실패할 때마다 그 무기의 다음 성공 확률이 ${ARCA.UP_PITY * 100}%p씩 올라요.`));
     for (const id of me.inv.weapons) {
       const w = WEAPONS[id], lv = me.inv.up[id] || 0, cost = ARCA.UPGRADES[lv];
       if (!cost) { list.appendChild(shopRow(w.icon, `${w.name} +${lv}`, `피해 +${Math.round(lv * ARCA.UP_BONUS * 100)}%`, '', [['끝까지 강화함', false, () => {}]])); continue; }
       const mats = Object.entries(cost.mats), ok = g >= cost.gold && mats.every(([m, n]) => (me.inv.items[m] || 0) >= n);
       const need = mats.map(([m, n]) => `${ITEMS[m].icon} ${ITEMS[m].name} ${me.inv.items[m] || 0}/${n}`).join(' · ');
-      list.appendChild(shopRow(w.icon, `${w.name}${lv ? ` +${lv}` : ''} → +${lv + 1}`, need + (cost.chance ? ` · 성공 확률 ${Math.round(cost.chance * 100)}%` : ''), `${cost.gold}G`, [[cost.chance ? '도전' : '강화', ok, () => net({ t: 'upgrade', w: id })]]));
+      list.appendChild(shopRow(w.icon, `${w.name}${lv ? ` +${lv}` : ''} → +${lv + 1}`, need + (cost.chance ? ` · 성공 확률 ${Math.round(ARCA.upChance(lv, (me.inv.upf || {})[id]) * 100)}%${(me.inv.upf || {})[id] ? ` (실패 ${me.inv.upf[id]}번 보정)` : ''}` : ''), `${cost.gold}G`, [[cost.chance ? '도전' : '강화', ok, () => net({ t: 'upgrade', w: id })]]));
     }
   } else {
     const ids = ITEM_IDS.filter((id) => me.inv.items[id] && ITEMS[id].sell);
@@ -1594,7 +1594,6 @@ const bridgeMesh = new THREE.Group();
 }
 function questProg(id) { // [지금, 목표]
   const q = QUESTS[id];
-  if (q.type === 'collect') return [Math.min(q.n, me.inv.items[q.key] || 0), q.n];
   return [quests.active[id] || 0, q.n];
 }
 function renderQuest() {

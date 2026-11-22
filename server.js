@@ -149,7 +149,7 @@ function killMonster(ch, m) {
     const gold = Math.round((loot.gold[0] + Math.floor(Math.random() * (loot.gold[1] - loot.gold[0] + 1))) * bonus * (1 + (perk(p).gold || 0)));
     p.inv.gold = Math.min(999999, p.inv.gold + gold);
     const got = [];
-    for (const [id, chance] of loot.drops) if (Math.random() < chance) { const n = addItem(p.inv, id, 1); got.push([id, n]); }
+    for (const [id, chance] of loot.drops) if (Math.random() < chance) { const n = addItem(p.inv, id, 1); got.push([id, n]); if (n) questEvent(p, 'collect', id); }
     send(p.ws, { t: 'loot', gold, items: got, x: r2(m.x), z: r2(m.z) });
     sendInv(p);
   }
@@ -565,12 +565,14 @@ function handleQuest(p, m) {
     for (const id in cost.mats) if ((inv.items[id] || 0) < cost.mats[id]) return notice(p, `${A.ITEMS[id].name}이(가) 모자라요`);
     inv.gold -= cost.gold;
     for (const id in cost.mats) removeItem(inv, id, cost.mats[id]);
-    if (cost.chance && Math.random() >= cost.chance) { // +6부터는 실패할 수 있음 (단계는 그대로)
+    const fails = inv.upf[m.w] || 0;
+    if (cost.chance && Math.random() >= A.upChance(lv, fails)) { // +6부터는 실패할 수 있음 (단계는 그대로, 다음 확률이 오름)
+      inv.upf[m.w] = Math.min(20, fails + 1);
       sendInv(p);
       send(p.ws, { t: 'upres', ok: false, w: m.w, lv });
-      return notice(p, `💨 ${w.name} +${lv + 1} 강화에 실패했어요… 골드와 재료만 사라졌어요`);
+      return notice(p, `💨 ${w.name} +${lv + 1} 강화에 실패했어요… 골드와 재료만 사라졌어요. 다음 성공 확률 ${Math.round(A.upChance(lv, inv.upf[m.w]) * 100)}%`);
     }
-    inv.up[m.w] = lv + 1;
+    inv.up[m.w] = lv + 1; delete inv.upf[m.w];
     sendInv(p);
     send(p.ws, { t: 'upres', ok: true, w: m.w, lv: lv + 1 });
     if (lv + 1 >= 8) broadcast(p.ch, { t: 'notice', text: `🔨 ${p.name} 님이 ${w.name} +${lv + 1} 강화에 성공했어요!` });
@@ -589,8 +591,8 @@ function handleQuest(p, m) {
     notice(p, `📜 의뢰를 맡았어요: ${q.name}`);
   } else if (m.t === 'qdone') {
     if (p.q.active[m.id] === undefined) return;
-    if (q.type === 'collect') { if ((inv.items[q.key] || 0) < q.n) return notice(p, `${A.ITEMS[q.key].name}이(가) 아직 모자라요`); }
-    else if (p.q.active[m.id] < q.n) return notice(p, '아직 다 하지 못했어요');
+    if (p.q.active[m.id] < q.n) return notice(p, q.type === 'collect' ? `의뢰를 맡은 뒤에 몬스터에게서 새로 얻은 것만 쳐 줘요 (${p.q.active[m.id]}/${q.n})` : '아직 다 하지 못했어요');
+    if (q.type === 'collect' && (inv.items[q.key] || 0) < q.n) return notice(p, `${A.ITEMS[q.key].name}이(가) 가방에 모자라요`);
     if (q.stones && !inv.items.windstone && bagSlots(inv) >= A.BAG_SLOTS && !(q.type === 'collect' && inv.items[q.key] === q.n)) return notice(p, '가방이 꽉 차서 보상을 받을 수 없어요');
     if (q.type === 'collect') removeItem(inv, q.key, q.n);
     delete p.q.active[m.id];

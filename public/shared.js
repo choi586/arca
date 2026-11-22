@@ -443,9 +443,12 @@ const UPGRADES = [
   { gold: 2600, mats: { heart: 1 }, chance: 0.4 },
   { gold: 4000, mats: { heart: 2, shard: 2 }, chance: 0.3 },
 ];
+// 실패할 때마다 그 무기의 다음 성공 확률이 UP_PITY 만큼 오름(성공하면 처음으로). fails = 연달아 실패한 횟수
+const UP_PITY = 0.05, UP_CHANCE_MAX = 0.95;
+function upChance(lv, fails) { const c = UPGRADES[lv]; if (!c || !c.chance) return 1; return Math.min(UP_CHANCE_MAX, c.chance + UP_PITY * (fails || 0)); }
 
 // ---------- 의뢰(퀘스트) ----------
-// type: kill 몬스터 잡기 · collect 재료 가져오기(완료할 때 가져감) · visit 섬에 가 보기
+// type: kill 몬스터 잡기 · collect 재료 가져오기(의뢰를 맡은 뒤 몬스터에게서 새로 얻은 것만 셈. 완료할 때 가져감) · visit 섬에 가 보기
 const QUESTS = {
   q1: { name: '말랑말랑 대청소', type: 'kill', key: 'slime', n: 5, gold: 60, xp: 20, stones: 0, lv: 1, desc: '광장 밖 풀밭의 말랑 슬라임을 5마리 잡아 줘요.' },
   q2: { name: '포자 수집', type: 'collect', key: 'spore', n: 3, gold: 120, xp: 50, stones: 0, lv: 3, desc: '버섯돌이가 떨어뜨리는 버섯 포자 3개를 가져다줘요.' },
@@ -479,7 +482,7 @@ function cleanQuests(raw) {
 }
 
 function cleanInv(raw) { // 저장된 가방을 안전하게 정리
-  const inv = { gold: 0, items: {}, weapons: ['sword'], equip: 'sword', up: {}, pets: [], pet: '', wear: {}, pity: 0, wp: 0 };
+  const inv = { gold: 0, items: {}, weapons: ['sword'], equip: 'sword', up: {}, upf: {}, pets: [], pet: '', wear: {}, pity: 0, wp: 0 };
   if (!raw || typeof raw !== 'object') return inv;
   const n = (v, max) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)));
   inv.gold = n(raw.gold, 999999);
@@ -498,6 +501,7 @@ function cleanInv(raw) { // 저장된 가방을 안전하게 정리
   inv.pity = n(raw.pity, 9);
   inv.wp = n(raw.wp, FISH.whalePity - 1); // 고래를 못 만난 채 낚시에 성공한 횟수
   if (raw.up && typeof raw.up === 'object') for (const w of inv.weapons) { const u = n(raw.up[w], MAX_UP); if (u) inv.up[w] = u; }
+  if (raw.upf && typeof raw.upf === 'object') for (const w of inv.weapons) { const f = n(raw.upf[w], 20); if (f) inv.upf[w] = f; }
   return inv;
 }
 
@@ -552,8 +556,8 @@ const MAX_LV = 60; // 처음에는 30이었는데 하루 만에 끝까지 간 �
 const needXp = (lv) => 10 * lv * lv + 10;
 const statsFor = (lv) => ({ maxHp: 80 + (lv - 1) * 15, atk: 10 + (lv - 1) * 3 });
 
-const VERSION = 16; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
-const api = { unlocked, VERSION, SLOTS, ACCS, ACC_IDS, CHEST, GACHA, RARITY, SAFE_R, inSafe, FISH, FISH_DAY, FISH_NIGHT, canFish, FOOD_BUFF, COOK_RANGE, PETS, PET_IDS, TITLES, TITLE_IDS, cleanStats, DUEL, ELDER, TALK_RANGE, ALTAR_RANGE, BRIDGE, world, onBridge, MAX_UP, UP_BONUS, UPGRADES, QUESTS, QUEST_IDS, QUEST_ACTIVE_MAX, cleanQuests, ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
+const VERSION = 17; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
+const api = { UP_PITY, upChance, unlocked, VERSION, SLOTS, ACCS, ACC_IDS, CHEST, GACHA, RARITY, SAFE_R, inSafe, FISH, FISH_DAY, FISH_NIGHT, canFish, FOOD_BUFF, COOK_RANGE, PETS, PET_IDS, TITLES, TITLE_IDS, cleanStats, DUEL, ELDER, TALK_RANGE, ALTAR_RANGE, BRIDGE, world, onBridge, MAX_UP, UP_BONUS, UPGRADES, QUESTS, QUEST_IDS, QUEST_ACTIVE_MAX, cleanQuests, ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
   UNLOCK, KEYS, WEAPONS, WEAPON_IDS, ITEMS, ITEM_IDS, SHOP_ITEMS, MAX_STACK, BAG_SLOTS, LOOT, cleanInv, MAX_LV, needXp, statsFor };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ARCA = api;
 })(this);
