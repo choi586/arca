@@ -436,39 +436,39 @@ const GACHA = {
     { r: '영웅', w: 13, pool: [['item', 'a_halo', 1], ['item', 'a_wings', 1], ['item', 'windstone', 2], ['item', 'heart', 2]] },
     { r: '전설', w: 2, pool: [['pet', 'ghosty'], ['pet', 'goldie']] },
   ] },
-  l: { name: '전설 상자', icon: '👑', price: 2000, dup: 1200, pity: 15, pityKey: 'pl', pityTier: 4, tiers: [
-    { r: '희귀', w: 40, pool: [['item', 'heart', 2], ['item', 'shard', 3], ['item', 'emberscale', 4], ['item', 'a_halo', 1], ['item', 'a_wings', 1], ['gold', 1500]] },
-    { r: '영웅', w: 48, pool: [['item', 'a_goldcape', 1], ['item', 'a_comet', 1], ['item', 'heart', 4], ['item', 'phoenixfeather', 3], ['item', 'windstone', 3], ['gold', 3000]] },
-    { r: '전설', w: 12, pool: [['pet', 'starcat'], ['pet', 'ghosty'], ['pet', 'goldie'], ['item', 'dragonheart', 1]] },
+  l: { name: '전설 상자', icon: '👑', price: 2000, dup: 1200, pity: 30, pityKey: 'pl', pityTier: 4, tiers: [
+    { r: '희귀', w: 50, pool: [['item', 'heart', 2], ['item', 'shard', 3], ['item', 'emberscale', 4], ['item', 'a_halo', 1], ['item', 'a_wings', 1], ['gold', 1500]] },
+    { r: '영웅', w: 45, pool: [['item', 'a_goldcape', 1], ['item', 'a_comet', 1], ['item', 'heart', 4], ['item', 'phoenixfeather', 3], ['item', 'windstone', 3], ['gold', 3000]] },
+    { r: '전설', w: 5, pool: [['pet', 'starcat'], ['pet', 'ghosty'], ['pet', 'goldie'], ['item', 'dragonheart', 1]] },
   ] },
-  pet: { name: '펫 상자', icon: '🐾', price: 800, dup: 400, tiers: [
-    { r: '좋음', w: 62, pool: [['pet', 'slimy'], ['pet', 'firefly'], ['pet', 'shelly']] },
-    { r: '영웅', w: 30, pool: [['pet', 'goldie'], ['pet', 'ghosty']] },
-    { r: '전설', w: 8, pool: [['pet', 'bunny'], ['pet', 'sporeling'], ['pet', 'pengu'], ['pet', 'drake']] },
+  pet: { name: '펫 상자', icon: '🐾', price: 1500, dup: 400, tiers: [
+    { r: '좋음', w: 82, pool: [['pet', 'slimy'], ['pet', 'firefly'], ['pet', 'shelly']] },
+    { r: '영웅', w: 16, pool: [['pet', 'goldie'], ['pet', 'ghosty']] },
+    { r: '전설', w: 2, pool: [['pet', 'bunny'], ['pet', 'sporeling'], ['pet', 'pengu'], ['pet', 'drake']] },
   ] },
   i0: { name: '포근 상자', icon: '🌼', price: 150, dup: 100, mats: { jelly: 5, honey: 3 }, tiers: [
-    { r: '흔함', w: 55, pool: [['item', 'potion', 3], ['item', 'grilled', 3], ['gold', 120]] },
+    { r: '흔함', w: 57, pool: [['item', 'potion', 3], ['item', 'grilled', 3], ['gold', 120]] },
     { r: '좋음', w: 30, pool: [['item', 'bigpotion', 2], ['item', 'shell', 3], ['gold', 300]] },
     { r: '희귀', w: 12, pool: [['item', 'a_wreath', 1]] },
-    { r: '전설', w: 3, pool: [['pet', 'bunny']] },
+    { r: '전설', w: 1, pool: [['pet', 'bunny']] },
   ] },
   i1: { name: '버섯 상자', icon: '🍄', price: 300, dup: 200, mats: { spore: 5, batwing: 3 }, tiers: [
-    { r: '좋음', w: 55, pool: [['item', 'bigpotion', 3], ['item', 'glowcap', 4], ['item', 'dust', 2], ['gold', 350]] },
+    { r: '좋음', w: 57, pool: [['item', 'bigpotion', 3], ['item', 'glowcap', 4], ['item', 'dust', 2], ['gold', 350]] },
     { r: '희귀', w: 30, pool: [['item', 'bark', 3], ['item', 'dust', 4], ['gold', 700]] },
     { r: '영웅', w: 12, pool: [['item', 'a_shroomcap', 1]] },
-    { r: '전설', w: 3, pool: [['pet', 'sporeling']] },
+    { r: '전설', w: 1, pool: [['pet', 'sporeling']] },
   ] },
   i2: { name: '서리 상자', icon: '❄️', price: 600, dup: 400, mats: { icecrystal: 3, feather: 3 }, tiers: [
-    { r: '좋음', w: 50, pool: [['item', 'bigpotion', 4], ['item', 'fang', 3], ['item', 'frostflower', 3], ['gold', 600]] },
+    { r: '좋음', w: 53, pool: [['item', 'bigpotion', 4], ['item', 'fang', 3], ['item', 'frostflower', 3], ['gold', 600]] },
     { r: '희귀', w: 32, pool: [['item', 'heart', 1], ['item', 'shard', 1], ['gold', 1200]] },
     { r: '영웅', w: 14, pool: [['item', 'a_icescarf', 1]] },
-    { r: '전설', w: 4, pool: [['pet', 'pengu']] },
+    { r: '전설', w: 1, pool: [['pet', 'pengu']] },
   ] },
   i3: { name: '불꽃 상자', icon: '🌋', price: 1200, dup: 800, mats: { emberscale: 3, magmastone: 2 }, tiers: [
-    { r: '좋음', w: 45, pool: [['item', 'bigpotion', 5], ['item', 'heart', 1], ['gold', 1200]] },
+    { r: '좋음', w: 49, pool: [['item', 'bigpotion', 5], ['item', 'heart', 1], ['gold', 1200]] },
     { r: '희귀', w: 35, pool: [['item', 'phoenixfeather', 2], ['item', 'heart', 2], ['item', 'shard', 2], ['gold', 2200]] },
     { r: '영웅', w: 15, pool: [['item', 'a_flamewings', 1]] },
-    { r: '전설', w: 5, pool: [['pet', 'drake']] },
+    { r: '전설', w: 1, pool: [['pet', 'drake']] },
   ] },
 };
 const RARITY = ['흔함', '좋음', '희귀', '영웅', '전설'];
@@ -603,7 +603,7 @@ const MAX_LV = 60; // 처음에는 30이었는데 하루 만에 끝까지 간 �
 const needXp = (lv) => 10 * lv * lv + 10;
 const statsFor = (lv) => ({ maxHp: 80 + (lv - 1) * 15, atk: 10 + (lv - 1) * 3 });
 
-const VERSION = 18; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
+const VERSION = 19; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
 const api = { UP_PITY, upChance, unlocked, VERSION, SLOTS, ACCS, ACC_IDS, CHEST, GACHA, RARITY, SAFE_R, inSafe, FISH, FISH_DAY, FISH_NIGHT, canFish, FOOD_BUFF, COOK_RANGE, PETS, PET_IDS, TITLES, TITLE_IDS, cleanStats, DUEL, ELDER, TALK_RANGE, ALTAR_RANGE, BRIDGE, world, onBridge, MAX_UP, UP_BONUS, UPGRADES, QUESTS, QUEST_IDS, QUEST_ACTIVE_MAX, cleanQuests, ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
   UNLOCK, KEYS, WEAPONS, WEAPON_IDS, ITEMS, ITEM_IDS, SHOP_ITEMS, MAX_STACK, BAG_SLOTS, LOOT, cleanInv, MAX_LV, needXp, statsFor };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ARCA = api;
