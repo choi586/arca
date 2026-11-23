@@ -1085,7 +1085,7 @@ const handlers = {
       setTagLv(o.tag, lv); setTagHp(o.tag, hp, true);
       o.hp = hp; o.lv = lv;
     }
-    const seen = new Set();
+    const seen = new Set(); // m.f 가 있을 때만 '전부'이고, 평소에는 달라진 몬스터만 옴
     let bossHp = null;
     for (const [id, ki, x, z, ry, hp, st, slow] of m.m) {
       seen.add(id);
@@ -1095,10 +1095,10 @@ const handlers = {
       if (!mdef || !ARCA.unlocked(mdef)) { seen.delete(id); continue; } // 모르는 몬스터(새 버전)나 아직 안 열린 섬의 몬스터는 건너뜀
       if (!mo) mo = addMonster(id, MONSTER_KINDS[ki], x, z, ry);
       mo.tx = x; mo.tz = z; mo.tr = ry; mo.st = st; mo.slow = slow;
-      if (mo.kind === 'golem') bossHp = hp;
       if (mo.hp !== hp) { mo.hp = hp; setTagHp(mo.tag, hp); }
     }
-    for (const [id, mo] of monsters) if (!seen.has(id) && !mo.dying) removeMonster(id);
+    if (m.f) for (const [id, mo] of monsters) if (!seen.has(id) && !mo.dying) removeMonster(id);
+    for (const mo of monsters.values()) if (mo.kind === 'golem' && !mo.dying) bossHp = mo.hp;
     $('bossBar').hidden = bossHp === null;
     if (bossHp !== null) { $('bossFill').style.width = bossHp + '%'; $('bossPct').textContent = bossHp + '%'; }
   },

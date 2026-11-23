@@ -8,7 +8,9 @@ const A = require('./public/shared.js');
 const PORT = process.env.PORT || 3000;
 const PUBLIC = path.join(__dirname, 'public');
 const MAX_PER_CHANNEL = 40;     // 섬 하나(채널)에 들어갈 수 있는 사람 수
-const TICK_MS = 66;             // 1초에 약 15번 위치를 나눠 줌
+const TICK_MS = 100;            // 1초에 10번 위치를 나눠 줌
+const VIEW_R = 110;             // 이보다 먼 몬스터는 보내지 않음 (가로+세로 거리)
+const FULL_EVERY = 30;          // 이만큼마다 한 번은 달라진 것만이 아니라 전부 보냄 (약 3초)
 const MAX_STEP = 4;             // 한 번 보낼 때 움직일 수 있는 최대 거리(순간이동 방지)
 const SPAWN_R = 8;              // 광장 근처로는 언제든 돌아올 수 있음(떨어졌을 때 부활)
 const CHAT_GAP_MS = 600;
@@ -86,6 +88,7 @@ function publicInfo(p) { return { id: p.id, name: p.name, color: p.color, hat: p
 function cleanText(s, max) { return String(s || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, max); }
 const num = (v, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
 const r2 = (v) => Math.round(v * 100) / 100;
+const r1 = (v) => Math.round(v * 10) / 10;
 function sendStats(p) { send(p.ws, { t: 'stats', hp: Math.ceil(p.hp), maxHp: p.maxHp, lv: p.lv, xp: p.xp, need: A.needXp(p.lv), atk: p.atk }); }
 function titleName(p) { return p.title && A.TITLES[p.title] ? A.TITLES[p.title].name : ''; }
 function statsOf(p) { return { lv: p.lv, gold: p.inv.gold, kills: p.st.kills, boss: p.st.boss, wins: p.st.wins, quests: p.st.quests, fish: p.st.fish, chests: p.st.chests, maxUp: Math.max(0, ...Object.values(p.inv.up)) }; }
@@ -1005,10 +1008,23 @@ setInterval(() => {
   for (const [ch, c] of channels) {
     if (c.players.size === 0) continue;
     updateMonsters(ch, dt);
-    const p = [], mo = [];
-    for (const q of c.players.values()) p.push([q.id, r2(q.x), r2(q.y), r2(q.z), r2(q.ry), q.a, Math.round(q.hp / q.maxHp * 100), q.lv]);
-    for (const m of c.monsters) if (m.alive) mo.push([m.id, A.MONSTER_KINDS.indexOf(m.kind), r2(m.x), r2(m.z), r2(m.ry), Math.max(1, Math.round(m.hp / m.maxHp * 100)), m.st, now < m.slowUntil ? 1 : 0]);
-    broadcast(ch, { t: 's', p, m: mo });
+    // 전송량 줄이기: 사람마다 ①가까운 몬스터만 ②지난번과 달라진 것만 보냄. FULL_EVERY 번에 한 번은 전부(f:1) 보내서 화면을 맞춤
+    const pl = [], ml = [];
+    for (const q of c.players.values()) pl.push([q.id, JSON.stringify([q.id, r2(q.x), r2(q.y), r2(q.z), r2(q.ry), q.a, Math.round(q.hp / q.maxHp * 100), q.lv])]);
+    for (const m of c.monsters) if (m.alive) ml.push([m, JSON.stringify([m.id, A.MONSTER_KINDS.indexOf(m.kind), r1(m.x), r1(m.z), r1(m.ry), Math.max(1, Math.round(m.hp / m.maxHp * 100)), m.st, now < m.slowUntil ? 1 : 0])]);
+    for (const q of c.players.values()) {
+      if (q.ws.readyState !== 1) continue;
+      const full = !q.sent || ++q.sentN >= FULL_EVERY;
+      if (full) { q.sent = new Map(); q.sentN = 0; }
+      const sent = q.sent, ps = [], ms = [];
+      for (const [id, e] of pl) { if (id !== q.id && sent.get('p' + id) !== e) { sent.set('p' + id, e); ps.push(e); } }
+      for (const [m, e] of ml) {
+        if (!m.def.boss && Math.abs(m.x - q.x) + Math.abs(m.z - q.z) > VIEW_R) continue; // 먼 섬의 몬스터는 안 보냄 (보스는 체력 막대 때문에 늘 보냄)
+        if (sent.get(m.id) !== e) { sent.set(m.id, e); ms.push(e); }
+      }
+      if (!full && !ps.length && !ms.length) continue;
+      q.ws.send('{"t":"s","p":[' + ps.join(',') + '],"m":[' + ms.join(',') + ']' + (full ? ',"f":1' : '') + '}');
+    }
   }
 }, TICK_MS);
 
