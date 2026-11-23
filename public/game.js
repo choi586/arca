@@ -374,7 +374,7 @@ function applyUnlock(announce) { // 내 레벨에 맞춰 레벨 제한 섬을 �
   for (const o of lockedObjs) o.visible = open;
   if (open && announce) {
     toast('🌋 남쪽 하늘에 새로운 섬이 나타났어요!');
-    addLog('🌋 Lv30이 되어 남쪽 하늘에 불꽃마루가 나타났어요. 포근언덕 남쪽 끝의 새 바람 기둥을 타고 가요');
+    toast('🌋 Lv30이 되어 남쪽 하늘에 불꽃마루가 나타났어요. 포근언덕 남쪽 끝의 새 바람 기둥을 타고 가요');
     if (me.av) pop('🌋 새로운 섬!', me.x, me.y + 3.4, me.z, 'lvup');
   }
 }
@@ -1122,7 +1122,7 @@ const handlers = {
       UNLOCK.forEach((u, k) => {
         if (u <= wasLv || u > me.lv) return;
         const s = weaponSkills()[k];
-        toast(`✨ 새 기술: ${s.name} (${KEYS[k]})`); addLog(`새 기술을 배웠어요: ${s.icon} ${s.name} — ${KEYS[k]} 키 (다른 무기도 같은 칸이 열려요)`);
+        toast(`✨ 새 기술: ${s.name} (${KEYS[k]})`);
       });
     }
   },
@@ -1144,7 +1144,7 @@ const handlers = {
     const av = avatarOf(m.id); if (!av) return;
     levelFx(av);
     pop(`레벨 업! Lv${m.lv}`, av.position.x, av.position.y + 3, av.position.z, 'lvup');
-    if (m.id === me.id) addLog(`🎉 레벨이 올랐어요! 이제 Lv${m.lv}`);
+    if (m.id === me.id) toast(`🎉 레벨이 올랐어요! 이제 Lv${m.lv}`);
   },
   tele(m) { telegraph(m.x, m.z, m.r, m.ms); },
   ask(m) { showAsk(m); },
@@ -1163,7 +1163,7 @@ const handlers = {
     renderTrade();
   },
   tstate(m) { if (!trade) return; Object.assign(trade, { mine: m.mine, theirs: m.theirs, okMine: m.okMine, okTheirs: m.okTheirs }); renderTrade(); },
-  tclose(m) { trade = null; $('trade').hidden = true; if (m.text) { toast(m.text); addLog(m.text); } },
+  tclose(m) { trade = null; $('trade').hidden = true; if (m.text) toast(m.text); },
   bossinfo(m) { bossAlive = m.alive; bossAt = performance.now() + m.in; },
   mdie(m) {
     const mo = monsters.get(m.id); if (!mo) return;
@@ -1187,18 +1187,18 @@ const handlers = {
     pop(`+${m.gold}G`, m.x, y, m.z, 'gold');
     for (const [id, n] of m.items) {
       const it = ITEMS[id];
-      if (n > 0) { pop(`${it.icon} +${n}`, m.x, y + 0.6, m.z, 'item'); addLog(`얻었어요: ${it.icon} ${it.name}`); }
-      else addLog(`가방이 꽉 차서 못 주웠어요: ${it.name}`);
+      if (n > 0) { pop(`${it.icon} +${n}`, m.x, y + 0.6, m.z, 'item'); }
+      else toast(`가방이 꽉 차서 못 주웠어요: ${it.name}`);
     }
   },
-  notice(m) { toast(m.text); addLog(m.text); },
+  notice(m) { toast(m.text); },
   fishing(m) { fishState = { biteAt: performance.now() + m.in, window: m.window, bit: false }; toast('🎣 찌를 던졌어요… 흔들릴 때까지 기다려요'); },
   caught(m) {
     stopFishing();
     if (m.fail) { toast(m.fail); return; }
     if (m.pet) { toast('🐳 아기 하늘고래를 만났어요!!'); pop('🐳', me.x, me.y + 3, me.z, 'lvup'); return; }
     const it = ITEMS[m.item];
-    pop(`${it.icon} ${it.name}`, me.x, me.y + 2.8, me.z, 'item'); toast(`🎣 ${it.icon} ${it.name}을(를) 낚았어요!`); addLog(`🎣 낚았어요: ${it.icon} ${it.name}${m.wp > 0 ? ` · 🐳 고래 보장까지 ${m.wp}/${ARCA.FISH.whalePity}` : ''}`);
+    pop(`${it.icon} ${it.name}`, me.x, me.y + 2.8, me.z, 'item'); toast(`🎣 ${it.icon} ${it.name}을(를) 낚았어요!${m.wp > 0 ? ` · 🐳 ${m.wp}/${ARCA.FISH.whalePity}` : ''}`);
   },
   foodbuff(m) { buffUntil = performance.now() + m.ms; toast('🍢 든든해요! 2분 동안 공격력이 올라요'); renderTrack(); },
   cookfx(m) { const av = avatarOf(m.id); if (av) pop('🍢', av.position.x, av.position.y + 2.6, av.position.z, 'item'); },
@@ -1210,7 +1210,7 @@ const handlers = {
     lastGacha = m.res;
     const best = m.res.slice().sort((a, b) => ARCA.RARITY.indexOf(b.r) - ARCA.RARITY.indexOf(a.r))[0];
     toast(`${ARCA.GACHA[m.box].icon} [${best.r}] ${best.icon} ${best.text}`);
-    for (const r of m.res) if (ARCA.RARITY.indexOf(r.r) >= 2) addLog(`${ARCA.GACHA[m.box].icon} [${r.r}] ${r.icon} ${r.text}`);
+
     if (ARCA.RARITY.indexOf(best.r) >= 3) pop(`${best.icon} ${best.r}!`, me.x, me.y + 3, me.z, 'lvup');
     renderShop();
   },
@@ -1224,10 +1224,10 @@ const handlers = {
   title(m) { const o = others.get(m.id); if (o) setTagTitle(o.tag, m.title); },
   rank(m) { rankData = m; renderRecord(); },
   duel(m) {
-    if (m.a !== me.id && m.b !== me.id) { addLog(`⚔️ ${m.an} 님과 ${m.bn} 님이 결투를 시작해요!`); return; }
+    if (m.a !== me.id && m.b !== me.id) return;
     duelOp = m.a === me.id ? m.b : m.a; duelStart = performance.now() + m.in;
     const o = others.get(duelOp); if (o) { o.tag.el.classList.add('foe'); o.tag.hpb.hidden = false; }
-    addLog(`⚔️ ${m.a === me.id ? m.bn : m.an} 님과 결투! 져도 쓰러지지 않아요`);
+
     ['⚔️ 결투 준비… 3', '⚔️ 2', '⚔️ 1', '⚔️ 시작!'].forEach((t, i) => setTimeout(() => { if (duelOp) toast(t); }, i * 1000));
     $('people').hidden = true; renderPeople();
   },
@@ -1238,7 +1238,7 @@ const handlers = {
       if (m.win) pop(m.win === me.id ? '승리!' : '패배…', me.x, me.y + 3, me.z, 'lvup');
       toast(m.text); renderPeople();
     }
-    if (m.text) addLog(m.text);
+
   },
   kicked(m) {
     kickedOut = true; joined = false;
@@ -1251,8 +1251,8 @@ const handlers = {
     wind = { n: m.n, need: m.need, bridge: m.bridge };
     ARCA.world.bridge = m.bridge; bridgeMesh.visible = m.bridge;
     fountainOrb.material.emissiveIntensity = 0.6 + 1.6 * Math.min(1, m.n / m.need);
-    if (m.by) addLog(`🌀 ${m.by} 님이 바람의 돌 ${m.add}개를 바쳤어요 (${Math.min(m.n, m.need)}/${m.need})`);
-    if (m.opened) { toast('🌉 바람의 다리가 열렸어요! 섬 동쪽 끝으로 가 보세요'); addLog('🌉 바람의 다리가 열렸어요! 이제 걸어서 버섯숲 섬에 갈 수 있어요'); bridgeT = 0; }
+
+    if (m.opened) { toast('🌉 바람의 다리가 열렸어요! 섬 동쪽 끝으로 가 보세요'); bridgeT = 0; }
     renderTrack();
   },
   buff(m) { const av = avatarOf(m.id); if (av) bubble(av, m.dur); },
@@ -1260,8 +1260,8 @@ const handlers = {
     if (m.id === me.id) {
       me.dead = true; me.deadT = 4.6; me.actT = 0; me.dashT = 0;
       $('deadView').hidden = false; document.body.classList.add('deadtint');
-      addLog('쓰러졌어요… 잠시 뒤 광장에서 다시 일어나요');
-    } else { const o = others.get(m.id); if (o) addLog(`${o.name} 님이 쓰러졌어요`); }
+      toast('쓰러졌어요… 잠시 뒤 광장에서 다시 일어나요');
+    }
   },
   revive(m) {
     me.dead = false; me.x = m.x; me.y = m.y + 0.5; me.z = m.z; me.vy = 0; me.ry = Math.PI; camYaw = 0;
@@ -1650,7 +1650,7 @@ function myStats() { return { lv: me.lv, gold: me.inv.gold, chests: myst.chests 
 function earnedTitles() { const st = myStats(); return ARCA.TITLE_IDS.filter((id) => ARCA.TITLES[id].ok(st)); }
 function checkNewTitles() { // 새 칭호를 얻으면 알려 줌
   const now = earnedTitles();
-  if (knownTitles) for (const id of now) if (!knownTitles.includes(id)) { toast(`🏅 새 칭호: ${ARCA.TITLES[id].name}`); addLog(`🏅 새 칭호를 얻었어요: 〈${ARCA.TITLES[id].name}〉 — 기록 창(L)에서 달 수 있어요`); }
+  if (knownTitles) for (const id of now) if (!knownTitles.includes(id)) { toast(`🏅 새 칭호: ${ARCA.TITLES[id].name}`); }
   knownTitles = now;
 }
 {
@@ -2347,7 +2347,7 @@ function updateMe(dt) {
   else if ((jumpQueued || glideQueued) && !me.onGround && !me.dead) me.glide = !me.glide; // 공중에서 한 번 더 누르면 글라이더
   jumpQueued = glideQueued = false;
   const inDraft = UPDRAFTS.some((u) => ARCA.unlocked(u) && Math.hypot(u.x - me.x, u.z - me.z) < u.r);
-  if (inDraft && !updraftHint) { updraftHint = true; toast('🌬️ 바람 기둥! 점프한 뒤 공중에서 한 번 더 누르면 글라이더를 펴요'); addLog('🌬️ 바람 기둥에서 글라이더를 펴면 높이 올라가요. 그대로 옆 섬까지 날아갈 수 있어요!'); }
+  if (inDraft && !updraftHint) { updraftHint = true; toast('🌬️ 바람 기둥! 점프한 뒤 공중에서 한 번 더 누르면 글라이더를 펴요'); }
   // 낮은 곳에서 들어온 사람만 띄움 (높이 날아서 지나가는 사람은 그대로 통과)
   if (!inDraft || !me.glide) me.lift = false; else if (me.y < 11) me.lift = true;
   if (me.glide) me.vy = me.lift && me.y < UPDRAFT_TOP ? Math.min(11, me.vy + 45 * dt) : Math.max(-GLIDE_FALL, me.vy - GRAV * dt);
@@ -2361,9 +2361,9 @@ function updateMe(dt) {
   if (isle && isle !== curIsle && me.onGround) {
     curIsle = isle; $('isle').textContent = `${isle.icon} ${isle.name}`;
     toast(`${isle.icon} ${isle.name}에 도착!`);
-    if (isle.id === 1) addLog('🍄 버섯숲은 Lv10 안팎의 몬스터가 살아요. 돌아갈 때는 서쪽 끝의 바람 기둥을 타세요');
-    if (isle.id === 3) addLog('🌋 불꽃마루는 Lv30이 넘는 몬스터가 살아요. 분화구 한가운데에는 용이 있어요. 돌아갈 때는 북쪽 끝의 바람 기둥을 타세요');
-    if (isle.id === 2) addLog('❄️ 서리봉우리는 Lv16이 넘는 몬스터가 살고 바닥이 미끄러워요. 돌아갈 때는 남쪽 끝의 바람 기둥을 타세요');
+    if (isle.id === 1) toast('🍄 버섯숲은 Lv10 안팎의 몬스터가 살아요. 돌아갈 때는 서쪽 끝의 바람 기둥을 타세요');
+    if (isle.id === 3) toast('🌋 불꽃마루는 Lv30이 넘는 몬스터가 살아요. 분화구 한가운데에는 용이 있어요. 돌아갈 때는 북쪽 끝의 바람 기둥을 타세요');
+    if (isle.id === 2) toast('❄️ 서리봉우리는 Lv16이 넘는 몬스터가 살고 바닥이 미끄러워요. 돌아갈 때는 남쪽 끝의 바람 기둥을 타세요');
   }
 
   if (me.y < -45) { // 구름 아래로 떨어지면 광장으로
@@ -2504,7 +2504,7 @@ function applyGfx(low, why) {
   resize();
   const b = $('gfxBtn'); if (b) b.textContent = `⚙️ 화질: ${gfxPref === 'auto' ? '자동' + (low ? '(낮음)' : '') : low ? '낮음' : '높음'}`;
   for (const c of document.querySelectorAll('#gfxChips button')) c.classList.toggle('on', c.dataset.gfx === gfxPref);
-  if (why === 'auto') { toast('🐢 화면이 느려서 화질을 낮췄어요'); addLog('화면이 느려서 화질을 낮췄어요. ⚙️ 화질 버튼으로 바꿀 수 있어요'); }
+  if (why === 'auto') { toast('🐢 화면이 느려서 화질을 낮췄어요'); }
 }
 function setGfx(pref) { gfxPref = pref; store.set('arca.gfx', pref); slowT = 0; applyGfx(pref === 'low', 'init'); }
 // 자동: 3초 넘게 1초에 24번도 못 그리면 낮은 화질로 (한 번 낮추면 그대로 둠)

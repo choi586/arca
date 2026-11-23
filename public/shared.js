@@ -605,7 +605,7 @@ const XP_HARD_LV = 20, XP_HARD_STEP = 0.08;
 const needXp = (lv) => Math.round((10 * lv * lv + 10) * (lv >= XP_HARD_LV ? 1 + (lv - XP_HARD_LV + 1) * XP_HARD_STEP : 1));
 const statsFor = (lv) => ({ maxHp: 80 + (lv - 1) * 15, atk: 10 + (lv - 1) * 3 });
 
-const VERSION = 22; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
+const VERSION = 23; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
 const api = { UP_PITY, upChance, unlocked, VERSION, SLOTS, ACCS, ACC_IDS, CHEST, GACHA, RARITY, SAFE_R, inSafe, FISH, FISH_DAY, FISH_NIGHT, canFish, FOOD_BUFF, COOK_RANGE, PETS, PET_IDS, TITLES, TITLE_IDS, cleanStats, DUEL, ELDER, TALK_RANGE, ALTAR_RANGE, BRIDGE, world, onBridge, MAX_UP, UP_BONUS, UPGRADES, QUESTS, QUEST_IDS, QUEST_ACTIVE_MAX, cleanQuests, ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
   UNLOCK, KEYS, WEAPONS, WEAPON_IDS, ITEMS, ITEM_IDS, SHOP_ITEMS, MAX_STACK, BAG_SLOTS, LOOT, cleanInv, MAX_LV, needXp, statsFor };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ARCA = api;
