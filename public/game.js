@@ -1732,6 +1732,7 @@ function updateChest(dt, now) {
 }
 
 // ================= 구름 낚시 · 요리 · 펫 =================
+let fishLabel = -1; const isTouch = () => document.body.classList.contains('touch');
 let fishState = null, buffUntil = 0, canFishNow = false, canCookNow = false, buffTick = 0;
 const bobber = new THREE.Group();
 {
@@ -1775,7 +1776,7 @@ function updateLeisure(dt) {
     else {
       me.actA = ANIM.cast; me.actT = 0.3;
       const fx = Math.sin(me.ry), fz = Math.cos(me.ry), bit = now >= fishState.biteAt;
-      if (bit && !fishState.bit) { fishState.bit = true; toast('❗ 지금이에요! X 를 눌러 당겨요'); pop('❗', me.x + fx * 2, me.y + 2.2, me.z + fz * 2, 'lvup'); }
+      if (bit && !fishState.bit) { fishState.bit = true; toast(isTouch() ? '❗ 지금이에요! 버튼을 눌러 당겨요' : '❗ 지금이에요! X 를 눌러 당겨요'); pop('❗', me.x + fx * 2, me.y + 2.2, me.z + fz * 2, 'lvup'); }
       if (now > fishState.biteAt + fishState.window + 400 && !fishState.late) { fishState.late = true; net({ t: 'reel' }); } // 너무 늦으면 서버가 놓쳤다고 알려 줌
       bobber.visible = fishLine.visible = true;
       bobber.position.set(me.x + fx * 7, me.y - 3 + Math.sin(now / (bit ? 60 : 400)) * (bit ? 0.25 : 0.1), me.z + fz * 7);
@@ -1783,8 +1784,11 @@ function updateLeisure(dt) {
       pos.setXYZ(0, me.x + fx * 0.6, me.y + 1.5, me.z + fz * 0.6); pos.setXYZ(1, bobber.position.x, bobber.position.y, bobber.position.z); pos.needsUpdate = true;
     }
   }
-  const cf = !fishState && !me.dead && me.onGround && ARCA.canFish(me.x, me.z);
+  // 낚시 중에도 버튼을 남겨 둠 — 손가락으로는 X 키를 못 눌러서 이 버튼으로 당김
+  const cf = !me.dead && (!!fishState || (me.onGround && ARCA.canFish(me.x, me.z)));
   if (cf !== canFishNow) { canFishNow = cf; $('fishHint').hidden = !cf; }
+  const fl = !fishState ? 0 : fishState.bit ? 2 : 1;
+  if (fl !== fishLabel) { fishLabel = fl; const b = $('fishHint').firstChild; b.textContent = ['🎣 구름 낚시' + (isTouch() ? '' : ' (X)'), '🎣 기다리는 중…', '❗ 지금 당기기!'][fl]; b.classList.toggle('bite', fl === 2); }
   let cook = false;
   if (!me.dead && rawFishCount() > 0) for (const e of decos.values()) if (e.d.k === 'campfire' && Math.hypot(e.d.x - me.x, e.d.z - me.z) < ARCA.COOK_RANGE) { cook = true; break; }
   if (cook !== canCookNow) { canCookNow = cook; $('cookHint').hidden = !cook; }

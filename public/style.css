@@ -245,6 +245,7 @@ body.touch #recordBtn { display: none; }
 
 /* ---------- 8단계: 낚시 · 요리 · 펫 ---------- */
 #fishHint button { background: #a5d8ff; }
+#fishHint button.bite { background: #ff6b6b; color: #fff; transform: scale(1.15); }
 #cookHint button { background: #ffc9c9; }
 .recstats { grid-template-columns: repeat(5, 1fr); }
 #bagPets { margin-bottom: 4px; }
