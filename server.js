@@ -898,7 +898,8 @@ wss.on('connection', (ws) => {
     let m;
     try { m = JSON.parse(raw); } catch (e) { return; }
     if (!m || typeof m.t !== 'string') return;
-    if (me) { me.lastAct = Date.now(); me.hiddenAt = m.t === 'hide' ? Date.now() : 0; }
+    // 가만히 서 있어도 1초마다 오는 위치 신호('m')는 '움직임'으로 치지 않음 → 켜 두기만 한 화면도 AFK_MS 뒤에 내보냄
+    if (me) { if (m.t !== 'm') me.lastAct = Date.now(); me.hiddenAt = m.t === 'hide' ? Date.now() : 0; }
 
     if (m.t === 'join' && !me) {
       // 새로고침을 안 한 예전 화면은 새 몬스터·아이템을 몰라서 오류가 나므로, 다시 들어오게 안내함
@@ -946,6 +947,7 @@ wss.on('connection', (ws) => {
       let [x, y, z, ry] = m.p.map((v) => num(v));
       const dx = x - me.x, dz = z - me.z;
       const d = Math.hypot(dx, dz);
+      if (d > 0.05 || Math.abs(ry - me.ry) > 0.02) me.lastAct = Date.now(); // 실제로 움직이거나 몸을 돌렸을 때만
       const nearSpawn = Math.hypot(x, z - 7) < SPAWN_R;
       if (d > MAX_STEP && !nearSpawn) { x = me.x + (dx / d) * MAX_STEP; z = me.z + (dz / d) * MAX_STEP; }
       me.x = Math.max(-200, Math.min(200, x));
