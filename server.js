@@ -34,7 +34,7 @@ const HOMES = A.monsterHomes(LAYOUT.obstacles);
 
 // ---------- 관리자용 유저 현황 ----------
 // Render 환경 변수 ADMIN_KEY 를 정해 두어야 켜짐. 열쇠는 주소가 아니라 요청 머리말(x-admin-key)로 받음
-const ADMIN_KEY = process.env.ADMIN_KEY || '';
+const ADMIN_KEY = (process.env.ADMIN_KEY || '').trim();
 const startedAt = Date.now();
 const seen = new Map();   // 서버가 켜진 뒤 다녀간 사람 (uid 또는 이름 기준). 서버가 다시 켜지면 비워짐
 let peak = 0, peakAt = 0, totalJoins = 0;
@@ -53,9 +53,13 @@ function seenTouch(p, e = seen.get(seenKey(p))) {
 }
 function seenLeave(p) { const e = seen.get(seenKey(p)); if (e && p.joinedAt) { e.playMs += Date.now() - p.joinedAt; seenTouch(p, e); } }
 function adminStatus(req, res) {
-  const key = String(req.headers['x-admin-key'] || '');
-  const ok = ADMIN_KEY.length >= 8 && key.length === ADMIN_KEY.length && require('crypto').timingSafeEqual(Buffer.from(key), Buffer.from(ADMIN_KEY));
-  if (!ok) return setTimeout(() => { res.writeHead(ADMIN_KEY ? 401 : 404, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: ADMIN_KEY ? 'key' : 'off' })); }, 400);
+  // 열쇠에 한글이 들어가도 되도록 화면이 주소 글자(encodeURIComponent)로 바꿔 보냄. 비교는 해시끼리
+  let key = String(req.headers['x-admin-key'] || '');
+  try { key = decodeURIComponent(key).trim(); } catch (e) { /* 그대로 비교 */ }
+  const crypto = require('crypto'), h = (t) => crypto.createHash('sha256').update(t).digest();
+  const short = ADMIN_KEY && [...ADMIN_KEY].length < 8;
+  const ok = ADMIN_KEY && !short && crypto.timingSafeEqual(h(key), h(ADMIN_KEY));
+  if (!ok) return setTimeout(() => { res.writeHead(ADMIN_KEY ? 401 : 404, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: !ADMIN_KEY ? 'off' : short ? 'short' : 'key' })); }, 400);
   const now = Date.now(), online = [], onKeys = new Map();
   for (const [ch, c] of channels) for (const p of c.players.values()) {
     const I = A.islandOf(p.x, p.z); onKeys.set(seenKey(p), now - (p.joinedAt || now));

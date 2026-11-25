@@ -86,10 +86,13 @@
   async function load() {
     clearTimeout(timer);
     let res;
-    try { res = await fetch('/admin/status', { headers: { 'x-admin-key': key }, cache: 'no-store' }); }
+    try { res = await fetch('/admin/status', { headers: { 'x-admin-key': encodeURIComponent(key) }, cache: 'no-store' }); }
     catch (e) { $('when').textContent = '서버에 연결하지 못했어요. 다시 시도하는 중…'; timer = setTimeout(load, 5000); return; }
     if (res.status === 404) { fail('관리자 화면이 꺼져 있어요. 서버에 ADMIN_KEY 가 정해져 있지 않아요.'); return; }
-    if (res.status !== 200) { fail('열쇠가 맞지 않아요.'); return; }
+    if (res.status !== 200) {
+      let why = ''; try { why = (await res.json()).error; } catch (e) { /* 괜찮음 */ }
+      fail(why === 'short' ? '서버에 정해 둔 ADMIN_KEY 가 8글자보다 짧아요. Render 에서 더 길게 바꿔 주세요.' : '열쇠가 맞지 않아요. 대문자·소문자와 빈칸을 확인해 주세요.'); return;
+    }
     data = await res.json();
     try { sessionStorage.setItem('arca.admin', key); } catch (e) { /* 괜찮음 */ }
     show(true); render();
