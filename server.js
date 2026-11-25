@@ -600,6 +600,7 @@ function handleShop(p, m) {
     if (A.WEAPONS[m.id]) {
       const w = A.WEAPONS[m.id];
       if (inv.weapons.includes(m.id)) return notice(p, '이미 가지고 있어요');
+      if (!w.price) return notice(p, w.craft ? '이 무기는 살 수 없어요. 제작 탭에서 재료로 만들어요' : '살 수 없는 무기예요');
       if (inv.gold < w.price) return notice(p, '골드가 모자라요');
       inv.gold -= w.price; inv.weapons.push(m.id);
       notice(p, `샀어요: ${w.icon} ${w.name} — 가방(I)에서 바꿔 들 수 있어요`);
@@ -670,6 +671,19 @@ function handleQuest(p, m) {
     giveXp(p.ch, p, 30 * n);
     sendInv(p);
     broadcastAll(windMsg({ by: p.name, add: n, opened: !was && A.world.bridge }));
+    return;
+  }
+  if (m.t === 'craft') { // 제작 무기: 골드와 재료를 내고 만듦
+    if (!nearShop(p)) return notice(p, '상인 모모 가까이에서만 만들 수 있어요');
+    const w = A.WEAPONS[m.w]; if (!w || !w.craft) return;
+    if (inv.weapons.includes(m.w)) return notice(p, '이미 가지고 있어요');
+    if (inv.gold < w.craft.gold) return notice(p, '골드가 모자라요');
+    for (const id in w.craft.mats) if ((inv.items[id] || 0) < w.craft.mats[id]) return notice(p, `${A.ITEMS[id].name}이(가) 모자라요`);
+    inv.gold -= w.craft.gold;
+    for (const id in w.craft.mats) removeItem(inv, id, w.craft.mats[id]);
+    inv.weapons.push(m.w);
+    sendInv(p);
+    broadcast(p.ch, { t: 'notice', text: `⚒️ ${p.name} 님이 ${w.icon} ${w.name}을(를) 만들었어요!` });
     return;
   }
   if (m.t === 'upgrade') {
@@ -1083,7 +1097,7 @@ wss.on('connection', (ws) => {
       handleSocial(me, m);
     } else if (m.t === 'deco' || m.t === 'decodel') {
       handleDeco(me, m);
-    } else if (['qtake', 'qdone', 'qdrop', 'donate', 'upgrade'].includes(m.t)) {
+    } else if (['qtake', 'qdone', 'qdrop', 'donate', 'upgrade', 'craft'].includes(m.t)) {
       handleQuest(me, m);
     } else if (m.t === 'respawn') {
       if (!me.dead || Date.now() - me.deadAt < RESPAWN_MS - 300) return;

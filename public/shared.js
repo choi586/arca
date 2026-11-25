@@ -302,6 +302,21 @@ WEAPONS.scythe = { name: '달빛 낫', icon: '🌙', price: 1800, color: 0xb197f
     { name: '영혼 수확', icon: '👻', kind: 'blast', cd: 8000, mult: 2.2, range: 9, radius: 4, leech: 0.15 },
     { name: '달의 장막', icon: '🌫️', kind: 'guard', cd: 14000, guard: 0.4, dur: 6000 },
   ] };
+// 제작 무기: 상점에서 안 팔고(price 0) 상인 옆 '제작' 탭에서 재료로 만듦. craft = { gold, mats }
+WEAPONS.boomerang = { name: '꿀벌 부메랑', icon: '🪃', price: 0, color: 0xffd43b, desc: '중간 거리에서 던지고 끈적한 꿀로 적을 느리게 해요', craft: { gold: 1000, mats: { honey: 40, straw: 30, shard: 3 } },
+  skills: [
+    { name: '부메랑 던지기', icon: '🪃', kind: 'shot', cd: 550, mult: 0.9, range: 9 },
+    { name: '꿀벌 떼', icon: '🐝', kind: 'multi', cd: 4500, mult: 1.1, range: 9, n: 4 },
+    { name: '끈적 회전', icon: '🍯', kind: 'around', cd: 6000, mult: 1.4, range: 4.2, slow: 2500 },
+    { name: '여왕벌의 침', icon: '👑', kind: 'shot', cd: 10000, mult: 3.0, range: 11, crit: 0.3 },
+  ] };
+WEAPONS.greatsword = { name: '용염 대검', icon: '⚔️', price: 0, color: 0xff6b35, desc: '느리지만 한 방이 가장 센 무기', craft: { gold: 6000, mats: { magmastone: 30, phoenixfeather: 20, dragonheart: 3 } },
+  skills: [
+    { name: '크게 베기', icon: '⚔️', kind: 'arc', cd: 1100, mult: 2.5, range: 3.8, arc: 1.6 },
+    { name: '불꽃 회오리', icon: '🌪️', kind: 'around', cd: 5500, mult: 2.4, range: 4.6 },
+    { name: '화염 돌진', icon: '☄️', kind: 'line', cd: 7500, mult: 3.2, range: 8, width: 2.0, move: 'dash' },
+    { name: '용의 숨결', icon: '🐲', kind: 'blast', cd: 13000, mult: 4.6, range: 8, radius: 4.5 },
+  ] };
 const WEAPON_IDS = Object.keys(WEAPONS);
 
 // ---------- 아이템 ----------
@@ -605,7 +620,7 @@ const XP_HARD_LV = 20, XP_HARD_STEP = 0.08;
 const needXp = (lv) => Math.round((10 * lv * lv + 10) * (lv >= XP_HARD_LV ? 1 + (lv - XP_HARD_LV + 1) * XP_HARD_STEP : 1));
 const statsFor = (lv) => ({ maxHp: 80 + (lv - 1) * 15, atk: 10 + (lv - 1) * 3 });
 
-const VERSION = 25; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
+const VERSION = 26; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
 const api = { UP_PITY, upChance, unlocked, VERSION, SLOTS, ACCS, ACC_IDS, CHEST, GACHA, RARITY, SAFE_R, inSafe, FISH, FISH_DAY, FISH_NIGHT, canFish, FOOD_BUFF, COOK_RANGE, PETS, PET_IDS, TITLES, TITLE_IDS, cleanStats, DUEL, ELDER, TALK_RANGE, ALTAR_RANGE, BRIDGE, world, onBridge, MAX_UP, UP_BONUS, UPGRADES, QUESTS, QUEST_IDS, QUEST_ACTIVE_MAX, cleanQuests, ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
   UNLOCK, KEYS, WEAPONS, WEAPON_IDS, ITEMS, ITEM_IDS, SHOP_ITEMS, MAX_STACK, BAG_SLOTS, LOOT, cleanInv, MAX_LV, needXp, statsFor };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ARCA = api;

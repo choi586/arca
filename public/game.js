@@ -516,6 +516,20 @@ function setWeapon(av, w) {
     const pole = mesh(new THREE.CylinderGeometry(0.045, 0.05, 2.0, 6), '#343a40'); pole.position.y = 0.45;
     const blade = mesh(new THREE.TorusGeometry(0.55, 0.05, 4, 12, 1.9), '#d0bfff', { metalness: 0.6, roughness: 0.2, emissive: '#7950f2', emissiveIntensity: 0.6 }); blade.position.set(0, 1.0, 0.5); blade.rotation.y = Math.PI / 2; blade.scale.z = 0.5;
     R_.add(pole, blade);
+  } else if (w === 'boomerang') { // 노란 줄무늬 ㄱ자 부메랑
+    for (const [rot, col] of [[0.55, '#ffd43b'], [-0.55, '#343a40']]) {
+      const wing = mesh(new THREE.BoxGeometry(0.13, 0.05, 0.6), col); wing.rotation.x = rot; wing.position.set(0, rot > 0 ? 0.14 : -0.14, 0.42);
+      R_.add(wing);
+    }
+    const tip = mesh(new THREE.BoxGeometry(0.14, 0.06, 0.16), '#fff3bf', { emissive: '#fab005', emissiveIntensity: 0.6 }); tip.position.set(0, 0, 0.66);
+    R_.add(tip);
+  } else if (w === 'greatsword') { // 크고 넓은 불타는 칼
+    const grip = mesh(new THREE.BoxGeometry(0.09, 0.09, 0.45), '#343a40'); grip.position.z = 0.02;
+    const guard = mesh(new THREE.BoxGeometry(0.6, 0.1, 0.1), '#c92a2a', { metalness: 0.5, roughness: 0.4 }); guard.position.z = 0.28;
+    const blade = mesh(new THREE.BoxGeometry(0.26, 0.05, 1.6), '#495057', { metalness: 0.7, roughness: 0.3 }); blade.position.z = 1.1;
+    const edge = mesh(new THREE.BoxGeometry(0.1, 0.07, 1.5), '#ff922b', { emissive: '#ff6b35', emissiveIntensity: 1.1 }, false); edge.position.z = 1.1;
+    const point = mesh(new THREE.ConeGeometry(0.15, 0.3, 4), '#ff922b', { emissive: '#ff6b35', emissiveIntensity: 1.1 }); point.rotation.x = Math.PI / 2; point.position.z = 2.02;
+    R_.add(grip, guard, blade, edge, point);
   } else if (w === 'lantern') {
     const hook = mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.25, 4), '#495057'); hook.position.y = -0.12;
     const frame = mesh(new THREE.BoxGeometry(0.26, 0.32, 0.26), '#495057', { transparent: true, opacity: 0.35 }); frame.position.y = -0.4;
@@ -1348,7 +1362,7 @@ function tryAttack(k) {
   const A_ = { arc: ANIM.attack, line: ANIM.attack, around: ANIM.spin, shot: ANIM.cast, multi: ANIM.cast, blast: ANIM.cast, heal: ANIM.wave, shield: ANIM.wave, taunt: ANIM.wave, guard: ANIM.guard };
   me.actA = A_[sk.kind];
   if (w === 'hammer' && sk.kind === 'around') me.actA = ANIM.attack;
-  if (w === 'spear' && sk.kind === 'shot') me.actA = ANIM.attack; // 창은 던지는 동작
+  if ((w === 'spear' || w === 'boomerang') && sk.kind === 'shot') me.actA = ANIM.attack; // 창은 던지는 동작
   me.actT = sk.kind === 'around' ? 0.45 : sk.kind === 'guard' ? sk.dur / 1000 : sk.kind === 'arc' || sk.kind === 'line' ? 0.28 : 0.4;
   if (sk.move === 'dash') { me.dashT = DASH_TIME; me.dashDir = 1; }
   if (sk.move === 'back') { me.dashT = 0.22; me.dashDir = -1; }
@@ -1518,6 +1532,15 @@ function renderShop() {
       list.appendChild(odds);
     }
     list.appendChild(el('div', 'tip', '섬 상자는 골드와 그 섬 몬스터의 재료로 열어요. 그 섬 상자에서만 나오는 장신구와 펫이 있어요. 장신구는 여러 개 나와도 가방에 쌓여요. 남는 건 친구와 거래하거나 팔 수 있어요. 이미 가진 펫이 나오면 골드로 돌려받아요.'));
+  } else if (shopTab === 'craft') { // 제작 무기
+    list.appendChild(el('div', 'tip', '상점에서 팔지 않는 무기예요. 몬스터와 보스가 떨어뜨리는 재료를 모아 와서 만들어요. 만든 무기는 가방(I)에서 바꿔 들 수 있고, 강화도 똑같이 돼요.'));
+    for (const id of ARCA.WEAPON_IDS) {
+      const w = WEAPONS[id], c = w.craft; if (!c) continue;
+      const own = me.inv.weapons.includes(id), mats = Object.entries(c.mats);
+      const ok = !own && g >= c.gold && mats.every(([m, n]) => (me.inv.items[m] || 0) >= n);
+      const need = mats.map(([m, n]) => `${ITEMS[m].icon} ${ITEMS[m].name} ${me.inv.items[m] || 0}/${n}`).join(' · ');
+      list.appendChild(shopRow(w.icon, w.name, own ? w.desc : `${w.desc} — ${need}`, own ? '' : `${c.gold}G`, [[own ? '가지고 있음' : '만들기', ok, () => net({ t: 'craft', w: id })]]));
+    }
   } else if (shopTab === 'up') { // 무기 강화
     list.appendChild(el('div', 'tip', `재료와 골드로 무기를 강화해요. 한 단계마다 그 무기의 피해가 ${ARCA.UP_BONUS * 100}%씩 늘어요 (최대 +${ARCA.MAX_UP}). +6부터는 실패할 수 있어요. 실패하면 골드와 재료만 사라지고 단계는 그대로예요. 대신 실패할 때마다 그 무기의 다음 성공 확률이 ${ARCA.UP_PITY * 100}%p씩 올라요.`));
     for (const id of me.inv.weapons) {
@@ -1590,6 +1613,8 @@ const bridgeMesh = new THREE.Group();
   const track = el('div'); track.id = 'qtrack'; $('hud').appendChild(track);
   const tabUp = el('button', '', '강화'); tabUp.dataset.tab = 'up'; document.querySelector('#shop .tabs').appendChild(tabUp);
   tabUp.onclick = () => { shopTab = 'up'; renderShop(); };
+  const tabC = el('button', '', '제작'); tabC.dataset.tab = 'craft'; document.querySelector('#shop .tabs').appendChild(tabC);
+  tabC.onclick = () => { shopTab = 'craft'; renderShop(); };
   const tabG = el('button', '', '🎁 뽑기'); tabG.dataset.tab = 'gacha'; document.querySelector('#shop .tabs').appendChild(tabG);
   tabG.onclick = () => { shopTab = 'gacha'; renderShop(); };
   const tabA = el('button', '', '장신구'); tabA.dataset.tab = 'acc'; document.querySelector('#shop .tabs').insertBefore(tabA, tabUp);

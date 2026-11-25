@@ -465,6 +465,13 @@ sup a { cursor: pointer; }
   <h2 id="weapons">무기와 기술</h2>
   <p>직업이 따로 없고 <b>손에 든 무기가 곧 직업</b>이다. 가방(<kbd>I</kbd>)에서 언제든 바꿔 들 수 있고, 한 번 산 무기는 계속 내 것이다. "배율"은 내 공격력에 곱해지는 값이고, 치료량은 <b>쓰는 사람의</b> 최대 체력에 대한 비율이다. 무기는 거래할 수 없다.</p>
   <div data-auto="weapons"></div>
+  <h3 id="craft">제작 무기</h3>
+  <p><b>꿀벌 부메랑</b>과 <b>용염 대검</b>은 상점에서 팔지 않는다. 상인 모모의 <b>제작</b> 탭에서 골드와 재료를 내고 만든다. 재료는 몬스터와 보스가 떨어뜨리는 것들이고, 값은 위 표의 이름 옆에 적혀 있다.</p>
+  <ul>
+    <li>부메랑은 포근언덕 재료(꿀·밀짚)와 폭풍 골렘의 조각으로 만든다. 레벨이 낮아도 노릴 수 있다.</li>
+    <li>대검은 불꽃마루 재료와 <b>용의 심장 3개</b>가 든다. 용의 심장은 상점에 팔면 1,500G라서 <del>팔고 싶은 마음과 싸워야 한다.</del></li>
+    <li>만든 무기는 산 무기와 똑같이 강화된다. 한 번 만들면 계속 내 것이고, 누가 만들면 채널 모두에게 알림이 뜬다.</li>
+  </ul>
   <h3 id="weapon-tips">무기 고르기</h3>
   <div class="tw"><table class="wiki">
     <tr><th>무기</th><th>혼자 할 때</th><th>같이 할 때</th><th>이런 사람에게</th></tr>
@@ -476,6 +483,8 @@ sup a { cursor: pointer; }
     <tr><td>🔪 그림자 쌍단검</td><td class="c stars">★★★★☆</td><td class="c stars">★★★★☆</td><td>손이 빠르다. 클릭 속도가 곧 세기다. <del>마우스가 먼저 닳는다</del></td></tr>
     <tr><td>⚡ 천둥 창</td><td class="c stars">★★★★☆</td><td class="c stars">★★★★☆</td><td>맞기 싫지만 활은 심심하다. 빨간 원 밖에서 찌른다</td></tr>
     <tr><td>🌙 달빛 낫</td><td class="c stars">★★★★★</td><td class="c stars">★★★☆☆</td><td>물약 값이 아깝다. 여러 마리를 모아 놓고 베면 체력이 쭉 찬다</td></tr>
+    <tr><td>🪃 꿀벌 부메랑</td><td class="c stars">★★★★☆</td><td class="c stars">★★★★☆</td><td>활은 멀고 검은 가깝다. 꿀벌을 40번쯤 울릴 각오가 됐다</td></tr>
+    <tr><td>⚔️ 용염 대검</td><td class="c stars">★★★★★</td><td class="c stars">★★★★☆</td><td>한 방에 끝내고 싶다. 느려서 빗나가면 민망하다. 용을 세 번 잡아야 만들 수 있다</td></tr>
   </table></div>
   <p>별점은 문서를 쓴 쪽의 생각일 뿐이다. <del>등불로 혼자 서리 거인을 잡는 사람도 언젠가 나올 것이다.</del></p>
   <ul>
@@ -805,6 +814,8 @@ sup a { cursor: pointer; }
     <tr><td class="c">22</td><td>말수 줄이기</td><td>서버가 보내는 위치 신호를 7분의 1쯤으로 줄임(가까운 몬스터만, 달라진 것만). 게임 내용은 그대로</td><td class="c">11월 23일</td></tr>
     <tr><td class="c">23</td><td>조용한 채팅 창</td><td>채팅 창에는 채팅과 드나드는 사람만 나옴. 얻은 것·판 것·레벨 업 같은 소식은 화면 알림으로만 뜸</td><td class="c">11월 23일</td></tr>
     <tr><td class="c">24</td><td>손가락 낚시</td><td>휴대폰·태블릿에서 찌를 던진 뒤 당길 버튼이 사라져 낚시가 안 되던 것을 고침. <del>그동안 물고기들은 평화로웠다.</del></td><td class="c">11월 24일</td></tr>
+    <tr><td class="c">25</td><td>현황 화면</td><td>이어하기 코드를 빼고 운영용 현황 화면을 넣음</td><td class="c">11월 24일</td></tr>
+    <tr><td class="c">26</td><td>대장간</td><td>재료로 만드는 제작 무기 2종(꿀벌 부메랑, 용염 대검)과 상점의 제작 탭</td><td class="c">11월 25일</td></tr>
   </table></div>
   <p>1단계부터 5단계까지가 처음 기획이었다. 6단계부터는 그때그때 들어온 요청으로 만들어졌다. <del>기획서는 5단계에서 끝났는데 게임은 끝나지 않았다.</del></p>
 
@@ -942,7 +953,7 @@ sup a { cursor: pointer; }
       var h = '';
       A.WEAPON_IDS.forEach(function (id) {
         var w = A.WEAPONS[id];
-        h += '<h3 id="w-' + id + '">' + w.icon + ' ' + w.name + ' <small>(' + (w.price ? N(w.price) + 'G' : '처음부터 있음') + ')</small></h3><p>' + esc(w.desc) + '.</p>';
+        h += '<h3 id="w-' + id + '">' + w.icon + ' ' + w.name + ' <small>(' + (w.price ? N(w.price) + 'G' : w.craft ? '제작: ' + N(w.craft.gold) + 'G' + Object.keys(w.craft.mats).map(function (m) { return ' + ' + A.ITEMS[m].icon + ' ' + A.ITEMS[m].name + ' ' + w.craft.mats[m]; }).join('') : '처음부터 있음') + ')</small></h3><p>' + esc(w.desc) + '.</p>';
         h += table(['칸', '기술', '배율', '다시 쓰기', '설명'], w.skills.map(function (sk, k) {
           var d = '';
           if (sk.kind === 'arc') d = '앞쪽 부채꼴 (거리 ' + sk.range + ')';
