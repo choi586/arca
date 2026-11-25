@@ -66,7 +66,7 @@
   <h2>지금 접속한 사람 <small id="onCount"></small></h2>
   <div class="wrap"><table id="online"></table></div>
 
-  <h2>다녀간 사람 <small>서버가 켜진 뒤부터의 기록이에요. 서버가 잠들었다 깨면 비워져요. 최근 300명까지.</small></h2>
+  <h2>다녀간 사람 <small id="visNote"></small></h2>
   <div class="wrap"><table id="visitors"></table></div>
 </main>
 
@@ -128,7 +128,7 @@
     const idle = d.online.filter((p) => p.idleMs > 5 * 60000 || p.hidden).length;
     tile(num(d.online.length), '지금 접속한 사람');
     tile(num(idle), '그중 쉬는 사람 (5분 넘게 가만히 · 화면 가림)');
-    tile(num(d.seenCount), '서버가 켜진 뒤 다녀간 사람');
+    tile(num(d.seenCount), d.saving.on ? `다녀간 사람 (${clock(d.since)}부터)` : '서버가 켜진 뒤 다녀간 사람');
     tile(num(d.peak), d.peakAt ? `가장 많았을 때 (${clock(d.peakAt)})` : '가장 많았을 때');
     tile(num(d.totalJoins), '접속 횟수 (다시 접속 포함)');
     tile(dur(d.now - d.startedAt), `서버가 켜진 지 (${clock(d.startedAt)}부터)`);
@@ -155,6 +155,11 @@
       { label: '접속한 지', key: 'onMs', n: 1, cell: (p) => dur(p.onMs) },
     ], d.online, '지금은 아무도 없어요.');
 
+    const sv = d.saving;
+    $('visNote').textContent = !sv.on ? '저장이 꺼져 있어요(DATA_TOKEN 없음). 서버가 잠들었다 깨면 비워져요. 최근 300명까지.'
+      : sv.error ? `⚠️ 저장에 문제가 있어요: ${sv.error}`
+      : !sv.loaded ? '저장된 기록을 불러오는 중이에요…'
+      : `서버가 잠들어도 남아요. 바뀐 것이 있으면 5분마다 저장해요${sv.savedAt ? ` · 마지막 저장 ${clock(sv.savedAt)}` : ' · 아직 저장 전'}. 최근 300명까지 보여요.`;
     table('visitors', [
       { label: '이름', key: 'name', cell: (v) => frag(el('span', 'dot' + (v.online ? '' : ' off')), el('b', '', v.name), el('span', 'id', v.id ? `  ${v.id}` : '')) },
       { label: '레벨', key: 'lv', n: 1, cell: (v) => v.lv },

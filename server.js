@@ -36,13 +36,70 @@ const HOMES = A.monsterHomes(LAYOUT.obstacles);
 // Render 환경 변수 ADMIN_KEY 를 정해 두어야 켜짐. 열쇠는 주소가 아니라 요청 머리말(x-admin-key)로 받음
 const ADMIN_KEY = (process.env.ADMIN_KEY || '').trim();
 const startedAt = Date.now();
-const seen = new Map();   // 서버가 켜진 뒤 다녀간 사람 (uid 또는 이름 기준). 서버가 다시 켜지면 비워짐
-let peak = 0, peakAt = 0, totalJoins = 0;
+const seen = new Map();   // 다녀간 사람 (uid 또는 이름 기준). DATA_TOKEN 이 있으면 GitHub 비공개 저장소에 저장해서 서버가 잠들어도 남음
+let peak = 0, peakAt = 0, totalJoins = 0, since = startedAt;
+
+// ---------- 기록 저장 (GitHub 비공개 저장소의 파일 하나) ----------
+const DATA_REPO = process.env.DATA_REPO || 'choi586/arca-data', DATA_FILE = 'visitors.json';
+const DATA_TOKEN = (process.env.DATA_TOKEN || '').trim();
+const store = { on: !!DATA_TOKEN, loaded: false, sha: null, dirty: false, savedAt: 0, error: '', busy: false };
+async function gh(method, body) {
+  const res = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/${DATA_FILE}`, {
+    method, body: body && JSON.stringify(body),
+    headers: { Authorization: `Bearer ${DATA_TOKEN}`, Accept: 'application/vnd.github+json', 'User-Agent': 'arca-server', 'X-GitHub-Api-Version': '2022-11-28' },
+  });
+  return { status: res.status, json: await res.json().catch(() => ({})) };
+}
+async function loadStore() {
+  if (!store.on) return;
+  try {
+    const r = await gh('GET');
+    if (r.status === 200) {
+      store.sha = r.json.sha;
+      const d = JSON.parse(Buffer.from(r.json.content || '', 'base64').toString('utf8') || '{}');
+      // 불러오는 사이에 들어온 사람이 있으면 합침
+      for (const [k, e] of Object.entries(d.seen || {})) {
+        const cur = seen.get(k);
+        if (cur) { cur.first = Math.min(cur.first, e.first); cur.visits += e.visits; cur.playMs += e.playMs; }
+        else seen.set(k, e);
+      }
+      if ((d.peak || 0) > peak) { peak = d.peak; peakAt = d.peakAt || 0; }
+      totalJoins += d.totalJoins || 0; since = Math.min(since, d.since || since);
+    } else if (r.status !== 404) throw new Error(`불러오기 ${r.status} ${r.json.message || ''}`);
+    store.loaded = true; store.error = '';
+    console.log(`기록 불러옴: ${seen.size}명`);
+  } catch (e) { store.error = String(e.message || e).slice(0, 200); console.log('기록 불러오기 실패:', store.error); setTimeout(loadStore, 60000); }
+}
+async function saveStore() {
+  if (!store.on || !store.loaded || !store.dirty || store.busy) return; // 못 불러온 채로 저장하면 예전 기록을 덮어쓰므로 막음
+  store.busy = true; store.dirty = false;
+  try {
+    for (const c of channels.values()) for (const p of c.players.values()) seenTouch(p);
+    const entries = [...seen.entries()].sort((a, b) => b[1].last - a[1].last).slice(0, 5000);
+    const data = { savedAt: Date.now(), since, peak, peakAt, totalJoins, seen: Object.fromEntries(entries) };
+    const body = { message: `기록 저장 (${entries.length}명)`, content: Buffer.from(JSON.stringify(data)).toString('base64') };
+    if (store.sha) body.sha = store.sha;
+    let r = await gh('PUT', body);
+    if (r.status === 409 || r.status === 422) { const g = await gh('GET'); if (g.status === 200) { body.sha = g.json.sha; r = await gh('PUT', body); } }
+    if (r.status !== 200 && r.status !== 201) throw new Error(`저장 ${r.status} ${r.json.message || ''}`);
+    store.sha = r.json.content.sha; store.savedAt = Date.now(); store.error = '';
+  } catch (e) { store.dirty = true; store.error = String(e.message || e).slice(0, 200); console.log('기록 저장 실패:', store.error); }
+  store.busy = false;
+}
+loadStore();
+setInterval(saveStore, Number(process.env.SAVE_MS) || 5 * 60000); // 바뀐 것이 있을 때만 5분마다
+// 서버가 잠들거나 다시 켜질 때(SIGTERM) 마지막으로 한 번 저장
+for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, async () => {
+  for (const c of channels.values()) for (const p of c.players.values()) { seenLeave(p); p.joinedAt = 0; }
+  if (seen.size) store.dirty = true;
+  const t = setTimeout(() => process.exit(0), 8000);
+  await saveStore(); clearTimeout(t); process.exit(0);
+});
 const seenKey = (p) => p.uid || 'name:' + p.name;
 function seenJoin(p) {
-  p.joinedAt = Date.now(); totalJoins++;
+  p.joinedAt = Date.now(); totalJoins++; store.dirty = true;
   let e = seen.get(seenKey(p));
-  if (!e) { e = { first: p.joinedAt, visits: 0, playMs: 0 }; seen.set(seenKey(p), e); if (seen.size > 2000) seen.delete(seen.keys().next().value); }
+  if (!e) { e = { first: p.joinedAt, visits: 0, playMs: 0 }; seen.set(seenKey(p), e); if (seen.size > 6000) seen.delete(seen.keys().next().value); }
   e.visits++; seenTouch(p, e);
   let n = 0; for (const c of channels.values()) n += c.players.size;
   if (n > peak) { peak = n; peakAt = p.joinedAt; }
@@ -51,7 +108,7 @@ function seenTouch(p, e = seen.get(seenKey(p))) {
   if (!e) return;
   Object.assign(e, { name: p.name, lv: p.lv, gold: p.inv.gold, last: Date.now() });
 }
-function seenLeave(p) { const e = seen.get(seenKey(p)); if (e && p.joinedAt) { e.playMs += Date.now() - p.joinedAt; seenTouch(p, e); } }
+function seenLeave(p) { const e = seen.get(seenKey(p)); if (e && p.joinedAt) { e.playMs += Date.now() - p.joinedAt; seenTouch(p, e); store.dirty = true; } }
 function adminStatus(req, res) {
   // 열쇠에 한글이 들어가도 되도록 화면이 주소 글자(encodeURIComponent)로 바꿔 보냄. 비교는 해시끼리
   let key = String(req.headers['x-admin-key'] || '');
@@ -77,7 +134,7 @@ function adminStatus(req, res) {
   const mem = process.memoryUsage();
   res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end(JSON.stringify({ now, startedAt, version: A.VERSION, channels: [...channels.values()].filter((c) => c.players.size).length, online, visitors, seenCount: seen.size,
-    peak, peakAt, totalJoins, night: isNight(), memMb: Math.round(mem.rss / 1048576), afkMin: AFK_MS / 60000, hiddenMin: HIDDEN_MS / 60000 }));
+    peak, peakAt, totalJoins, since, saving: { on: store.on, loaded: store.loaded, savedAt: store.savedAt, error: store.error }, night: isNight(), memMb: Math.round(mem.rss / 1048576), afkMin: AFK_MS / 60000, hiddenMin: HIDDEN_MS / 60000 }));
 }
 
 // ---------- 정적 파일 ----------
