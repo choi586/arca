@@ -65,7 +65,11 @@ async function loadStore() {
       }
       if ((d.peak || 0) > peak) { peak = d.peak; peakAt = d.peakAt || 0; }
       totalJoins += d.totalJoins || 0; since = Math.min(since, d.since || since);
-    } else if (r.status !== 404) throw new Error(`불러오기 ${r.status} ${r.json.message || ''}`);
+    } else if (r.status !== 404) {
+      // 값 자체는 적지 않고 모양만 알려 줌 (잘못 붙여 넣었는지 알 수 있게)
+      const shape = `넣은 값은 ${DATA_TOKEN.length}글자, ${DATA_TOKEN.startsWith('github_pat_') ? 'github_pat_ 로 시작함' : 'github_pat_ 로 시작하지 않음'}`;
+      throw new Error(`불러오기 ${r.status} ${r.json.message || ''} (${shape})`);
+    }
     store.loaded = true; store.error = '';
     console.log(`기록 불러옴: ${seen.size}명`);
   } catch (e) { store.error = String(e.message || e).slice(0, 200); console.log('기록 불러오기 실패:', store.error); setTimeout(loadStore, 60000); }
