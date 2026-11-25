@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>아르카 유저 현황</title>
+<style>
+  :root { --bg: #f4f7fb; --card: #fff; --ink: #1d2b3a; --sub: #66768a; --line: #e3e9f1; --blue: #1c7ed6; --green: #2f9e44; --red: #e03131; --amber: #e67700; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #141a22; --card: #1d2530; --ink: #e6edf5; --sub: #93a1b3; --line: #2c3745; --blue: #4dabf7; --green: #51cf66; --red: #ff6b6b; --amber: #ffa94d; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1 { font-size: 20px; margin: 0; }
+  h2 { font-size: 15px; margin: 26px 0 8px; }
+  h2 small, .sub { color: var(--sub); font-weight: 400; font-size: 12.5px; }
+  .top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .top .sp { flex: 1; }
+  button { font: inherit; padding: 6px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--card); color: var(--ink); cursor: pointer; }
+  button.main { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 700; }
+  #login { max-width: 360px; margin: 14vh auto 0; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
+  #login input { width: 100%; font: inherit; font-size: 16px; padding: 10px 12px; margin: 12px 0; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); }
+  #login button { width: 100%; padding: 10px; }
+  #msg { min-height: 20px; color: var(--red); font-size: 13px; margin-top: 8px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 16px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+  .tile b { display: block; font-size: 24px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+  .tile span { color: var(--sub); font-size: 12.5px; }
+  .wrap { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: 0; }
+  th { font-size: 12px; color: var(--sub); font-weight: 600; cursor: pointer; user-select: none; position: sticky; top: 0; background: var(--card); }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .tag { display: inline-block; padding: 1px 7px; border-radius: 8px; font-size: 11.5px; font-weight: 700; margin-right: 3px; }
+  .tag.g { background: color-mix(in srgb, var(--green) 18%, transparent); color: var(--green); }
+  .tag.a { background: color-mix(in srgb, var(--amber) 18%, transparent); color: var(--amber); }
+  .tag.r { background: color-mix(in srgb, var(--red) 18%, transparent); color: var(--red); }
+  .tag.b { background: color-mix(in srgb, var(--blue) 18%, transparent); color: var(--blue); }
+  .empty { padding: 22px; text-align: center; color: var(--sub); }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-right: 6px; }
+  .dot.off { background: var(--line); }
+  .id { color: var(--sub); font-size: 11.5px; font-family: ui-monospace, monospace; }
+</style>
+</head>
+<body>
+<div id="login" hidden>
+  <h1>☁️ 아르카 유저 현황</h1>
+  <p class="sub">관리자 열쇠를 넣어 주세요. 열쇠는 이 탭을 닫으면 지워져요.</p>
+  <input id="key" type="password" placeholder="관리자 열쇠" autocomplete="off">
+  <button id="go" class="main">들어가기</button>
+  <div id="msg"></div>
+</div>
+
+<main id="app" hidden>
+  <div class="top">
+    <h1>☁️ 아르카 유저 현황</h1>
+    <span id="when" class="sub"></span>
+    <span class="sp"></span>
+    <label class="sub"><input id="auto" type="checkbox" checked> 5초마다 새로 보기</label>
+    <button id="reload">지금 새로 보기</button>
+    <button id="out">나가기</button>
+  </div>
+  <div class="tiles" id="tiles"></div>
+
+  <h2>지금 접속한 사람 <small id="onCount"></small></h2>
+  <div class="wrap"><table id="online"></table></div>
+
+  <h2>다녀간 사람 <small>서버가 켜진 뒤부터의 기록이에요. 서버가 잠들었다 깨면 비워져요. 최근 300명까지.</small></h2>
+  <div class="wrap"><table id="visitors"></table></div>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+  const num = (n) => Number(n || 0).toLocaleString('ko-KR');
+  const dur = (ms) => { const m = Math.floor(ms / 60000); return m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : m >= 1 ? `${m}분` : `${Math.max(0, Math.floor(ms / 1000))}초`; };
+  const clock = (t) => new Date(t).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  let key = '', timer = 0, data = null;
+  try { key = sessionStorage.getItem('arca.admin') || ''; } catch (e) { /* 저장 못 해도 괜찮음 */ }
+  const sort = { online: ['onMs', -1], visitors: ['last', -1] };
+
+  function show(logged) { $('login').hidden = logged; $('app').hidden = !logged; if (!logged) { clearTimeout(timer); $('key').focus(); } }
+
+  async function load() {
+    clearTimeout(timer);
+    let res;
+    try { res = await fetch('/admin/status', { headers: { 'x-admin-key': key }, cache: 'no-store' }); }
+    catch (e) { $('when').textContent = '서버에 연결하지 못했어요. 다시 시도하는 중…'; timer = setTimeout(load, 5000); return; }
+    if (res.status === 404) { fail('관리자 화면이 꺼져 있어요. 서버에 ADMIN_KEY 가 정해져 있지 않아요.'); return; }
+    if (res.status !== 200) { fail('열쇠가 맞지 않아요.'); return; }
+    data = await res.json();
+    try { sessionStorage.setItem('arca.admin', key); } catch (e) { /* 괜찮음 */ }
+    show(true); render();
+    if ($('auto').checked) timer = setTimeout(load, 5000);
+  }
+  function fail(text) { key = ''; try { sessionStorage.removeItem('arca.admin'); } catch (e) { /* 괜찮음 */ } show(false); $('msg').textContent = text; }
+
+  function table(id, cols, rows, emptyText) {
+    const t = $(id); t.textContent = '';
+    const [sk, dir] = sort[id];
+    rows = [...rows].sort((a, b) => { const x = a[sk], y = b[sk]; return (typeof x === 'string' ? String(x).localeCompare(String(y), 'ko') : (x || 0) - (y || 0)) * dir; });
+    const head = el('tr');
+    for (const c of cols) {
+      const th = el('th', c.n ? 'n' : '', c.label + (c.key === sk ? (dir > 0 ? ' ▲' : ' ▼') : ''));
+      if (c.key) th.onclick = () => { sort[id] = [c.key, c.key === sk ? -dir : (c.n ? -1 : 1)]; render(); };
+      head.appendChild(th);
+    }
+    t.appendChild(head);
+    if (!rows.length) { const tr = el('tr'), td = el('td', 'empty', emptyText); td.colSpan = cols.length; tr.appendChild(td); t.appendChild(tr); return; }
+    for (const r of rows) {
+      const tr = el('tr');
+      for (const c of cols) { const td = el('td', c.n ? 'n' : ''); const v = c.cell(r); if (v instanceof Node) td.appendChild(v); else td.textContent = v; tr.appendChild(td); }
+      t.appendChild(tr);
+    }
+  }
+  const frag = (...nodes) => { const f = document.createDocumentFragment(); nodes.forEach((n) => n && f.appendChild(n)); return f; };
+
+  function render() {
+    const d = data; if (!d) return;
+    $('when').textContent = `${clock(d.now)} 기준 · 게임 버전 ${d.version}`;
+    const tiles = $('tiles'); tiles.textContent = '';
+    const tile = (v, label) => { const t = el('div', 'tile'); t.append(el('b', '', v), el('span', '', label)); tiles.appendChild(t); };
+    const idle = d.online.filter((p) => p.idleMs > 5 * 60000 || p.hidden).length;
+    tile(num(d.online.length), '지금 접속한 사람');
+    tile(num(idle), '그중 쉬는 사람 (5분 넘게 가만히 · 화면 가림)');
+    tile(num(d.seenCount), '서버가 켜진 뒤 다녀간 사람');
+    tile(num(d.peak), d.peakAt ? `가장 많았을 때 (${clock(d.peakAt)})` : '가장 많았을 때');
+    tile(num(d.totalJoins), '접속 횟수 (다시 접속 포함)');
+    tile(dur(d.now - d.startedAt), `서버가 켜진 지 (${clock(d.startedAt)}부터)`);
+    tile(`${d.memMb} MB`, '서버 메모리 (한도 512 MB)');
+    tile(d.night ? '🌙 밤' : '☀️ 낮', `게임 속 시간 · 채널 ${d.channels}개 사용 중`);
+
+    $('onCount').textContent = `${d.online.length}명 · 가만히 ${d.afkMin}분, 화면 가림 ${d.hiddenMin}분이 지나면 자동으로 나가요`;
+    table('online', [
+      { label: '이름', key: 'name', cell: (p) => frag(el('b', '', p.name), p.title ? el('span', 'sub', ` 〈${p.title}〉`) : null, el('span', 'id', p.id ? `  ${p.id}` : '')) },
+      { label: '레벨', key: 'lv', n: 1, cell: (p) => p.lv },
+      { label: '골드', key: 'gold', n: 1, cell: (p) => num(p.gold) },
+      { label: '있는 곳', key: 'isle', cell: (p) => `${p.isle} · 채널 ${p.ch}` },
+      { label: '상태', cell: (p) => frag(
+          p.dead ? el('span', 'tag r', '쓰러짐') : null,
+          p.hidden ? el('span', 'tag a', '화면 가림') : p.idleMs > 5 * 60000 ? el('span', 'tag a', `가만히 ${dur(p.idleMs)}`) : el('span', 'tag g', '활동 중'),
+          p.party ? el('span', 'tag b', `파티 ${p.party}명`) : null, p.trading ? el('span', 'tag b', '거래 중') : null, p.dueling ? el('span', 'tag b', '결투 중') : null) },
+      { label: '체력', key: 'hp', n: 1, cell: (p) => `${p.hp}%` },
+      { label: '무기', key: 'weapon', cell: (p) => p.weapon },
+      { label: '물건', key: 'items', n: 1, cell: (p) => num(p.items) },
+      { label: '펫', key: 'pets', n: 1, cell: (p) => p.pets },
+      { label: '처치', key: 'kills', n: 1, cell: (p) => num(p.kills) },
+      { label: '낚시', key: 'fish', n: 1, cell: (p) => num(p.fish) },
+      { label: '결투 승', key: 'wins', n: 1, cell: (p) => num(p.wins) },
+      { label: '접속한 지', key: 'onMs', n: 1, cell: (p) => dur(p.onMs) },
+    ], d.online, '지금은 아무도 없어요.');
+
+    table('visitors', [
+      { label: '이름', key: 'name', cell: (v) => frag(el('span', 'dot' + (v.online ? '' : ' off')), el('b', '', v.name), el('span', 'id', v.id ? `  ${v.id}` : '')) },
+      { label: '레벨', key: 'lv', n: 1, cell: (v) => v.lv },
+      { label: '골드', key: 'gold', n: 1, cell: (v) => num(v.gold) },
+      { label: '접속 횟수', key: 'visits', n: 1, cell: (v) => v.visits },
+      { label: '논 시간', key: 'playMs', n: 1, cell: (v) => dur(v.playMs) },
+      { label: '처음 온 때', key: 'first', n: 1, cell: (v) => clock(v.first) },
+      { label: '마지막으로 본 때', key: 'last', n: 1, cell: (v) => v.online ? '접속 중' : clock(v.last) },
+    ], d.visitors, '아직 다녀간 사람이 없어요.');
+  }
+
+  $('go').onclick = () => { key = $('key').value.trim(); $('key').value = ''; $('msg').textContent = ''; if (key) load(); };
+  $('key').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('go').click(); });
+  $('reload').onclick = load;
+  $('auto').onchange = () => { if ($('auto').checked) load(); else clearTimeout(timer); };
+  $('out').onclick = () => fail('');
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && key && $('auto').checked) load(); else clearTimeout(timer); });
+  if (key) load(); else show(false);
+})();
+</script>
+</body>
+</html>

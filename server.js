@@ -32,11 +32,56 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; ch
 const LAYOUT = A.buildLayout();
 const HOMES = A.monsterHomes(LAYOUT.obstacles);
 
+// ---------- 관리자용 유저 현황 ----------
+// Render 환경 변수 ADMIN_KEY 를 정해 두어야 켜짐. 열쇠는 주소가 아니라 요청 머리말(x-admin-key)로 받음
+const ADMIN_KEY = process.env.ADMIN_KEY || '';
+const startedAt = Date.now();
+const seen = new Map();   // 서버가 켜진 뒤 다녀간 사람 (uid 또는 이름 기준). 서버가 다시 켜지면 비워짐
+let peak = 0, peakAt = 0, totalJoins = 0;
+const seenKey = (p) => p.uid || 'name:' + p.name;
+function seenJoin(p) {
+  p.joinedAt = Date.now(); totalJoins++;
+  let e = seen.get(seenKey(p));
+  if (!e) { e = { first: p.joinedAt, visits: 0, playMs: 0 }; seen.set(seenKey(p), e); if (seen.size > 2000) seen.delete(seen.keys().next().value); }
+  e.visits++; seenTouch(p, e);
+  let n = 0; for (const c of channels.values()) n += c.players.size;
+  if (n > peak) { peak = n; peakAt = p.joinedAt; }
+}
+function seenTouch(p, e = seen.get(seenKey(p))) {
+  if (!e) return;
+  Object.assign(e, { name: p.name, lv: p.lv, gold: p.inv.gold, last: Date.now() });
+}
+function seenLeave(p) { const e = seen.get(seenKey(p)); if (e && p.joinedAt) { e.playMs += Date.now() - p.joinedAt; seenTouch(p, e); } }
+function adminStatus(req, res) {
+  const key = String(req.headers['x-admin-key'] || '');
+  const ok = ADMIN_KEY.length >= 8 && key.length === ADMIN_KEY.length && require('crypto').timingSafeEqual(Buffer.from(key), Buffer.from(ADMIN_KEY));
+  if (!ok) return setTimeout(() => { res.writeHead(ADMIN_KEY ? 401 : 404, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: ADMIN_KEY ? 'key' : 'off' })); }, 400);
+  const now = Date.now(), online = [], onKeys = new Map();
+  for (const [ch, c] of channels) for (const p of c.players.values()) {
+    const I = A.islandOf(p.x, p.z); onKeys.set(seenKey(p), now - (p.joinedAt || now));
+    online.push({
+      name: p.name, lv: p.lv, gold: p.inv.gold, ch, isle: I ? I.name : '하늘', hp: Math.round(p.hp / p.maxHp * 100), dead: p.dead,
+      weapon: (A.WEAPONS[p.inv.equip] || {}).name || p.inv.equip, title: (A.TITLES[p.title] || {}).name || '',
+      items: Object.values(p.inv.items || {}).reduce((a, b) => a + b, 0), pets: (p.inv.pets || []).length,
+      kills: p.st.kills || 0, wins: p.st.wins || 0, fish: p.st.fish || 0,
+      party: p.party ? parties.get(p.party).size : 0, trading: !!p.trade, dueling: !!p.duel,
+      onMs: now - (p.joinedAt || now), idleMs: now - p.lastAct, hidden: !!p.hiddenAt, id: (p.uid || '').slice(0, 6),
+    });
+  }
+  const visitors = [...seen.entries()].map(([k, e]) => ({ name: e.name, lv: e.lv, gold: e.gold, visits: e.visits, first: e.first, last: e.last, playMs: e.playMs + (onKeys.get(k) || 0), online: onKeys.has(k), id: k.startsWith('name:') ? '' : k.slice(0, 6) }))
+    .sort((a, b) => b.last - a.last).slice(0, 300);
+  const mem = process.memoryUsage();
+  res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+  res.end(JSON.stringify({ now, startedAt, version: A.VERSION, channels: [...channels.values()].filter((c) => c.players.size).length, online, visitors, seenCount: seen.size,
+    peak, peakAt, totalJoins, night: isNight(), memMb: Math.round(mem.rss / 1048576), afkMin: AFK_MS / 60000, hiddenMin: HIDDEN_MS / 60000 }));
+}
+
 // ---------- 정적 파일 ----------
 const server = http.createServer((req, res) => {
   let url;
   try { url = new URL(req.url, 'http://x'); } catch (e) { res.writeHead(400); return res.end(); }
   if (url.pathname === '/healthz') { res.writeHead(200); return res.end('ok'); }
+  if (url.pathname === '/admin/status') return adminStatus(req, res);
   let rel = decodeURIComponent(url.pathname);
   if (rel === '/') rel = '/index.html';
   const file = path.join(PUBLIC, path.normalize(rel));
@@ -929,6 +974,7 @@ wss.on('connection', (ws) => {
       if (m.inv && m.inv.wp === undefined && !me.inv.pets.includes('whale')) me.inv.wp = Math.min(A.FISH.whalePity - 1, me.st.fish);
       const c = channels.get(ch);
       c.players.set(me.id, me);
+      seenJoin(me);
       // 전에 놓아 둔 꾸미기 물건을 다시 놓음 (브라우저에 저장된 목록)
       if (Array.isArray(m.deco)) for (const raw of m.deco.slice(0, A.DECO_MAX)) {
         const d = raw && cleanDeco(me, raw, num(raw.x, 999), num(raw.z, 999), raw.ry);
@@ -992,6 +1038,7 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     clearInterval(refill);
     if (!me) return;
+    seenLeave(me);
     const c = channels.get(me.ch);
     c.players.delete(me.id);
     if (me.duel) endDuel(me.duel, null, `${me.name} 님이 나가서 결투가 끝났어요`);
