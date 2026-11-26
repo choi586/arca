@@ -268,7 +268,7 @@ body.touch #recordBtn { display: none; }
 #codeBtn { position: fixed; left: 392px; top: 50px; padding: 6px 12px; border: 0; border-radius: 12px; background: rgba(255,255,255,.85); font-size: 13px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
 body.touch #codeBtn { display: none; }
 #gfxBtn { position: fixed; left: 500px; top: 50px; padding: 6px 12px; border: 0; border-radius: 12px; background: rgba(255,255,255,.85); font-size: 13px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
-body.touch #gfxBtn { left: auto; right: 8px; top: auto; bottom: 8px; padding: 4px 8px; font-size: 10px; opacity: .75; }
+body.touch #gfxBtn { left: 8px; right: auto; top: 62px; bottom: auto; padding: 4px 8px; font-size: 10px; opacity: .75; } /* 오른쪽 아래는 공격 버튼 자리라 왼쪽 위로 */
 #codeBox { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: rgba(20,30,50,.6); padding: 16px; }
 #codeBox > div { background: #fff; border-radius: 18px; padding: 20px 22px; width: min(460px, 100%); box-shadow: 0 12px 40px rgba(0,0,0,.3); -webkit-user-select: text; user-select: text; }
 #codeBox b { font-size: 18px; }
@@ -365,3 +365,6 @@ body.touch input, body.touch textarea, body.touch select { font-size: 16px !impo
   body.touch .panel { width: min(520px, calc(100% - 32px)); }
   body.touch .tag .nm { font-size: 12px; }
 }
+/* 가로로 눕힌 휴대폰처럼 낮은 화면: 첫 화면 카드가 잘리지 않게 위에서부터 놓고 스크롤 */
+#join { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+@media (max-height: 620px) { #join { align-items: start; } }
