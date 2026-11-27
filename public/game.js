@@ -315,7 +315,7 @@ const snowFx = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMate
   snowFx.visible = false; snowFx.frustumCulled = false; scene.add(snowFx);
 }
 // ---------- 불꽃마루 섬 (Lv30 이 되어야 나타남) ----------
-const lockedObjs = []; // 레벨이 되면 한꺼번에 보이게 할 것들
+const lockedObjs = [], lockedStar = []; // 레벨이 되면 한꺼번에 보이게 할 것들 (Lv30 불꽃마루 / Lv45 하늘섬)
 const emberFx = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ color: 0xff922b, size: 0.2, transparent: true, opacity: 0.9, depthWrite: false }));
 {
   const I = ISLANDS[3], grp = new THREE.Group();
@@ -364,11 +364,65 @@ const emberFx = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMat
   emberFx.geometry.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
   emberFx.visible = false; emberFx.frustumCulled = false; scene.add(emberFx);
 }
-let islesOpen = false;
+// ---------- 별무리 하늘섬 (Lv45 부터 보임): 높이 떠 있는 남보랏빛 섬 ----------
+const starFx = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ color: 0xfff3bf, size: 0.24, transparent: true, opacity: 0.95, depthWrite: false }));
+{
+  const I = ISLANDS[4], grp = new THREE.Group(), rs = rng(7447);
+  const g = new THREE.PlaneGeometry(I.R * 2 + 2, I.R * 2 + 2, 64, 64).toNonIndexed();
+  g.rotateX(-Math.PI / 2);
+  const pos = g.attributes.position, cols = [], c = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    let x = pos.getX(i), z = pos.getZ(i);
+    const r = Math.hypot(x, z);
+    if (r > I.R) { x *= I.R / r; z *= I.R / r; }
+    pos.setX(i, x + I.x); pos.setZ(i, z + I.z);
+    pos.setY(i, islandH(x + I.x, z + I.z));
+  }
+  for (let i = 0; i < pos.count; i += 3) {
+    const x = (pos.getX(i) + pos.getX(i + 1) + pos.getX(i + 2)) / 3 - I.x, z = (pos.getZ(i) + pos.getZ(i + 1) + pos.getZ(i + 2)) / 3 - I.z, r = Math.hypot(x, z);
+    const n = Math.sin(x * 1.1 + z * 1.7) * 0.5 + Math.sin(x * 2.3 - z * 1.4) * 0.5;
+    c.setHSL(0.68 + n * 0.03, 0.45, 0.3 + n * 0.05);            // 남보랏빛 풀밭
+    if (n > 0.7) c.setHSL(0.14, 0.9, 0.72);                     // 군데군데 박힌 별빛
+    if (r < 7) c.setHSL(0.74, 0.5, 0.42 + n * 0.04);            // 가운데 언덕은 조금 밝음
+    if (r > I.R - 2.5) c.setHSL(0.7, 0.35, 0.18);
+    for (let k = 0; k < 3; k++) cols.push(c.r, c.g, c.b);
+  }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  g.computeVertexNormals();
+  const top = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.9 }));
+  top.receiveShadow = true;
+  const bottom = rockBottom(I.R, 30, 17, 0.9); bottom.position.set(I.x, I.base, I.z);
+  grp.add(top, bottom);
+  // 빛나는 별 수정 (꾸밈이라 부딪히지 않음)
+  for (let i = 0; i < 26; i++) {
+    const a = rs() * Math.PI * 2, r = 5 + rs() * (I.R - 9), x = I.x + Math.cos(a) * r, z = I.z + Math.sin(a) * r, h = 0.8 + rs() * 2.2;
+    const col = ['#ffe066', '#b197fc', '#74c0fc'][i % 3];
+    const cr = mesh(new THREE.OctahedronGeometry(0.45, 0), col, { emissive: col, emissiveIntensity: 0.9, roughness: 0.3 }, false);
+    cr.scale.y = h; cr.position.set(x, islandH(x, z) + h * 0.35, z); cr.rotation.y = rs() * 3;
+    grp.add(cr);
+  }
+  // 가운데 언덕 위에 떠 있는 큰 별, 멀리서도 보이는 빛기둥
+  const bigStar = mesh(new THREE.OctahedronGeometry(1.6, 0), '#fff3bf', { emissive: '#ffd43b', emissiveIntensity: 1.3 }, false); bigStar.position.set(I.x, islandH(I.x, I.z) + 5, I.z); grp.add(bigStar);
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(3, 5, 46, 14, 1, true), flatMat(0xb197fc, 0.13)); beam.position.set(I.x, I.base + 24, I.z); grp.add(beam);
+  grp.userData.bigStar = bigStar;
+  grp.visible = false; scene.add(grp); lockedStar.push(grp);
+  const pts = []; for (let i = 0; i < 350; i++) pts.push((Math.random() - 0.5) * 56, Math.random() * 22, (Math.random() - 0.5) * 56);
+  starFx.geometry.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  starFx.visible = false; starFx.frustumCulled = false; scene.add(starFx);
+}
+let islesOpen = false, starOpen = false, liftTop = UPDRAFT_TOP;
 ARCA.world.lv = 1; // 내 레벨을 받기 전에는 레벨 제한 섬이 없는 것으로 침
 function applyUnlock(announce) { // 내 레벨에 맞춰 레벨 제한 섬을 나타나게 함
   ARCA.world.lv = me.lv;
-  const open = me.lv >= ISLANDS[3].minLv;
+  const open = me.lv >= ISLANDS[3].minLv, sOpen = me.lv >= ISLANDS[4].minLv;
+  if (sOpen !== starOpen) {
+    starOpen = sOpen;
+    for (const o of lockedStar) o.visible = sOpen;
+    if (sOpen && announce) {
+      toast('🌌 Lv45가 되어 하늘 높이 별무리 하늘섬이 나타났어요. 불꽃마루 남쪽 끝의 높은 바람 기둥을 타고 가요');
+      if (me.av) pop('🌌 새로운 섬!', me.x, me.y + 3.4, me.z, 'lvup');
+    }
+  }
   if (open === islesOpen) return;
   islesOpen = open;
   for (const o of lockedObjs) o.visible = open;
@@ -382,14 +436,15 @@ function applyUnlock(announce) { // 내 레벨에 맞춰 레벨 제한 섬을 �
 const updraftFx = [];
 for (const u of UPDRAFTS) {
   const y0 = islandH(u.x, u.z);
-  const col = new THREE.Mesh(new THREE.CylinderGeometry(u.r, u.r, UPDRAFT_TOP, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.1, side: THREE.DoubleSide, depthWrite: false }));
-  col.position.set(u.x, y0 + UPDRAFT_TOP / 2, u.z); scene.add(col);
-  if (u.minLv) { col.visible = false; lockedObjs.push(col); }
+  const T = u.top || UPDRAFT_TOP, lock = u.minLv >= 45 ? lockedStar : lockedObjs;
+  const col = new THREE.Mesh(new THREE.CylinderGeometry(u.r, u.r, T, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.1, side: THREE.DoubleSide, depthWrite: false }));
+  col.position.set(u.x, y0 + T / 2, u.z); scene.add(col);
+  if (u.minLv) { col.visible = false; lock.push(col); }
   for (let k = 0; k < 5; k++) {
     const ring = new THREE.Mesh(new THREE.TorusGeometry(u.r * 0.8, 0.09, 5, 24), new THREE.MeshBasicMaterial({ color: 0xc5f6fa, transparent: true, opacity: 0.6, depthWrite: false }));
     ring.rotation.x = Math.PI / 2; ring.position.set(u.x, y0, u.z); scene.add(ring);
-    if (u.minLv) { ring.visible = false; lockedObjs.push(ring); }
-    updraftFx.push({ ring, y0, off: k / 5 });
+    if (u.minLv) { ring.visible = false; lock.push(ring); }
+    updraftFx.push({ ring, y0, off: k / 5, top: T });
   }
 }
 
@@ -647,6 +702,29 @@ function makeMonster(kind) {
       const wing = monsterMesh(new THREE.ConeGeometry(0.8, 1.6, 3), '#c2410c', mats, { emissive: '#f76707', emissiveIntensity: 0.3 }); wing.scale.z = 0.1; wing.rotation.z = x * 2.0; wing.position.set(x * 1.05, 1.6, 0);
       body.add(horn, wing);
       for (const z of [0.55, -0.55]) { const leg = monsterMesh(new THREE.BoxGeometry(0.3, 0.55, 0.35), '#d9480f', mats); leg.position.set(x * 0.42, 0.28, z); body.add(leg); }
+    }
+  } else if (kind === 'starbun') { // 하늘섬: 별똥 토끼
+    const b = monsterMesh(new THREE.SphereGeometry(0.6, 10, 8), '#fff3bf', mats, { emissive: '#ffd43b', emissiveIntensity: 0.45 }); b.scale.set(1, 0.9, 1.2); b.position.y = 0.65;
+    const head = monsterMesh(new THREE.SphereGeometry(0.42, 9, 7), '#fff9db', mats, { emissive: '#ffd43b', emissiveIntensity: 0.35 }); head.position.set(0, 1.15, 0.55);
+    const tail = monsterMesh(new THREE.OctahedronGeometry(0.22, 0), '#ffd43b', mats, { emissive: '#fab005', emissiveIntensity: 1.2 }); tail.position.set(0, 0.75, -0.8);
+    body.add(b, head, tail, eye(-0.16, 1.22, 0.9), eye(0.16, 1.22, 0.9));
+    for (const x of [-1, 1]) { const ear = monsterMesh(new THREE.ConeGeometry(0.11, 0.75, 5), '#fff9db', mats); ear.position.set(x * 0.2, 1.8, 0.45); ear.rotation.z = -x * 0.2; const foot = monsterMesh(new THREE.SphereGeometry(0.2, 6, 5), '#ffe8a1', mats); foot.position.set(x * 0.35, 0.15, 0.3); foot.scale.y = 0.6; body.add(ear, foot); }
+  } else if (kind === 'shade') { // 하늘섬: 달그림자 (초승달을 인 어두운 그림자)
+    const b = monsterMesh(new THREE.ConeGeometry(0.85, 2.3, 8), '#2b2d5c', mats, { transparent: true, opacity: 0.85 }); b.position.y = 1.15;
+    const head = monsterMesh(new THREE.SphereGeometry(0.55, 9, 7), '#3b3d7a', mats, { transparent: true, opacity: 0.9 }); head.position.y = 2.35;
+    const moon = monsterMesh(new THREE.TorusGeometry(0.42, 0.09, 5, 12, Math.PI * 1.2), '#e5dbff', mats, { emissive: '#b197fc', emissiveIntensity: 1.3 }); moon.position.set(0, 3.15, 0); moon.rotation.z = 0.6;
+    body.add(b, head, moon);
+    for (const x of [-1, 1]) { const ey = monsterMesh(new THREE.SphereGeometry(0.09, 6, 5), '#e5dbff', mats, { emissive: '#d0bfff', emissiveIntensity: 1.6 }); ey.position.set(x * 0.2, 2.42, 0.48); const arm = monsterMesh(new THREE.ConeGeometry(0.2, 1.2, 5), '#2b2d5c', mats, { transparent: true, opacity: 0.85 }); arm.position.set(x * 0.85, 1.5, 0.2); arm.rotation.z = x * 2.4; body.add(ey, arm); }
+  } else if (kind === 'meteor') { // 하늘섬: 유성 골렘 (돌덩이 몸에 빛나는 핵)
+    const b = monsterMesh(new THREE.DodecahedronGeometry(1.25, 0), '#495057', mats); b.position.y = 1.9;
+    const core = monsterMesh(new THREE.OctahedronGeometry(0.6, 0), '#74c0fc', mats, { emissive: '#4dabf7', emissiveIntensity: 1.5 }); core.position.set(0, 1.95, 0.85);
+    const head = monsterMesh(new THREE.DodecahedronGeometry(0.6, 0), '#5c636a', mats); head.position.y = 3.3;
+    body.add(b, core, head, eye(-0.22, 3.4, 0.5, 1.3), eye(0.22, 3.4, 0.5, 1.3));
+    for (const x of [-1, 1]) {
+      const arm = monsterMesh(new THREE.DodecahedronGeometry(0.62, 0), '#343a40', mats); arm.position.set(x * 1.6, 1.6, 0.2);
+      const leg = monsterMesh(new THREE.BoxGeometry(0.6, 0.9, 0.7), '#343a40', mats); leg.position.set(x * 0.6, 0.45, 0);
+      const rock = monsterMesh(new THREE.OctahedronGeometry(0.28, 0), '#ffd43b', mats, { emissive: '#fab005', emissiveIntensity: 1.1 }); rock.position.set(x * 1.3, 3.5, -0.4);
+      body.add(arm, leg, rock);
     }
   } else if (kind === 'dragon') { // 불꽃마루 보스: 분화구의 용
     const b = monsterMesh(new THREE.BoxGeometry(1.8, 1.6, 3.6), '#a61e1e', mats); b.position.y = 1.9;
@@ -1154,7 +1232,7 @@ const handlers = {
     store.set('arca.lv', String(m.lv)); store.set('arca.xp', String(m.xp));
     refreshStats();
     const first = !statsReady; statsReady = true;
-    applyUnlock(!first && wasLv < ISLANDS[3].minLv);
+    applyUnlock(!first && (wasLv < ISLANDS[3].minLv || wasLv < ISLANDS[4].minLv));
     if (first) return;
     if (me.lv > wasLv && statsReady) {
       UNLOCK.forEach((u, k) => {
@@ -2122,13 +2200,16 @@ function updateDecos(dt) {
 }
 
 // ================= 낮과 밤 =================
+let starNight = 0;
 let dayPhase = 0.1, dayMs = ARCA.DAY_MS, phaseAt = performance.now(), nightShown = -1;
 const curPhase = () => (dayPhase + (performance.now() - phaseAt) / dayMs) % 1;
 const cDay = { fog: new THREE.Color(0xbfe3ff), cloud: new THREE.Color(0xffffff) }, cNight = { fog: new THREE.Color(0x1a2140), cloud: new THREE.Color(0x56608a) }, cDusk = new THREE.Color(0xffa94d);
 function updateSky() {
   const ph = curPhase();
   // 밤의 정도: 노을(0.62~0.7)에 어두워지고 새벽(0.93~1)에 밝아짐
-  const n = ph < 0.62 ? 0 : ph < 0.7 ? (ph - 0.62) / 0.08 : ph < 0.93 ? 1 : 1 - (ph - 0.93) / 0.07;
+  const n0 = ph < 0.62 ? 0 : ph < 0.7 ? (ph - 0.62) / 0.08 : ph < 0.93 ? 1 : 1 - (ph - 0.93) / 0.07;
+  starNight += ((curIsle.id === 4 ? 1 : 0) - starNight) * 0.03; // 하늘섬은 늘 밤 (보이는 것만. 밤 보상은 진짜 밤에만)
+  const n = Math.max(n0, starNight);
   const dusk = Math.max(0, 1 - Math.abs(n - 0.5) * 2) * 0.6; // 노을빛
   skyMat.color.setRGB(1 - 0.86 * n, 1 - 0.84 * n, 1 - 0.66 * n).lerp(cDusk, dusk * 0.5);
   scene.fog.color.copy(cDay.fog).lerp(cNight.fog, n).lerp(cDusk, dusk * 0.35);
@@ -2381,7 +2462,7 @@ function updateMe(dt) {
     if (me.actT <= 0) me.ry = lerpAngle(me.ry, Math.atan2(mx, mz), Math.min(1, dt * 12));
     if (me.emote) { me.emote = 0; me.emoteT = 0; }
   }
-  if (me.glide && me.dashT <= 0) { mx = Math.sin(me.ry); mz = Math.cos(me.ry); speed = GLIDE_SPEED * (me.lift && me.y < UPDRAFT_TOP ? 0.25 : 1); } // 글라이더는 바라보는 쪽으로 계속 나아감 (바람 기둥 안에서는 천천히 떠오름)
+  if (me.glide && me.dashT <= 0) { mx = Math.sin(me.ry); mz = Math.cos(me.ry); speed = GLIDE_SPEED * (me.lift && me.y < liftTop ? (liftTop > UPDRAFT_TOP ? 0.07 : 0.25) : 1); } // 글라이더는 바라보는 쪽으로 계속 나아감 (바람 기둥 안에서는 천천히 떠오름)
   let vx = mx * speed, vz = mz * speed;
   if (curIsle.id === 2 && me.onGround && !me.glide && me.dashT <= 0 && !me.dead) { // 서리봉우리는 바닥이 미끄러워서 바로 서거나 꺾지 못함
     const k = Math.min(1, dt * 2.2);
@@ -2399,11 +2480,12 @@ function updateMe(dt) {
   if (jumpQueued && me.onGround && !me.dead) { me.vy = JUMP; me.onGround = false; me.emote = 0; }
   else if ((jumpQueued || glideQueued) && !me.onGround && !me.dead) me.glide = !me.glide; // 공중에서 한 번 더 누르면 글라이더
   jumpQueued = glideQueued = false;
-  const inDraft = UPDRAFTS.some((u) => ARCA.unlocked(u) && Math.hypot(u.x - me.x, u.z - me.z) < u.r);
+  const draft = UPDRAFTS.find((u) => ARCA.unlocked(u) && Math.hypot(u.x - me.x, u.z - me.z) < u.r), inDraft = !!draft;
+  if (draft) liftTop = draft.top || UPDRAFT_TOP; // 기둥마다 올려 주는 높이가 다름
   if (inDraft && !updraftHint) { updraftHint = true; toast('🌬️ 바람 기둥! 점프한 뒤 공중에서 한 번 더 누르면 글라이더를 펴요'); }
   // 낮은 곳에서 들어온 사람만 띄움 (높이 날아서 지나가는 사람은 그대로 통과)
-  if (!inDraft || !me.glide) me.lift = false; else if (me.y < 11) me.lift = true;
-  if (me.glide) me.vy = me.lift && me.y < UPDRAFT_TOP ? Math.min(11, me.vy + 45 * dt) : Math.max(-GLIDE_FALL, me.vy - GRAV * dt);
+  if (!inDraft || !me.glide) me.lift = false; else if (me.y < liftTop - 11) me.lift = true;
+  if (me.glide) me.vy = me.lift && me.y < liftTop ? Math.min(11, me.vy + 45 * dt) : Math.max(-GLIDE_FALL, me.vy - GRAV * dt);
   else me.vy -= GRAV * dt;
   me.y += me.vy * dt;
   const g = groundAt(me.x, me.z);
@@ -2416,6 +2498,7 @@ function updateMe(dt) {
     toast(`${isle.icon} ${isle.name}에 도착!`);
     if (isle.id === 1) toast('🍄 버섯숲은 Lv10 안팎의 몬스터가 살아요. 돌아갈 때는 서쪽 끝의 바람 기둥을 타세요');
     if (isle.id === 3) toast('🌋 불꽃마루는 Lv30이 넘는 몬스터가 살아요. 분화구 한가운데에는 용이 있어요. 돌아갈 때는 북쪽 끝의 바람 기둥을 타세요');
+    if (isle.id === 4) toast('🌌 별무리 하늘섬은 Lv48이 넘는 몬스터가 살아요. 돌아갈 때는 북쪽 끝의 바람 기둥을 타세요');
     if (isle.id === 2) toast('❄️ 서리봉우리는 Lv16이 넘는 몬스터가 살고 바닥이 미끄러워요. 돌아갈 때는 남쪽 끝의 바람 기둥을 타세요');
   }
 
@@ -2499,7 +2582,8 @@ function updateMonsters(dt) {
     av.position.y = islandH(av.position.x, av.position.z);
     av.rotation.y = lerpAngle(av.rotation.y, mo.tr, k);
     animateMonster(mo, dt);
-    placeTag(mo.tag, av, dt, MONSTERS[mo.kind].size * 1.4 + 0.5, 32);
+    if (mo.kind === 'shade') av.visible = Math.hypot(av.position.x - me.x, av.position.z - me.z) < 14 || mo.hp < 100; // 가까이 가거나 한 대 맞아야 보임
+    placeTag(mo.tag, av, dt, MONSTERS[mo.kind].size * 1.4 + 0.5, av.visible ? 32 : 0);
   }
 }
 
@@ -2510,21 +2594,22 @@ function drawMinimap() { // 내가 있는 섬을 보여 줌
   const X = (x) => c + (x - I.x) * s, Z = (z) => c + (z - I.z) * s, on = (x, z, pad = 4) => Math.hypot(x - I.x, z - I.z) < I.R + pad;
   const dot = (x, z, r) => { mm.beginPath(); mm.arc(X(x), Z(z), r, 0, Math.PI * 2); mm.fill(); };
   mm.clearRect(0, 0, W, W);
-  mm.fillStyle = I.id === 3 ? '#5c2e1f' : I.id === 2 ? '#dbe4ff' : I.id ? '#3f8f7f' : '#69b34c'; dot(I.x, I.z, I.R * s);
+  mm.fillStyle = I.id === 4 ? '#3b3a7a' : I.id === 3 ? '#5c2e1f' : I.id === 2 ? '#dbe4ff' : I.id ? '#3f8f7f' : '#69b34c'; dot(I.x, I.z, I.R * s);
   if (I.id === 0) {
     mm.fillStyle = '#e6d6ae'; dot(0, 0, 13 * s);
     mm.fillStyle = '#5fc1ff'; dot(0, 0, 3 * s);
     for (const h of houses) { mm.fillStyle = h.color; mm.fillRect(X(h.x) - 4, Z(h.z) - 4, 8, 8); }
   } else if (I.id === 3) { mm.fillStyle = '#ff7b00'; dot(I.x, I.z, 9 * s); for (const t of LAYOUT.lavaPools) dot(t.x, t.z, 2); mm.fillStyle = '#1f1f1f'; for (const t of LAYOUT.lavaRocks) dot(t.x, t.z, 2); }
   else if (I.id === 2) { mm.fillStyle = '#74c0fc'; for (const t of LAYOUT.iceRocks) dot(t.x, t.z, 2.5); mm.fillStyle = '#5c8f7f'; for (const t of LAYOUT.frostTrees) dot(t.x, t.z, 1.6); }
+  else if (I.id === 4) { mm.fillStyle = '#ffe066'; dot(I.x, I.z, 3); }
   else { mm.fillStyle = '#e599f7'; for (const sh of LAYOUT.shrooms) dot(sh.x, sh.z, 2); }
   mm.strokeStyle = '#c5f6fa'; mm.lineWidth = 2;
   for (const u of UPDRAFTS) if (ARCA.unlocked(u) && on(u.x, u.z, 8)) { mm.beginPath(); mm.arc(X(u.x), Z(u.z), 4, 0, Math.PI * 2); mm.stroke(); }
   mm.fillStyle = '#a0723a';
   for (const e of decos.values()) if (on(e.d.x, e.d.z)) mm.fillRect(X(e.d.x) - 1.5, Z(e.d.z) - 1.5, 3, 3);
   for (const mo of monsters.values()) {
-    if (mo.dying || !on(mo.av.position.x, mo.av.position.z)) continue;
-    mm.fillStyle = mo.kind === 'golem' ? '#9c36b5' : mo.kind === 'turtle' || mo.kind === 'giant' || mo.kind === 'queen' || mo.kind === 'dragon' ? '#7a3b00' : '#e03131';
+    if (mo.dying || !mo.av.visible || !on(mo.av.position.x, mo.av.position.z)) continue;
+    mm.fillStyle = mo.kind === 'golem' ? '#9c36b5' : mo.kind === 'turtle' || mo.kind === 'giant' || mo.kind === 'queen' || mo.kind === 'dragon' || mo.kind === 'meteor' ? '#7a3b00' : '#e03131';
     dot(mo.av.position.x, mo.av.position.z, mo.kind === 'golem' ? 6 : mo.kind === 'giant' || mo.kind === 'queen' || mo.kind === 'dragon' ? 5 : mo.kind === 'turtle' ? 3.5 : 2);
   }
   for (const [id, o] of others) {
@@ -2585,7 +2670,7 @@ function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now; time += dt;
 
   for (const c of clouds) { c.position.x += c.userData.speed * dt; if (c.position.x > 260) c.position.x = -260; }
-  for (const u of updraftFx) { const p = (time * 0.35 + u.off) % 1; u.ring.position.y = u.y0 + p * UPDRAFT_TOP; u.ring.material.opacity = 0.6 * Math.sin(p * Math.PI); u.ring.scale.setScalar(0.7 + p * 0.5); }
+  for (const u of updraftFx) { const p = (time * 0.35 + u.off) % 1; u.ring.position.y = u.y0 + p * u.top; u.ring.material.opacity = 0.6 * Math.sin(p * Math.PI); u.ring.scale.setScalar(0.7 + p * 0.5); }
   updateSky();
   for (const f of farIslands) f.position.y = f.userData.baseY + Math.sin(time * 0.4 + f.userData.phase) * 1.5;
   fountainOrb.rotation.y += dt; fountainOrb.position.y = 3.4 + Math.sin(time * 2) * 0.15;
@@ -2605,6 +2690,12 @@ function frame(now) {
       const ep = emberFx.geometry.attributes.position;
       for (let i = 0; i < ep.count; i++) { let y = ep.getY(i) + dt * 2.5; if (y > 22) y -= 22; ep.setY(i, y); }
       ep.needsUpdate = true; emberFx.position.set(me.x, me.y - 3, me.z);
+    }
+    starFx.visible = curIsle.id === 4;
+    if (starFx.visible) { // 하늘섬에서는 별빛이 천천히 떠오름
+      const tp = starFx.geometry.attributes.position;
+      for (let i = 0; i < tp.count; i++) { let y = tp.getY(i) + dt * 0.9; if (y > 22) y -= 22; tp.setY(i, y); }
+      tp.needsUpdate = true; starFx.position.set(me.x, me.y - 4, me.z);
     }
     snowFx.visible = curIsle.id === 2;
     if (snowFx.visible) {

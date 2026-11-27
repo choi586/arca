@@ -1077,7 +1077,7 @@ wss.on('connection', (ws) => {
       if (d > MAX_STEP && !nearSpawn) { x = me.x + (dx / d) * MAX_STEP; z = me.z + (dz / d) * MAX_STEP; }
       me.x = Math.max(-200, Math.min(200, x));
       me.y = Math.max(-80, Math.min(80, y));
-      me.z = Math.max(-200, Math.min(200, z));
+      me.z = Math.max(-200, Math.min(300, z)); // 남쪽 끝은 별무리 하늘섬(z 206~274)까지
       me.ry = ry;
       me.a = Math.max(0, Math.min(15, Math.floor(num(m.a))));
       if (Math.hypot(me.x, me.z) > A.R) { const I = A.islandOf(me.x, me.z); if (I && I.id) questEvent(me, 'visit', String(I.id)); }

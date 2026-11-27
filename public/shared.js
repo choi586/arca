@@ -26,10 +26,12 @@ const ISLANDS = [
   { id: 1, name: '버섯숲', icon: '🍄', x: 124, z: 0, R: 30 },
   { id: 2, name: '서리봉우리', icon: '❄️', x: 0, z: -132, R: 34 }, // 북쪽의 눈 덮인 섬. 바닥이 미끄러움
   { id: 3, name: '불꽃마루', icon: '🌋', x: 0, z: 136, R: 36, minLv: 30 }, // 남쪽의 화산섬. Lv30 이 되어야 나타남
+  { id: 4, name: '별무리 하늘섬', icon: '🌌', x: 0, z: 240, R: 34, minLv: 45, base: 12 }, // 불꽃마루 남쪽, 다른 섬보다 훨씬 높이 떠 있는 밤의 섬. Lv45 부터
 ];
 // 바람 기둥: 글라이더를 편 채 들어가면 하늘 높이 올라감
 const UPDRAFTS = [{ x: 56, z: 0, r: 4.5 }, { x: 99, z: 0, r: 4.5 }, { x: 0, z: -56, r: 4.5 }, { x: 0, z: -103, r: 4.5 },
-  { x: 0, z: 56, r: 4.5, minLv: 30 }, { x: 0, z: 105, r: 4.5, minLv: 30 }]; // 뒤의 둘은 불꽃마루로 가는 기둥 (Lv30 부터 보임)
+  { x: 0, z: 56, r: 4.5, minLv: 30 }, { x: 0, z: 105, r: 4.5, minLv: 30 }, // 이 둘은 불꽃마루로 가는 기둥 (Lv30 부터 보임)
+  { x: 0, z: 166, r: 4.5, minLv: 45, top: 36 }, { x: 0, z: 211, r: 4.5, minLv: 45, top: 30 }]; // 불꽃마루 남쪽 끝과 하늘섬 북쪽 끝의 높은 기둥 (top = 올라가는 높이)
 const UPDRAFT_TOP = 22;
 // 레벨 제한이 있는 섬은 그 레벨이 되기 전에는 '없는 섬'이다. 화면 쪽에서 world.lv 에 내 레벨을 넣어 둠 (서버는 비워 둬서 모든 섬이 있음)
 function unlocked(o) { return !o.minLv || world.lv === undefined || world.lv >= o.minLv; }
@@ -50,7 +52,14 @@ function fireH(x, z) { // 화산섬: 바깥은 낮고, 가운데 둘레가 솟�
   const rim = 6.5 * Math.exp(-((r - 13) * (r - 13)) / 14);
   return Math.max(0.6, 2.6 + rim + bumps * smooth(0, 8, I.R - r) * smooth(9, 18, r) - smooth(I.R - 7, I.R, r) * 1.8);
 }
+function starH(x, z) { // 하늘섬: 높이 떠 있는 완만한 언덕. 가운데가 살짝 솟음
+  const I = ISLANDS[4], dx = x - I.x, dz = z - I.z, r = Math.hypot(dx, dz);
+  const bumps = 1.1 * Math.sin(dx * 0.2 + 0.8) * Math.cos(dz * 0.22) + 0.6 * Math.sin(dx * 0.39 + dz * 0.31);
+  return I.base + 1.6 + 2.2 * Math.exp(-r * r / 90) + bumps * smooth(0, 8, I.R - r) - smooth(I.R - 7, I.R, r) * 1.6;
+}
 function islandH(x, z) {
+  const S = ISLANDS[4];
+  if (Math.hypot(x - S.x, z - S.z) <= S.R + 0.5) return starH(x, z);
   const V = ISLANDS[3];
   if (Math.hypot(x - V.x, z - V.z) <= V.R + 0.5) return fireH(x, z);
   const I = ISLANDS[1], F = ISLANDS[2];
@@ -168,8 +177,12 @@ MONSTERS.dragon = { name: '분화구의 용', lv: 45, hp: 15000, atk: 210, speed
 // 불꽃마루 안쪽(분화구 둘레)의 Lv40대 몬스터 — 30대 후반부터 경험치 줄 몬스터가 없던 것을 메움
 MONSTERS.cinder = { name: '잿더미 기사', lv: 42, hp: 4200, atk: 185, speed: 3.2, xp: 1200, aggro: 11, reach: 3.0, hitR: 3.4, hitAt: 0.0, windup: 900, cd: 2200, size: 1.5, respawn: 32000, minLv: 30 };
 MONSTERS.drake = { name: '새끼 화룡', lv: 46, hp: 5600, atk: 225, speed: 4.2, xp: 1700, aggro: 12, reach: 2.8, hitR: 2.8, hitAt: 1.8, windup: 650, cd: 1700, size: 1.4, respawn: 36000, minLv: 30 };
+// 별무리 하늘섬의 몬스터 (Lv45 부터 보임). shade 는 가까이 가야 보임(화면 쪽에서 처리), meteor 는 주변 큰 원 공격을 섞어 씀
+MONSTERS.starbun = { name: '별똥 토끼', lv: 48, hp: 5200, atk: 195, speed: 5.2, xp: 1900, aggro: 10, reach: 2.2, hitR: 2.2, hitAt: 1.4, windup: 550, cd: 1400, size: 0.9, respawn: 26000, minLv: 45 };
+MONSTERS.shade = { name: '달그림자', lv: 52, hp: 7200, atk: 255, speed: 4.0, xp: 2800, aggro: 9, reach: 2.8, hitR: 3.0, hitAt: 1.2, windup: 700, cd: 1800, size: 1.3, respawn: 32000, minLv: 45 };
+MONSTERS.meteor = { name: '유성 골렘', lv: 56, hp: 13000, atk: 300, speed: 2.2, xp: 5200, aggro: 11, reach: 3.6, hitR: 4.2, hitAt: 0.0, windup: 1300, cd: 2800, size: 2.0, respawn: 50000, elite: true, ringR: 7, minLv: 45 };
 // 새 종류는 반드시 맨 뒤에 붙임 (번호가 바뀌면 새로고침 안 한 화면에서 몬스터가 뒤바뀜)
-const MONSTER_KINDS = ['slime', 'shroom', 'turtle', 'golem', 'toad', 'wisp', 'yeti', 'wolf', 'giant', 'bee', 'scarecrow', 'bat', 'treant', 'penguin', 'icewisp', 'queen', 'lizard', 'magma', 'firebird', 'dragon', 'cinder', 'drake'];
+const MONSTER_KINDS = ['slime', 'shroom', 'turtle', 'golem', 'toad', 'wisp', 'yeti', 'wolf', 'giant', 'bee', 'scarecrow', 'bat', 'treant', 'penguin', 'icewisp', 'queen', 'lizard', 'magma', 'firebird', 'dragon', 'cinder', 'drake', 'starbun', 'shade', 'meteor'];
 const BOSS = { x: -30, z: -26 };
 const PARTY_MAX = 4, PARTY_SHARE_RANGE = 30;
 
@@ -240,6 +253,11 @@ function monsterHomes(obstacles) {
   // 분화구 둘레 안쪽 고리: Lv40대 (용의 눈에 띄지 않을 만큼만 떨어짐)
   placeMore('cinder', 4, 3, 13.5, 18.5, lane);
   placeMore('drake', 3, 3, 13.5, 18.5, lane);
+  // 별무리 하늘섬: 북쪽 끝(내리는 곳)은 비워 둠
+  const S = ISLANDS[4], land = (x, z) => !(Math.abs(x - S.x) < 10 && z < S.z - 20);
+  placeMore('starbun', 8, 4, 8, S.R - 6, land);
+  placeMore('shade', 5, 4, 6, S.R - 8, land);
+  placeMore('meteor', 2, 4, 4, 16, (x, z) => z > S.z - 4);
   return homes;
 }
 
@@ -350,6 +368,9 @@ const ITEMS = {
   phoenixfeather: { name: '불새 깃털', icon: '🪶', type: 'mat', sell: 260, desc: '꺼지지 않는 불새의 깃털' },
   ashplate: { name: '그을린 갑옷 조각', icon: '🛡️', type: 'mat', sell: 330, desc: '잿더미 기사의 갑옷에서 떨어진 조각. 아직 따뜻해요' },
   drakescale: { name: '화룡 비늘', icon: '🐲', type: 'mat', sell: 450, desc: '새끼 화룡의 반짝이는 비늘. 비싸요' },
+  stardust: { name: '별가루', icon: '⭐', type: 'mat', sell: 520, desc: '별똥 토끼가 뛸 때마다 떨어지는 가루' },
+  moonshard: { name: '달 조각', icon: '🌙', type: 'mat', sell: 680, desc: '달그림자가 사라지며 남긴 차가운 조각' },
+  meteorcore: { name: '유성 핵', icon: '☄️', type: 'mat', sell: 1100, desc: '유성 골렘 가슴에서 빛나던 돌. 아주 비싸요' },
   dragonheart: { name: '용의 심장', icon: '❤️‍🔥', type: 'mat', sell: 1500, desc: '분화구의 용이 남긴 심장. 엄청나게 비싸요' },
   honey: { name: '달콤한 꿀', icon: '🍯', type: 'mat', sell: 6, desc: '붕붕 꿀벌이 떨어뜨려요' },
   straw: { name: '바삭한 밀짚', icon: '🌾', type: 'mat', sell: 14, desc: '심술 허수아비의 속' },
@@ -415,6 +436,9 @@ const LOOT = {
   firebird: { gold: [170, 230], drops: [['phoenixfeather', 0.55], ['bigpotion', 0.15]] },
   cinder: { gold: [240, 320], drops: [['ashplate', 0.5], ['bigpotion', 0.2]] },
   drake: { gold: [320, 420], drops: [['drakescale', 0.45], ['bigpotion', 0.2]] },
+  starbun: { gold: [360, 460], drops: [['stardust', 0.5], ['bigpotion', 0.2]] },
+  shade: { gold: [480, 600], drops: [['moonshard', 0.45], ['bigpotion', 0.2]] },
+  meteor: { gold: [900, 1200], drops: [['meteorcore', 0.6], ['bigpotion', 0.5]] },
   dragon: { gold: [600, 900], drops: [['dragonheart', 1], ['bigpotion', 1]] },
   bee: { gold: [3, 6], drops: [['honey', 0.6], ['potion', 0.08]] },
   scarecrow: { gold: [10, 18], drops: [['straw', 0.6], ['potion', 0.15]] },
@@ -624,13 +648,13 @@ function cleanStats(raw) {
 // ---------- 결투 ----------
 const DUEL = { countdown: 3000, maxMs: 90000, range: 12, leave: 45, dmg: 0.5, loserHp: 0.3 };
 
-const MAX_LV = 60; // 처음에는 30이었는데 하루 만에 끝까지 간 사람이 나와서 올림
+const MAX_LV = 70; // 처음에는 30이었는데 하루 만에 끝까지 간 사람이 나와서 올림
 // Lv20부터는 한 레벨마다 8%씩 더 듦(높은 레벨이 너무 빨리 오르지 않게). XP_HARD_LV 아래는 예전 그대로
 const XP_HARD_LV = 20, XP_HARD_STEP = 0.08;
 const needXp = (lv) => Math.round((10 * lv * lv + 10) * (lv >= XP_HARD_LV ? 1 + (lv - XP_HARD_LV + 1) * XP_HARD_STEP : 1));
 const statsFor = (lv) => ({ maxHp: 80 + (lv - 1) * 15, atk: 10 + (lv - 1) * 3 });
 
-const VERSION = 28; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
+const VERSION = 29; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
 const api = { UP_PITY, upChance, unlocked, VERSION, SLOTS, ACCS, ACC_IDS, CHEST, GACHA, RARITY, SAFE_R, inSafe, FISH, FISH_DAY, FISH_NIGHT, canFish, FOOD_BUFF, COOK_RANGE, PETS, PET_IDS, TITLES, TITLE_IDS, cleanStats, DUEL, ELDER, TALK_RANGE, ALTAR_RANGE, BRIDGE, world, onBridge, MAX_UP, UP_BONUS, UPGRADES, QUESTS, QUEST_IDS, QUEST_ACTIVE_MAX, cleanQuests, ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
   UNLOCK, KEYS, WEAPONS, WEAPON_IDS, ITEMS, ITEM_IDS, SHOP_ITEMS, MAX_STACK, BAG_SLOTS, LOOT, cleanInv, MAX_LV, needXp, statsFor };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ARCA = api;
