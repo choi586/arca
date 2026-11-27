@@ -624,6 +624,30 @@ function makeMonster(kind) {
     const tail = monsterMesh(new THREE.ConeGeometry(0.3, 1.1, 5), '#ffd43b', mats, { emissive: '#ff922b', emissiveIntensity: 0.9 }); tail.rotation.x = -Math.PI / 2; tail.position.set(0, 1.9, -1.1);
     body.add(b, beak, tail, eye(-0.18, 2.05, 0.5), eye(0.18, 2.05, 0.5));
     for (const x of [-1, 1]) { const w = monsterMesh(new THREE.ConeGeometry(0.6, 1.4, 3), '#fa5252', mats, { emissive: '#f03e3e', emissiveIntensity: 0.5 }); w.scale.z = 0.12; w.rotation.z = x * 1.9; w.position.set(x * 0.95, 2.0, 0); body.add(w); }
+  } else if (kind === 'cinder') { // 불꽃마루 안쪽: 잿더미 기사 (검은 갑옷 틈으로 불빛)
+    const legs = monsterMesh(new THREE.BoxGeometry(0.8, 0.9, 0.55), '#343a40', mats); legs.position.y = 0.45;
+    const chest = monsterMesh(new THREE.BoxGeometry(1.15, 1.1, 0.75), '#212529', mats); chest.position.y = 1.45;
+    const glow = monsterMesh(new THREE.BoxGeometry(0.5, 0.5, 0.1), '#ff922b', mats, { emissive: '#ff6b00', emissiveIntensity: 1.4 }); glow.position.set(0, 1.5, 0.39);
+    const helm = monsterMesh(new THREE.BoxGeometry(0.7, 0.65, 0.7), '#343a40', mats); helm.position.y = 2.35;
+    const visor = monsterMesh(new THREE.BoxGeometry(0.5, 0.12, 0.1), '#ffd43b', mats, { emissive: '#ff922b', emissiveIntensity: 1.5 }); visor.position.set(0, 2.4, 0.36);
+    const plume = monsterMesh(new THREE.ConeGeometry(0.16, 0.6, 5), '#ff6b00', mats, { emissive: '#ff4500', emissiveIntensity: 1.2 }); plume.position.y = 2.95;
+    const sword = monsterMesh(new THREE.BoxGeometry(0.14, 1.9, 0.08), '#868e96', mats, { emissive: '#ff6b00', emissiveIntensity: 0.5 }); sword.position.set(0.95, 1.5, 0.35); sword.rotation.x = 0.5;
+    body.add(legs, chest, glow, helm, visor, plume, sword);
+    for (const x of [-1, 1]) { const sh = monsterMesh(new THREE.DodecahedronGeometry(0.38, 0), '#495057', mats); sh.position.set(x * 0.78, 1.95, 0); const arm = monsterMesh(new THREE.BoxGeometry(0.3, 0.95, 0.3), '#343a40', mats); arm.position.set(x * 0.8, 1.3, 0.05); body.add(sh, arm); }
+  } else if (kind === 'drake') { // 불꽃마루 안쪽: 새끼 화룡 (용을 줄여 놓은 모습, 주황빛)
+    const b = monsterMesh(new THREE.BoxGeometry(0.9, 0.8, 1.7), '#e8590c', mats); b.position.y = 0.95;
+    const belly = monsterMesh(new THREE.BoxGeometry(0.7, 0.25, 1.5), '#ffe8cc', mats); belly.position.y = 0.55;
+    const neck = monsterMesh(new THREE.BoxGeometry(0.45, 0.8, 0.45), '#e8590c', mats); neck.position.set(0, 1.5, 0.9); neck.rotation.x = 0.5;
+    const head = monsterMesh(new THREE.BoxGeometry(0.65, 0.5, 0.9), '#f76707', mats); head.position.set(0, 1.95, 1.35);
+    const tail = monsterMesh(new THREE.ConeGeometry(0.3, 1.5, 5), '#e8590c', mats); tail.rotation.x = -Math.PI / 2; tail.position.set(0, 0.9, -1.55);
+    const flame = monsterMesh(new THREE.ConeGeometry(0.18, 0.45, 5), '#ffd43b', mats, { emissive: '#ff922b', emissiveIntensity: 1.3 }); flame.position.set(0, 1.2, -2.25);
+    body.add(b, belly, neck, head, tail, flame, eye(-0.22, 2.1, 1.78, 1.2), eye(0.22, 2.1, 1.78, 1.2));
+    for (const x of [-1, 1]) {
+      const horn = monsterMesh(new THREE.ConeGeometry(0.08, 0.4, 5), '#ffd43b', mats); horn.position.set(x * 0.22, 2.35, 1.1); horn.rotation.x = -0.4;
+      const wing = monsterMesh(new THREE.ConeGeometry(0.8, 1.6, 3), '#c2410c', mats, { emissive: '#f76707', emissiveIntensity: 0.3 }); wing.scale.z = 0.1; wing.rotation.z = x * 2.0; wing.position.set(x * 1.05, 1.6, 0);
+      body.add(horn, wing);
+      for (const z of [0.55, -0.55]) { const leg = monsterMesh(new THREE.BoxGeometry(0.3, 0.55, 0.35), '#d9480f', mats); leg.position.set(x * 0.42, 0.28, z); body.add(leg); }
+    }
   } else if (kind === 'dragon') { // 불꽃마루 보스: 분화구의 용
     const b = monsterMesh(new THREE.BoxGeometry(1.8, 1.6, 3.6), '#a61e1e', mats); b.position.y = 1.9;
     const belly = monsterMesh(new THREE.BoxGeometry(1.4, 0.5, 3.2), '#ffd8a8', mats); belly.position.y = 1.15;
