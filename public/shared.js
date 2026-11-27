@@ -175,8 +175,8 @@ MONSTERS.magma = { name: '용암 덩어리', lv: 34, hp: 3800, atk: 120, speed: 
 MONSTERS.firebird = { name: '불새', lv: 38, hp: 3200, atk: 150, speed: 4.8, xp: 820, aggro: 13, reach: 2.8, hitR: 2.4, hitAt: 2.2, windup: 600, cd: 1600, size: 1.0, respawn: 30000, minLv: 30 };
 MONSTERS.dragon = { name: '분화구의 용', lv: 45, hp: 15000, atk: 210, speed: 2.6, xp: 4200, aggro: 12, reach: 4.6, hitR: 5.2, hitAt: 2.6, windup: 1300, cd: 2600, size: 2.8, respawn: 180000, elite: true, ringR: 9, minLv: 30 };
 // 불꽃마루 안쪽(분화구 둘레)의 Lv40대 몬스터 — 30대 후반부터 경험치 줄 몬스터가 없던 것을 메움
-MONSTERS.cinder = { name: '잿더미 기사', lv: 42, hp: 4200, atk: 185, speed: 3.2, xp: 1200, aggro: 11, reach: 3.0, hitR: 3.4, hitAt: 0.0, windup: 900, cd: 2200, size: 1.5, respawn: 32000, minLv: 30 };
-MONSTERS.drake = { name: '새끼 화룡', lv: 46, hp: 5600, atk: 225, speed: 4.2, xp: 1700, aggro: 12, reach: 2.8, hitR: 2.8, hitAt: 1.8, windup: 650, cd: 1700, size: 1.4, respawn: 36000, minLv: 30 };
+MONSTERS.cinder = { name: '잿더미 기사', lv: 42, hp: 4200, atk: 185, speed: 3.2, xp: 1200, aggro: 7, reach: 3.0, hitR: 3.4, hitAt: 0.0, windup: 900, cd: 2200, size: 1.5, respawn: 32000, minLv: 30 };
+MONSTERS.drake = { name: '새끼 화룡', lv: 46, hp: 5600, atk: 225, speed: 4.2, xp: 1700, aggro: 7, reach: 2.8, hitR: 2.8, hitAt: 1.8, windup: 650, cd: 1700, size: 1.4, respawn: 36000, minLv: 30 };
 // 별무리 하늘섬의 몬스터 (Lv45 부터 보임). shade 는 가까이 가야 보임(화면 쪽에서 처리), meteor 는 주변 큰 원 공격을 섞어 씀
 MONSTERS.starbun = { name: '별똥 토끼', lv: 48, hp: 5200, atk: 195, speed: 5.2, xp: 1900, aggro: 10, reach: 2.2, hitR: 2.2, hitAt: 1.4, windup: 550, cd: 1400, size: 0.9, respawn: 26000, minLv: 45 };
 MONSTERS.shade = { name: '달그림자', lv: 52, hp: 7200, atk: 255, speed: 4.0, xp: 2800, aggro: 9, reach: 2.8, hitR: 3.0, hitAt: 1.2, windup: 700, cd: 1800, size: 1.3, respawn: 32000, minLv: 45 };
@@ -251,8 +251,8 @@ function monsterHomes(obstacles) {
   placeMore('firebird', 4, 3, 20, V.R - 9, lane);
   homes.push({ kind: 'dragon', x: V.x, z: V.z, isl: 3 });
   // 분화구 둘레 안쪽 고리: Lv40대 (용의 눈에 띄지 않을 만큼만 떨어짐)
-  placeMore('cinder', 4, 3, 13.5, 18.5, lane);
-  placeMore('drake', 3, 3, 13.5, 18.5, lane);
+  placeMore('cinder', 2, 3, 13.5, 18.5, lane); // 너무 세서 수를 줄임(4→2, 3→2). 먼저 건드리지 않으면 잘 안 덤비게 aggro 도 낮춤
+  placeMore('drake', 2, 3, 13.5, 18.5, lane);
   // 별무리 하늘섬: 북쪽 끝(내리는 곳)은 비워 둠
   const S = ISLANDS[4], land = (x, z) => !(Math.abs(x - S.x) < 10 && z < S.z - 20);
   placeMore('starbun', 8, 4, 8, S.R - 6, land);
@@ -654,7 +654,7 @@ const XP_HARD_LV = 20, XP_HARD_STEP = 0.08;
 const needXp = (lv) => Math.round((10 * lv * lv + 10) * (lv >= XP_HARD_LV ? 1 + (lv - XP_HARD_LV + 1) * XP_HARD_STEP : 1));
 const statsFor = (lv) => ({ maxHp: 80 + (lv - 1) * 15, atk: 10 + (lv - 1) * 3 });
 
-const VERSION = 29; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
+const VERSION = 30; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
 const api = { UP_PITY, upChance, unlocked, VERSION, SLOTS, ACCS, ACC_IDS, CHEST, GACHA, RARITY, SAFE_R, inSafe, FISH, FISH_DAY, FISH_NIGHT, canFish, FOOD_BUFF, COOK_RANGE, PETS, PET_IDS, TITLES, TITLE_IDS, cleanStats, DUEL, ELDER, TALK_RANGE, ALTAR_RANGE, BRIDGE, world, onBridge, MAX_UP, UP_BONUS, UPGRADES, QUESTS, QUEST_IDS, QUEST_ACTIVE_MAX, cleanQuests, ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
   UNLOCK, KEYS, WEAPONS, WEAPON_IDS, ITEMS, ITEM_IDS, SHOP_ITEMS, MAX_STACK, BAG_SLOTS, LOOT, cleanInv, MAX_LV, needXp, statsFor };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ARCA = api;
