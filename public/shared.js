@@ -343,6 +343,13 @@ WEAPONS.boomerang = { name: '꿀벌 부메랑', icon: '🪃', price: 0, color: 0
     { name: '끈적 회전', icon: '🍯', kind: 'around', cd: 6000, mult: 1.4, range: 4.2, slow: 2500 },
     { name: '여왕벌의 침', icon: '👑', kind: 'shot', cd: 10000, mult: 3.0, range: 11, crit: 0.3 },
   ] };
+WEAPONS.wardenblade = { name: '수호자의 심판검', icon: '⚜️', price: 0, color: 0xffd43b, desc: '시련의 수호자가 쓰던 기술을 그대로 쓰는 검', craft: { gold: 3000, mats: { trialmark: 15, shard: 5 } },
+  skills: [
+    { name: '빛의 베기', icon: '⚜️', kind: 'arc', cd: 650, mult: 1.5, range: 3.4, arc: 1.5 },
+    { name: '쫓는 번개', icon: '⚡', kind: 'multi', cd: 4500, mult: 1.4, range: 10, n: 4 },
+    { name: '둘레 폭발', icon: '💥', kind: 'around', cd: 6500, mult: 2.6, range: 5, slow: 2500 },
+    { name: '심판', icon: '🌟', kind: 'blast', cd: 12000, mult: 4.2, range: 9, radius: 5 },
+  ] };
 WEAPONS.greatsword = { name: '용염 대검', icon: '⚔️', price: 0, color: 0xff6b35, desc: '느리지만 한 방이 가장 센 무기', craft: { gold: 6000, mats: { magmastone: 30, phoenixfeather: 20, dragonheart: 3 } },
   skills: [
     { name: '크게 베기', icon: '⚔️', kind: 'arc', cd: 1100, mult: 2.5, range: 3.8, arc: 1.6 },
@@ -390,6 +397,7 @@ const ITEMS = {
   windstone: { name: '바람의 돌', icon: '🌀', type: 'key', sell: 0, desc: '광장 분수의 수정에 바치면 바람의 다리가 가까워져요' },
   shard: { name: '폭풍의 조각', icon: '💎', type: 'mat', sell: 120, desc: '폭풍 골렘을 쓰러뜨린 증표. 비싸게 팔려요' },
 };
+ITEMS.trialmark = { name: '시련의 증표', icon: '🏅', type: 'mat', notrade: true, desc: '시련의 수호자를 쓰러뜨린 증표. 팔 수도 넘길 수도 없어요. 모모의 제작 탭에서 써요' };
 const ITEM_IDS = Object.keys(ITEMS);
 // ---------- 장신구 (부위별로 하나씩 달 수 있는 아이템. 가방에 들어가고 거래·판매 가능) ----------
 const SLOTS = [['head', '머리'], ['face', '얼굴'], ['neck', '목'], ['back', '등'], ['side', '옆']];
@@ -417,11 +425,12 @@ const ACCS = {
   a_flamewings: { name: '불꽃 날개', icon: '🔥', slot: 'back', buy: 0, sell: 600 },
   a_goldcape: { name: '황금 망토', icon: '👑', slot: 'back', buy: 0, sell: 800 },
   a_comet: { name: '꼬마 혜성', icon: '☄️', slot: 'side', buy: 0, sell: 800 },
+  a_wardenhalo: { name: '수호자의 광륜', icon: '🌟', slot: 'head', buy: 0, craft: { gold: 500, mats: { trialmark: 5 } } }, // 파티 시련의 증표로만 만듦. 팔 수도 넘길 수도 없음
 };
 const ACC_IDS = Object.keys(ACCS);
 for (const id of ACC_IDS) { // 가방에 들어가는 아이템으로도 등록
   const a = ACCS[id], slotName = SLOTS.find((x) => x[0] === a.slot)[1];
-  ITEMS[id] = { name: a.name, icon: a.icon, type: 'acc', slot: a.slot, buy: a.buy, sell: a.sell || Math.round(a.buy * 0.4), desc: `${slotName}에 다는 장신구${a.buy ? '' : ' (뽑기 상자에서만 나와요)'}. 눌러서 달고 떼요` };
+  ITEMS[id] = { name: a.name, icon: a.icon, type: 'acc', slot: a.slot, buy: a.buy, sell: a.sell || Math.round(a.buy * 0.4), notrade: !!a.craft, desc: `${slotName}에 다는 장신구${a.buy ? '' : a.craft ? ' (시련의 증표로만 만들어요)' : ' (뽑기 상자에서만 나와요)'}. 눌러서 달고 떼요` };
 }
 ITEMS.firework = { name: '폭죽', icon: '🎆', type: 'fun', buy: 30, sell: 5, desc: '눌러서 쏘면 하늘에서 터져요. 모두에게 보여요' };
 ITEM_IDS.push(...ACC_IDS, 'firework');
@@ -665,7 +674,7 @@ const XP_HARD_LV = 20, XP_HARD_STEP = 0.08;
 const needXp = (lv) => Math.round((10 * lv * lv + 10) * (lv >= XP_HARD_LV ? 1 + (lv - XP_HARD_LV + 1) * XP_HARD_STEP : 1));
 const statsFor = (lv) => ({ maxHp: 80 + (lv - 1) * 15, atk: 10 + (lv - 1) * 3 });
 
-const VERSION = 34; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
+const VERSION = 35; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
 const api = { UP_PITY, upChance, unlocked, VERSION, SLOTS, ACCS, ACC_IDS, CHEST, GACHA, RARITY, SAFE_R, inSafe, FISH, FISH_DAY, FISH_NIGHT, canFish, FOOD_BUFF, COOK_RANGE, PETS, PET_IDS, TITLES, TITLE_IDS, cleanStats, DUEL, ELDER, TALK_RANGE, ALTAR_RANGE, BRIDGE, world, onBridge, MAX_UP, UP_BONUS, UPGRADES, QUESTS, QUEST_IDS, QUEST_ACTIVE_MAX, cleanQuests, ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, TRIAL, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
   UNLOCK, KEYS, WEAPONS, WEAPON_IDS, ITEMS, ITEM_IDS, SHOP_ITEMS, MAX_STACK, BAG_SLOTS, LOOT, cleanInv, MAX_LV, needXp, statsFor };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ARCA = api;

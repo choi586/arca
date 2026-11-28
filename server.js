@@ -680,6 +680,19 @@ function handleQuest(p, m) {
   }
   if (m.t === 'craft') { // 제작 무기: 골드와 재료를 내고 만듦
     if (!nearShop(p)) return notice(p, '상인 모모 가까이에서만 만들 수 있어요');
+    const acc = A.ACCS[m.a];
+    if (acc && acc.craft) { // 제작 장신구
+      if (inv.items[m.a]) return notice(p, '이미 가지고 있어요');
+      if (bagSlots(inv) >= A.BAG_SLOTS) return notice(p, '가방이 꽉 찼어요');
+      if (inv.gold < acc.craft.gold) return notice(p, '골드가 모자라요');
+      for (const id in acc.craft.mats) if ((inv.items[id] || 0) < acc.craft.mats[id]) return notice(p, `${A.ITEMS[id].name}이(가) 모자라요`);
+      inv.gold -= acc.craft.gold;
+      for (const id in acc.craft.mats) removeItem(inv, id, acc.craft.mats[id]);
+      addItem(inv, m.a, 1);
+      sendInv(p);
+      broadcast(p.ch, { t: 'notice', text: `⚒️ ${p.name} 님이 ${acc.icon} ${acc.name}을(를) 만들었어요!` });
+      return;
+    }
     const w = A.WEAPONS[m.w]; if (!w || !w.craft) return;
     if (inv.weapons.includes(m.w)) return notice(p, '이미 가지고 있어요');
     if (inv.gold < w.craft.gold) return notice(p, '골드가 모자라요');
@@ -934,9 +947,9 @@ function endTrial(ch, win, why) {
         p.trialPaid = now;
         const gold = 150 + p.lv * 10;
         p.inv.gold = Math.min(999999, p.inv.gold + gold);
-        const n = addItem(p.inv, 'shard', 1);
+        const items = [['trialmark', addItem(p.inv, 'trialmark', 1)], ['shard', addItem(p.inv, 'shard', 1)]].filter((x) => x[1]);
         giveXp(ch, p, Math.round(A.needXp(p.lv) * 0.06));
-        send(p.ws, { t: 'loot', gold, items: n ? [['shard', n]] : [], x: r2(p.x), z: r2(p.z) });
+        send(p.ws, { t: 'loot', gold, items, x: r2(p.x), z: r2(p.z) });
         sendInv(p);
       } else notice(p, `보상은 ${Math.round(A.TRIAL.rewardMs / 60000)}분에 한 번만 받을 수 있어요 (${mmss(A.TRIAL.rewardMs - (now - p.trialPaid))} 남음). 기록은 올라갔어요`);
     } else notice(p, `💀 시련 실패: ${why} 수호자의 체력이 ${left}% 남았어요`);
@@ -1160,7 +1173,7 @@ function handleSocial(me, m) {
     const o = { gold: Math.max(0, Math.min(me.inv.gold, Math.floor(num(m.gold)))), items: {} };
     if (m.items && typeof m.items === 'object') for (const id of A.ITEM_IDS) {
       const n = Math.max(0, Math.min(me.inv.items[id] || 0, Math.floor(num(m.items[id]))));
-      if (n > 0) o.items[id] = n;
+      if (n > 0 && !A.ITEMS[id].notrade) o.items[id] = n; // 시련의 증표와 그것으로 만든 것은 못 넘김
     }
     tr.offer.set(me.id, o); tr.ok.clear(); // 내용이 바뀌면 양쪽 확인이 풀림
     return sendTrade(tr);

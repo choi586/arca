@@ -579,6 +579,13 @@ function setWeapon(av, w) {
     }
     const tip = mesh(new THREE.BoxGeometry(0.14, 0.06, 0.16), '#fff3bf', { emissive: '#fab005', emissiveIntensity: 0.6 }); tip.position.set(0, 0, 0.66);
     R_.add(tip);
+  } else if (w === 'wardenblade') { // 수호자의 검: 흰 칼날에 금빛 날밑, 칼등에 붉은 핵
+    const grip = mesh(new THREE.BoxGeometry(0.08, 0.08, 0.4), '#343a6b'); grip.position.z = 0.02;
+    const guard = mesh(new THREE.BoxGeometry(0.55, 0.09, 0.12), '#ffd43b', { emissive: '#fab005', emissiveIntensity: 0.6, metalness: 0.5, roughness: 0.4 }); guard.position.z = 0.25;
+    const blade = mesh(new THREE.BoxGeometry(0.17, 0.05, 1.25), '#f1f3f5', { emissive: '#bac8ff', emissiveIntensity: 0.6, metalness: 0.6, roughness: 0.3 }); blade.position.z = 0.92;
+    const point = mesh(new THREE.ConeGeometry(0.1, 0.28, 4), '#f1f3f5', { emissive: '#bac8ff', emissiveIntensity: 0.6 }); point.rotation.x = Math.PI / 2; point.position.z = 1.68;
+    const core = mesh(new THREE.OctahedronGeometry(0.1, 0), '#ff8787', { emissive: '#ff6b6b', emissiveIntensity: 1.5 }, false); core.position.set(0, 0.06, 0.36);
+    R_.add(grip, guard, blade, point, core);
   } else if (w === 'greatsword') { // 크고 넓은 불타는 칼
     const grip = mesh(new THREE.BoxGeometry(0.09, 0.09, 0.45), '#343a40'); grip.position.z = 0.02;
     const guard = mesh(new THREE.BoxGeometry(0.6, 0.1, 0.1), '#c92a2a', { metalness: 0.5, roughness: 0.4 }); guard.position.z = 0.28;
@@ -1648,6 +1655,7 @@ function renderShop() {
       for (const id of ARCA.ACC_IDS) {
         const it = ITEMS[id]; if (it.slot !== slot) continue;
         const have = me.inv.items[id] || 0;
+        if (ARCA.ACCS[id].craft) { list.appendChild(shopRow(it.icon, it.name, '제작 탭에서 시련의 증표로 만들어요' + (have ? ' · 가지고 있음' : ''), '', [['제작으로만', false, () => {}]])); continue; }
         if (!it.buy) { list.appendChild(shopRow(it.icon, it.name, '뽑기 상자에서만 나와요' + (have ? ` · 가진 수 ${have}` : ''), '', [['뽑기로만', false, () => {}]])); continue; }
         list.appendChild(shopRow(it.icon, it.name, have ? `가진 수 ${have}` : `되팔면 ${it.sell}G`, `${it.buy}G`, [['사기', g >= it.buy, () => net({ t: 'buy', id })]]));
       }
@@ -1683,6 +1691,13 @@ function renderShop() {
       const ok = !own && g >= c.gold && mats.every(([m, n]) => (me.inv.items[m] || 0) >= n);
       const need = mats.map(([m, n]) => `${ITEMS[m].icon} ${ITEMS[m].name} ${me.inv.items[m] || 0}/${n}`).join(' · ');
       list.appendChild(shopRow(w.icon, w.name, own ? w.desc : `${w.desc} — ${need}`, own ? '' : `${c.gold}G`, [[own ? '가지고 있음' : '만들기', ok, () => net({ t: 'craft', w: id })]]));
+    }
+    for (const id of ARCA.ACC_IDS) { // 제작 장신구
+      const a = ARCA.ACCS[id], c = a.craft; if (!c) continue;
+      const own = !!me.inv.items[id], mats = Object.entries(c.mats);
+      const ok = !own && g >= c.gold && mats.every(([m, n]) => (me.inv.items[m] || 0) >= n);
+      const need = mats.map(([m, n]) => `${ITEMS[m].icon} ${ITEMS[m].name} ${me.inv.items[m] || 0}/${n}`).join(' · ');
+      list.appendChild(shopRow(a.icon, a.name, own ? ITEMS[id].desc : `장신구 — ${need}`, own ? '' : `${c.gold}G`, [[own ? '가지고 있음' : '만들기', ok, () => net({ t: 'craft', a: id })]]));
     }
   } else if (shopTab === 'up') { // 무기 강화
     list.appendChild(el('div', 'tip', `재료와 골드로 무기를 강화해요. 한 단계마다 그 무기의 피해가 ${ARCA.UP_BONUS * 100}%씩 늘어요 (최대 +${ARCA.MAX_UP}). +6부터는 실패할 수 있어요. 실패하면 골드와 재료만 사라지고 단계는 그대로예요. 대신 실패할 때마다 그 무기의 다음 성공 확률이 ${ARCA.UP_PITY * 100}%p씩 올라요.`));
@@ -2108,6 +2123,9 @@ function makeCos(id) {
     M(new THREE.BoxGeometry(0.55, 0.34, 0.02), '#ffd43b', null, -0.78, 2.45, -0.35);
   } else if (id === 'a_star') {
     g.userData.spin = M(new THREE.OctahedronGeometry(0.22, 0), '#ffe066', { emissive: '#fab005', emissiveIntensity: 1.1 }, 0, 2.95, 0);
+  } else if (id === 'a_wardenhalo') { // 수호자의 광륜: 큰 금빛 고리와 그 위를 도는 별
+    const h = M(new THREE.TorusGeometry(0.44, 0.05, 6, 24), '#ffd43b', { emissive: '#ffa94d', emissiveIntensity: 0.9 }, 0, 2.4, 0); h.rotation.x = Math.PI / 2 - 0.25;
+    g.userData.spin = M(new THREE.OctahedronGeometry(0.17, 0), '#ff8787', { emissive: '#ff6b6b', emissiveIntensity: 0.8 }, 0, 3.0, 0);
   } else if (id === 'a_halo') {
     const h = M(new THREE.TorusGeometry(0.34, 0.045, 6, 20), '#fff3bf', { emissive: '#ffd43b', emissiveIntensity: 1.4 }, 0, 2.5, 0); h.rotation.x = Math.PI / 2;
   } else if (id === 'a_flower') {
@@ -2380,7 +2398,7 @@ function renderTrade() {
   tradeCells($('tMine'), mine.items, (id) => { mine.items[id]--; if (!mine.items[id]) delete mine.items[id]; sendOffer(); });
   tradeCells($('tTheirs'), trade.theirs.items);
   const left = {};
-  for (const id of ITEM_IDS) { const n = (me.inv.items[id] || 0) - (mine.items[id] || 0); if (n > 0) left[id] = n; }
+  for (const id of ITEM_IDS) { const n = (me.inv.items[id] || 0) - (mine.items[id] || 0); if (n > 0 && !ITEMS[id].notrade) left[id] = n; } // 시련의 증표처럼 못 넘기는 것은 거래 창에 안 보임
   tradeCells($('tBag'), left, (id) => { mine.items[id] = (mine.items[id] || 0) + 1; sendOffer(); });
   if (!$('tBag').children.length) $('tBag').appendChild(el('div', 'empty', '올릴 물건이 없어요'));
   $('tOk').textContent = trade.okMine ? '확인함 ✓ (상대를 기다려요)' : '확인';
