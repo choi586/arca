@@ -35,8 +35,9 @@ const UPDRAFTS = [{ x: 56, z: 0, r: 4.5 }, { x: 99, z: 0, r: 4.5 }, { x: 0, z: -
   { x: 0, z: 166, r: 4.5, minLv: 45, top: 36 }, { x: 0, z: 211, r: 4.5, minLv: 45, top: 30 }]; // 불꽃마루 남쪽 끝과 하늘섬 북쪽 끝의 높은 기둥 (top = 올라가는 높이)
 const UPDRAFT_TOP = 22;
 // 파티 시련: 광장 북쪽 비석에서 파티가 함께 경기장으로 올라가 '시련의 수호자'와 싸움
+// emptyMs 경기장에 아무도 없어도 이만큼은 기다려 줌(쓰러진 사람이 다시 올라올 시간)
 // hpPer 수호자 체력 = 도전자들의 공격력 합 × 이 값 · maxMs 제한 시간 · rewardMs 보상을 다시 받기까지 걸리는 시간
-const TRIAL = { gate: { x: 0, z: -11 }, range: 6, minParty: 2, maxMs: 300000, ready: 4000, hpPer: 280, rewardMs: 600000 };
+const TRIAL = { gate: { x: 0, z: -11 }, range: 6, minParty: 2, maxMs: 300000, ready: 4000, hpPer: 180, emptyMs: 30000, rewardMs: 600000 };
 // 레벨 제한이 있는 섬은 그 레벨이 되기 전에는 '없는 섬'이다. 화면 쪽에서 world.lv 에 내 레벨을 넣어 둠 (서버는 비워 둬서 모든 섬이 있음)
 function unlocked(o) { return !o.minLv || world.lv === undefined || world.lv >= o.minLv; }
 function islandOf(x, z) { for (const I of ISLANDS) if (unlocked(I) && Math.hypot(x - I.x, z - I.z) <= I.R) return I; return null; }
@@ -192,7 +193,7 @@ MONSTERS.meteor = { name: '유성 골렘', lv: 56, hp: 13000, atk: 300, speed: 2
 MONSTERS.warden = { name: '시련의 수호자', lv: 60, hp: 10000, atk: 0, speed: 3.2, xp: 0, aggro: 60, reach: 4, hitR: 4.5, hitAt: 0, windup: 1000, cd: 2000, size: 2.6, respawn: 1e13, trial: true }; // 체력은 도전하는 파티에 맞춰 정해지고, 공격은 맞는 사람 체력의 몇 % 로 들어감
 const MONSTER_KINDS = ['slime', 'shroom', 'turtle', 'golem', 'toad', 'wisp', 'yeti', 'wolf', 'giant', 'bee', 'scarecrow', 'bat', 'treant', 'penguin', 'icewisp', 'queen', 'lizard', 'magma', 'firebird', 'dragon', 'cinder', 'drake', 'starbun', 'shade', 'meteor', 'warden'];
 const BOSS = { x: -30, z: -26 };
-const PARTY_MAX = 4, PARTY_SHARE_RANGE = 30;
+const PARTY_MAX = 8, PARTY_SHARE_RANGE = 30;
 
 // 몬스터가 사는 곳 (집 위치) — 슬라임은 광장 가까이, 버섯은 숲, 돌거북은 큰 언덕
 function monsterHomes(obstacles) {
@@ -664,7 +665,7 @@ const XP_HARD_LV = 20, XP_HARD_STEP = 0.08;
 const needXp = (lv) => Math.round((10 * lv * lv + 10) * (lv >= XP_HARD_LV ? 1 + (lv - XP_HARD_LV + 1) * XP_HARD_STEP : 1));
 const statsFor = (lv) => ({ maxHp: 80 + (lv - 1) * 15, atk: 10 + (lv - 1) * 3 });
 
-const VERSION = 32; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
+const VERSION = 33; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
 const api = { UP_PITY, upChance, unlocked, VERSION, SLOTS, ACCS, ACC_IDS, CHEST, GACHA, RARITY, SAFE_R, inSafe, FISH, FISH_DAY, FISH_NIGHT, canFish, FOOD_BUFF, COOK_RANGE, PETS, PET_IDS, TITLES, TITLE_IDS, cleanStats, DUEL, ELDER, TALK_RANGE, ALTAR_RANGE, BRIDGE, world, onBridge, MAX_UP, UP_BONUS, UPGRADES, QUESTS, QUEST_IDS, QUEST_ACTIVE_MAX, cleanQuests, ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, TRIAL, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
   UNLOCK, KEYS, WEAPONS, WEAPON_IDS, ITEMS, ITEM_IDS, SHOP_ITEMS, MAX_STACK, BAG_SLOTS, LOOT, cleanInv, MAX_LV, needXp, statsFor };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ARCA = api;

@@ -883,6 +883,14 @@ function startTrial(p) {
   const c = channels.get(p.ch), G = A.TRIAL.gate, now = Date.now();
   const near = (q) => Math.hypot(q.x - G.x, q.z - G.z) <= A.TRIAL.range;
   if (p.dead || !near(p)) return;
+  if (c.trial && c.trial.ids.has(p.id)) { // 쓰러졌거나 떨어진 사람이 싸움 중인 경기장으로 다시 올라감
+    if (Math.hypot(p.x - ARENA.x, p.z - ARENA.z) <= ARENA.R + 3) return;
+    const a = Math.random() * Math.PI * 2;
+    p.hp = p.maxHp; sendStats(p);
+    teleport(p, ARENA.x + Math.sin(a) * 15, ARENA.z + Math.cos(a) * 15, a + Math.PI);
+    for (const id of c.trial.ids) { const q = c.players.get(id); if (q && q !== p) notice(q, `⚔️ ${p.name} 님이 다시 올라왔어요!`); }
+    return;
+  }
   const set = parties.get(p.party);
   if (!set) return notice(p, '⚔️ 시련은 파티로만 도전할 수 있어요. 사람들(P)에서 친구를 파티에 초대해요');
   if (c.trial) return notice(p, `⚔️ 다른 파티가 도전하는 중이에요. 길어도 ${mmss(c.trial.end - now)} 뒤에는 끝나요`);
@@ -938,27 +946,27 @@ function endTrial(ch, win, why) {
 const TRIAL_PATTERNS = {
   slam(T, m, ph) { // 한 사람을 노려 내려찍기. 단계가 오르면 연달아
     const n = ph, out = [];
-    for (let i = 0; i < n; i++) out.push({ delay: i * 950, wind: 1000, frac: 0.25, make: (c) => { const t = c.target; m.ry = Math.atan2(t.x - m.x, t.z - m.z); return [{ x: t.x, z: t.z, r: 4.5 }]; } });
+    for (let i = 0; i < n; i++) out.push({ delay: i * 1200, wind: 1300, frac: 0.18, make: (c) => { const t = c.target; m.ry = Math.atan2(t.x - m.x, t.z - m.z); return [{ x: t.x, z: t.z, r: 4.5 }]; } });
     return out;
   },
   chase(T, m, ph) { // 모두의 발밑에 번개가 연달아 떨어짐 (계속 움직여야 함)
     const out = [];
-    for (let i = 0; i < 2 + ph; i++) out.push({ delay: i * 800, wind: 1000, frac: 0.16, make: (c) => c.alive.map((p) => ({ x: p.x, z: p.z, r: 3 })) });
+    for (let i = 0; i < 2 + ph; i++) out.push({ delay: i * 1000, wind: 1300, frac: 0.12, make: (c) => c.alive.map((p) => ({ x: p.x, z: p.z, r: 3 })) });
     return out;
   },
   inner(T, m, ph) { // 보스 둘레가 터짐 → 멀리 떨어지기. 2단계부터는 곧바로 바깥이 터짐
-    const out = [{ delay: 0, wind: 1600, frac: 0.35, make: () => [{ x: m.x, z: m.z, r: 11 }] }];
-    if (ph >= 2) out.push({ delay: 1500, wind: 1500, frac: 0.35, make: () => [{ x: m.x, z: m.z, r: 46, r0: 6 }] });
+    const out = [{ delay: 0, wind: 2000, frac: 0.25, make: () => [{ x: m.x, z: m.z, r: 11 }] }];
+    if (ph >= 2) out.push({ delay: 1900, wind: 1900, frac: 0.25, make: () => [{ x: m.x, z: m.z, r: 46, r0: 6 }] });
     return out;
   },
   donut(T, m, ph) { // 보스 곁만 안전 → 바짝 붙기. 2단계부터는 곧바로 안쪽이 터짐
-    const out = [{ delay: 0, wind: 1900, frac: 0.35, make: () => [{ x: m.x, z: m.z, r: 46, r0: 6 }] }];
-    if (ph >= 2) out.push({ delay: 1800, wind: 1500, frac: 0.35, make: () => [{ x: m.x, z: m.z, r: 11 }] });
+    const out = [{ delay: 0, wind: 2300, frac: 0.25, make: () => [{ x: m.x, z: m.z, r: 46, r0: 6 }] }];
+    if (ph >= 2) out.push({ delay: 2200, wind: 1900, frac: 0.25, make: () => [{ x: m.x, z: m.z, r: 11 }] });
     return out;
   },
   cross(T, m, ph) { // 십자로 뻗는 불길, 이어서 비스듬히 한 번 더
     const a0 = Math.random() * Math.PI, out = [];
-    for (let i = 0; i < ph; i++) out.push({ delay: i * 1200, wind: 1500, frac: 0.28, make: () => {
+    for (let i = 0; i < ph; i++) out.push({ delay: i * 1500, wind: 1900, frac: 0.2, make: () => {
       const list = [{ x: m.x, z: m.z, r: 3 }];
       for (let k = 0; k < 4; k++) for (let d = 4.5; d < 42; d += 4.2) {
         const a = a0 + i * Math.PI / 4 + k * Math.PI / 2, x = m.x + Math.sin(a) * d, z = m.z + Math.cos(a) * d;
@@ -970,7 +978,7 @@ const TRIAL_PATTERNS = {
   },
   meteors(T, m, ph) { // 경기장 곳곳에 별똥별이 세 번 쏟아짐
     const out = [];
-    for (let i = 0; i < 3; i++) out.push({ delay: i * 1300, wind: 1300, frac: 0.22, make: () => {
+    for (let i = 0; i < 3; i++) out.push({ delay: i * 1600, wind: 1600, frac: 0.16, make: () => {
       const list = [];
       for (let k = 0; k < 5 + ph * 2; k++) { const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * (ARENA.R - 2); list.push({ x: ARENA.x + Math.cos(a) * d, z: ARENA.z + Math.sin(a) * d, r: 3 }); }
       return list;
@@ -979,7 +987,7 @@ const TRIAL_PATTERNS = {
   },
   haven(T, m) { // 3단계: 경기장 전체가 터지고 파란 원 안만 안전
     const a = Math.random() * Math.PI * 2, d = 5 + Math.random() * 5;
-    return [{ delay: 0, wind: 4000, frac: 0.6, make: () => [{ x: ARENA.x + Math.cos(a) * d, z: ARENA.z + Math.sin(a) * d, r: 64, r0: 4.5, safe: 1 }] }];
+    return [{ delay: 0, wind: 5000, frac: 0.45, make: () => [{ x: ARENA.x + Math.cos(a) * d, z: ARENA.z + Math.sin(a) * d, r: 64, r0: 5.5, safe: 1 }] }];
   },
 };
 const TRIAL_ORDER = { 1: ['slam', 'chase', 'inner', 'slam', 'meteors', 'donut'], 2: ['slam', 'cross', 'donut', 'chase', 'meteors', 'inner'], 3: ['haven', 'cross', 'slam', 'donut', 'chase', 'meteors', 'inner'] };
@@ -988,7 +996,18 @@ function updateTrial(ch, c, now, dt) {
   const m = c.warden;
   const alive = [];
   for (const id of T.ids) { const p = c.players.get(id); if (p && !p.dead && Math.hypot(p.x - ARENA.x, p.z - ARENA.z) <= ARENA.R + 1 && p.y > ARENA.base - 2) alive.push(p); }
-  if (!alive.length && now > T.start - A.TRIAL.ready + 2500) return endTrial(ch, false, '모두 쓰러지거나 떨어졌어요.');
+  // 경기장이 비어도 바로 끝나지 않음: 쓰러진 사람이 광장에서 일어나 비석으로 다시 올라올 시간을 줌
+  if (alive.length) T.emptyAt = 0;
+  else {
+    if (!T.emptyAt) {
+      T.emptyAt = now; T.casts.length = 0; T.hits.length = 0; m.st = 0;
+      const sec = Math.round(A.TRIAL.emptyMs / 1000);
+      for (const id of T.ids) { const p = c.players.get(id); if (p) notice(p, `💀 경기장에 아무도 없어요! ${sec}초 안에 비석에서 다시 올라가면 이어서 싸울 수 있어요`); }
+    }
+    if (now - T.emptyAt > A.TRIAL.emptyMs) return endTrial(ch, false, '경기장이 너무 오래 비어 있었어요.');
+    if (now >= T.end) return endTrial(ch, false, '시간이 다 됐어요.');
+    return;
+  }
   if (now >= T.end) return endTrial(ch, false, '시간이 다 됐어요.');
   // 예고가 끝난 공격: 그 안에 있는 사람이 다침 (한 공격에 한 번만)
   for (let i = T.hits.length - 1; i >= 0; i--) {
@@ -1023,7 +1042,7 @@ function updateTrial(ch, c, now, dt) {
     const casts = TRIAL_PATTERNS[name](T, m, T.phase);
     let last = 0;
     for (const k of casts) { T.casts.push({ at: now + k.delay, wind: k.wind, frac: k.frac, make: k.make }); last = Math.max(last, k.delay + k.wind); }
-    T.next = now + last + [0, 1700, 1300, 1000][T.phase];
+    T.next = now + last + [0, 2300, 1900, 1500][T.phase];
     if (Math.random() < 0.5) m.target = 0; // 가끔 노리는 사람을 바꿈
     m.st = 2; return;
   }

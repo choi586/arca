@@ -1301,7 +1301,7 @@ const handlers = {
     if (fishState) stopFishing();
   },
   trial(m) {
-    if (m.on) { const t = performance.now() + m.ready; trial = { start: t, end: t + m.ms }; toast('⚔️ 시련 시작! 빨간 바닥은 피하고, 파란 원은 안전해요. 경기장 밖으로 떨어지면 끝이에요'); }
+    if (m.on) { const t = performance.now() + m.ready; trial = { start: t, end: t + m.ms }; toast('⚔️ 시련 시작! 빨간 바닥은 피하고, 파란 원은 안전해요. 쓰러져도 광장 비석에서 다시 올라올 수 있어요'); }
     else { trial = null; if (m.win) toast('🏆 시련 성공! 수호자를 쓰러뜨렸어요'); }
   },
   ask(m) { showAsk(m); },
@@ -1919,7 +1919,7 @@ fishLine.visible = false; fishLine.frustumCulled = false; scene.add(fishLine);
 }
 // ---------- 파티 시련: 광장 북쪽의 비석과 하늘 높이 떠 있는 경기장 ----------
 const AR = ISLANDS[5], TG = ARCA.TRIAL.gate;
-let trial = null, nearGate = false; // trial = { start, end } (내가 도전 중일 때만)
+let trial = null, nearGate = 0; // trial = { start, end } (내가 도전 중일 때만)
 const gateObj = new THREE.Group(), gateTag = makeTag('⚔️ 시련의 비석');
 {
   gateObj.position.set(TG.x, islandH(TG.x, TG.z), TG.z);
@@ -1985,8 +1985,8 @@ function updateLeisure(dt) {
   if (fl !== fishLabel) { fishLabel = fl; const b = $('fishHint').firstChild; b.textContent = ['🎣 구름 낚시' + (isTouch() ? '' : ' (X)'), '🎣 기다리는 중…', '❗ 지금 당기기!'][fl]; b.classList.toggle('bite', fl === 2); }
   let cook = false;
   if (!me.dead && rawFishCount() > 0) for (const e of decos.values()) if (e.d.k === 'campfire' && Math.hypot(e.d.x - me.x, e.d.z - me.z) < ARCA.COOK_RANGE) { cook = true; break; }
-  const ng = !me.dead && !trial && Math.hypot(me.x - TG.x, me.z - TG.z) < ARCA.TRIAL.range;
-  if (ng !== nearGate) { nearGate = ng; $('trialHint').hidden = !ng; }
+  const ng = !me.dead && Math.hypot(me.x - TG.x, me.z - TG.z) < ARCA.TRIAL.range ? (trial ? 2 : 1) : 0; // 2 = 싸움 중에 광장으로 돌아온 사람: 다시 올라갈 수 있음
+  if (ng !== nearGate) { nearGate = ng; $('trialHint').hidden = !ng; $('trialHint').firstChild.textContent = ng === 2 ? '⚔️ 시련에 다시 올라가기' : '⚔️ 파티 시련 도전'; }
   gateObj.userData.rune.rotation.y += dt * 1.5;
   placeTag(gateTag, gateObj, dt, 4.6, 40);
   if (cook !== canCookNow) { canCookNow = cook; $('cookHint').hidden = !cook; }
