@@ -444,6 +444,9 @@ ITEM_IDS.push(...ACC_IDS, 'firework');
 const CHEST = { everyMs: 150000, lifeMs: 150000, reach: 2.6 };
 const SHOP_ITEMS = ['potion', 'bigpotion', 'firework'];
 const MAX_STACK = 99, BAG_SLOTS = 30;
+// 가방 넓히기: 상인에게 골드를 내고 BAG_STEP 칸씩 늘림. BAG_UP[i] = i+1 번째로 넓힐 때의 값 (살수록 비쌈)
+const BAG_STEP = 5, BAG_UP = [2000, 5000, 12000, 30000, 70000, 150000];
+function bagMax(inv) { return BAG_SLOTS + BAG_STEP * Math.max(0, Math.min(BAG_UP.length, (inv && inv.bag) || 0)); }
 // 몬스터를 잡으면 나오는 것
 const LOOT = {
   slime: { gold: [2, 5], drops: [['jelly', 0.6], ['potion', 0.06]] },
@@ -601,13 +604,14 @@ function cleanQuests(raw) {
 }
 
 function cleanInv(raw) { // 저장된 가방을 안전하게 정리
-  const inv = { gold: 0, items: {}, weapons: ['sword'], equip: 'sword', up: {}, upf: {}, pets: [], pet: '', wear: {}, pity: 0, pl: 0, wp: 0 };
+  const inv = { gold: 0, items: {}, weapons: ['sword'], equip: 'sword', up: {}, upf: {}, pets: [], pet: '', wear: {}, pity: 0, pl: 0, wp: 0, bag: 0 };
   if (!raw || typeof raw !== 'object') return inv;
   const n = (v, max) => Math.max(0, Math.min(max, Math.floor(Number(v) || 0)));
+  inv.bag = n(raw.bag, BAG_UP.length); // 가방을 넓힌 횟수
   inv.gold = n(raw.gold, 999999);
   if (raw.items && typeof raw.items === 'object') {
     let slots = 0;
-    for (const id of ITEM_IDS) { const c = n(raw.items[id], MAX_STACK); if (c > 0 && slots < BAG_SLOTS) { inv.items[id] = c; slots++; } }
+    for (const id of ITEM_IDS) { const c = n(raw.items[id], MAX_STACK); if (c > 0 && slots < bagMax(inv)) { inv.items[id] = c; slots++; } }
   }
   if (Array.isArray(raw.weapons)) for (const w of raw.weapons) if (WEAPONS[w] && !inv.weapons.includes(w)) inv.weapons.push(w);
   if (inv.weapons.includes(raw.equip)) inv.equip = raw.equip;
@@ -682,8 +686,8 @@ const XP_HARD_LV = 20, XP_HARD_STEP = 0.08;
 const needXp = (lv) => Math.round((10 * lv * lv + 10) * (lv >= XP_HARD_LV ? 1 + (lv - XP_HARD_LV + 1) * XP_HARD_STEP : 1));
 const statsFor = (lv) => ({ maxHp: 80 + (lv - 1) * 15, atk: 10 + (lv - 1) * 3 });
 
-const VERSION = 36; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
+const VERSION = 37; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
 const api = { UP_PITY, upChance, unlocked, VERSION, SLOTS, ACCS, ACC_IDS, CHEST, GACHA, RARITY, SAFE_R, inSafe, FISH, FISH_DAY, FISH_NIGHT, canFish, FOOD_BUFF, COOK_RANGE, PETS, PET_IDS, TITLES, TITLE_IDS, cleanStats, DUEL, ELDER, TALK_RANGE, ALTAR_RANGE, BRIDGE, world, onBridge, MAX_UP, UP_BONUS, UPGRADES, QUESTS, QUEST_IDS, QUEST_ACTIVE_MAX, cleanQuests, ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, TRIAL, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
-  UNLOCK, KEYS, WEAPONS, WEAPON_IDS, ITEMS, ITEM_IDS, SHOP_ITEMS, MAX_STACK, BAG_SLOTS, LOOT, cleanInv, MAX_LV, needXp, statsFor };
+  UNLOCK, KEYS, WEAPONS, WEAPON_IDS, ITEMS, ITEM_IDS, SHOP_ITEMS, MAX_STACK, BAG_SLOTS, BAG_STEP, BAG_UP, bagMax, LOOT, cleanInv, MAX_LV, needXp, statsFor };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ARCA = api;
 })(this);

@@ -1336,7 +1336,7 @@ const handlers = {
   fx(m) { const o = others.get(m.id); if (o && WEAPONS[m.w]) { setWeapon(o.av, m.w); skillFx(o.av, m.w, m.k, m.tg); } },
   inv(m) {
     const prevEquip = me.inv.equip;
-    me.inv = { gold: m.gold, items: m.items, weapons: m.weapons, equip: m.equip, up: m.up || {}, upf: m.upf || {}, pets: m.pets || [], pet: m.pet || '', wear: m.wear && typeof m.wear === 'object' ? m.wear : {}, pity: m.pity || 0, pl: m.pl || 0, wp: m.wp || 0 };
+    me.inv = { gold: m.gold, items: m.items, weapons: m.weapons, equip: m.equip, up: m.up || {}, upf: m.upf || {}, pets: m.pets || [], pet: m.pet || '', wear: m.wear && typeof m.wear === 'object' ? m.wear : {}, pity: m.pity || 0, pl: m.pl || 0, wp: m.wp || 0, bag: m.bag || 0 };
     setPet(me, me.inv.pet); setCos(me, me.inv.wear);
     store.set('arca.inv', JSON.stringify(me.inv));
     if (me.av) {
@@ -1599,8 +1599,9 @@ function renderBag() {
   }
   const grid = $('bagItems'); grid.textContent = '';
   const ids = ITEM_IDS.filter((id) => me.inv.items[id]);
-  $('bagCount').textContent = `${ids.length} / ${BAG_SLOTS}칸`;
-  for (let i = 0; i < BAG_SLOTS; i++) {
+  const slotsMax = ARCA.bagMax(me.inv);
+  $('bagCount').textContent = `${ids.length} / ${slotsMax}칸`;
+  for (let i = 0; i < slotsMax; i++) {
     const id = ids[i], b = el('button', 'cell');
     if (!id) { b.disabled = true; grid.appendChild(b); continue; }
     const it = ITEMS[id];
@@ -1628,6 +1629,10 @@ function renderShop() {
   const list = $('shopList'); list.textContent = '';
   const g = me.inv.gold;
   if (shopTab === 'buy') {
+    { // 가방 넓히기 (살수록 비싸짐)
+      const lv = me.inv.bag || 0, cost = ARCA.BAG_UP[lv], now = ARCA.bagMax(me.inv);
+      list.appendChild(shopRow('🎒', '가방 넓히기', cost ? `${now}칸 → ${now + ARCA.BAG_STEP}칸 (${lv}/${ARCA.BAG_UP.length}번 넓힘)` : `${now}칸. 끝까지 넓혔어요`, cost ? `${cost.toLocaleString('en-US')}G` : '', [[cost ? '넓히기' : '끝', !!cost && g >= cost, () => net({ t: 'bagup' })]]));
+    }
     for (const id of SHOP_ITEMS) {
       const it = ITEMS[id];
       list.appendChild(shopRow(it.icon, it.name, it.desc, `${it.buy}G`, [
@@ -2308,6 +2313,7 @@ function addDeco(d) {
   scene.add(obj);
   let tag = null;
   if (d.k === 'sign') { tag = makeTag(`🪧 ${d.text || '…'}`); tag.el.classList.add('sign'); tag.el.title = d.name; }
+  else if (DECOS[d.k].lux) { tag = makeTag(`${DECOS[d.k].icon} ${d.name} 님의 ${DECOS[d.k].name}`); tag.el.classList.add('sign', 'lux'); } // 명품은 가까이 가면 누가 놓았는지 보임
   decos.set(d.id, { d, obj, tag, flame });
 }
 function removeDeco(id) {
@@ -2335,7 +2341,7 @@ function renderDeco() {
 function updateDecos(dt) {
   for (const e of decos.values()) {
     if (e.flame) { const f = 1 + Math.sin(time * 13 + e.d.id) * 0.12; e.flame.scale.set(f, 1 + Math.sin(time * 9 + e.d.id * 2) * 0.2, f); }
-    if (e.tag) placeTag(e.tag, e.obj, dt, 2.1, 30);
+    if (e.tag) placeTag(e.tag, e.obj, dt, e.d.k === 'sign' ? 2.1 : 3.4, e.d.k === 'sign' ? 30 : 16);
   }
 }
 

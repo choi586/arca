@@ -216,7 +216,7 @@ function sendInv(p) {
 }
 function bagSlots(inv) { return Object.keys(inv.items).length; }
 function addItem(inv, id, n) { // 가방이 꽉 차면 못 넣음
-  if (!inv.items[id] && bagSlots(inv) >= A.BAG_SLOTS) return 0;
+  if (!inv.items[id] && bagSlots(inv) >= A.bagMax(inv)) return 0;
   const before = inv.items[id] || 0, after = Math.min(A.MAX_STACK, before + n);
   inv.items[id] = after; return after - before;
 }
@@ -600,6 +600,14 @@ function handleShop(p, m) {
     inv.equip = m.w;
     broadcast(p.ch, { t: 'equip', id: p.id, w: m.w });
     sendInv(p);
+  } else if (m.t === 'bagup') { // 가방 넓히기
+    if (!nearShop(p)) return notice(p, '상인 모모 가까이에서만 살 수 있어요');
+    const cost = A.BAG_UP[inv.bag || 0];
+    if (!cost) return notice(p, '가방을 더는 넓힐 수 없어요');
+    if (inv.gold < cost) return notice(p, '골드가 모자라요');
+    inv.gold -= cost; inv.bag = (inv.bag || 0) + 1;
+    notice(p, `🎒 가방이 ${A.bagMax(inv)}칸으로 넓어졌어요!`);
+    sendInv(p);
   } else if (m.t === 'buy') {
     if (!nearShop(p)) return notice(p, '상인 모모 가까이에서만 살 수 있어요');
     if (A.WEAPONS[m.id]) {
@@ -685,7 +693,7 @@ function handleQuest(p, m) {
     const acc = A.ACCS[m.a];
     if (acc && acc.craft) { // 제작 장신구
       if (inv.items[m.a]) return notice(p, '이미 가지고 있어요');
-      if (bagSlots(inv) >= A.BAG_SLOTS) return notice(p, '가방이 꽉 찼어요');
+      if (bagSlots(inv) >= A.bagMax(inv)) return notice(p, '가방이 꽉 찼어요');
       if (inv.gold < acc.craft.gold) return notice(p, '골드가 모자라요');
       for (const id in acc.craft.mats) if ((inv.items[id] || 0) < acc.craft.mats[id]) return notice(p, `${A.ITEMS[id].name}이(가) 모자라요`);
       inv.gold -= acc.craft.gold;
@@ -743,7 +751,7 @@ function handleQuest(p, m) {
     if (p.q.active[m.id] === undefined) return;
     if (p.q.active[m.id] < q.n) return notice(p, q.type === 'collect' ? `의뢰를 맡은 뒤에 몬스터에게서 새로 얻은 것만 쳐 줘요 (${p.q.active[m.id]}/${q.n})` : '아직 다 하지 못했어요');
     if (q.type === 'collect' && (inv.items[q.key] || 0) < q.n) return notice(p, `${A.ITEMS[q.key].name}이(가) 가방에 모자라요`);
-    if (q.stones && !inv.items.windstone && bagSlots(inv) >= A.BAG_SLOTS && !(q.type === 'collect' && inv.items[q.key] === q.n)) return notice(p, '가방이 꽉 차서 보상을 받을 수 없어요');
+    if (q.stones && !inv.items.windstone && bagSlots(inv) >= A.bagMax(inv) && !(q.type === 'collect' && inv.items[q.key] === q.n)) return notice(p, '가방이 꽉 차서 보상을 받을 수 없어요');
     if (q.type === 'collect') removeItem(inv, q.key, q.n);
     delete p.q.active[m.id];
     p.q.done[m.id] = (p.q.done[m.id] || 0) + 1;
@@ -1204,7 +1212,7 @@ function finishTrade(tr) {
     const items = { ...p.inv.items };
     for (const [id, n] of Object.entries(give.items)) { if ((items[id] || 0) < n) return null; items[id] -= n; if (!items[id]) delete items[id]; }
     for (const [id, n] of Object.entries(take.items)) { items[id] = (items[id] || 0) + n; if (items[id] > A.MAX_STACK) return null; }
-    return Object.keys(items).length <= A.BAG_SLOTS ? items : null;
+    return Object.keys(items).length <= A.bagMax(p.inv) ? items : null;
   };
   const ia = check(a, oa, ob), ib = check(b, ob, oa);
   if (!ia || !ib) {
@@ -1294,7 +1302,7 @@ wss.on('connection', (ws) => {
       if (Math.hypot(me.x, me.z) > A.R) { const I = A.islandOf(me.x, me.z); if (I && I.id) questEvent(me, 'visit', String(I.id)); }
     } else if (m.t === 'atk') {
       playerAttack(me.ch, me, Math.floor(num(m.k, -1)), num(m.ry, me.ry));
-    } else if (m.t === 'use' || m.t === 'equip' || m.t === 'buy' || m.t === 'sell') {
+    } else if (m.t === 'use' || m.t === 'equip' || m.t === 'buy' || m.t === 'sell' || m.t === 'bagup') {
       handleShop(me, m);
     } else if (m.t === 'chestopen') {
       openChest(me);
