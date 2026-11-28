@@ -35,6 +35,21 @@
       <button data-gfx="low">낮음</button>
     </div>
     <button id="start" class="big">섬에 들어가기</button>
+    <div id="acctBox" hidden>
+      <div id="acctState"></div>
+      <div id="acctBtns">
+        <button id="acctLogin" type="button">로그인</button>
+        <button id="acctSignup" type="button">계정 만들기</button>
+        <button id="acctLogout" type="button" hidden>로그아웃</button>
+      </div>
+      <form id="acctForm" hidden autocomplete="off">
+        <div id="acctTitle"></div>
+        <input id="acctId" maxlength="12" placeholder="아이디 (한글·영문·숫자 2~12자)" autocomplete="off" autocapitalize="off">
+        <input id="acctPw" type="password" maxlength="30" placeholder="비밀번호 (4자 이상)" autocomplete="off">
+        <div id="acctMsg"></div>
+        <div class="row"><button id="acctOk" type="submit">확인</button><button id="acctCancel" type="button">취소</button></div>
+      </form>
+    </div>
     <p id="status" class="status"></p>
     <p class="guide"><a href="/guide.html" target="_blank" rel="noopener">📖 설명서·공략집 보기</a></p>
   </div>

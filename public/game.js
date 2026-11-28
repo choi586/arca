@@ -1174,12 +1174,22 @@ function touchAct() { // 키나 화면을 누르면 '아직 여기 있어요'를
 addEventListener('keydown', touchAct); addEventListener('pointerdown', touchAct);
 function loadSt() { try { return JSON.parse(store.get('arca.st') || 'null'); } catch (e) { return null; } }
 function loadQ() { try { return JSON.parse(store.get('arca.q') || 'null'); } catch (e) { return null; } }
+function loadAcct() { try { const a = JSON.parse(store.get('arca.acc') || 'null'); return a && a.id && a.tok ? a : null; } catch (e) { return null; } }
+// 계정에 담긴 캐릭터를 이 브라우저에 옮겨 적음 / 이 브라우저에 남은 캐릭터를 지움 (계정이 다른 기기로 넘어갔거나 로그아웃했을 때)
+function writeSave(sv) {
+  store.set('arca.lv', String(sv.lv || 1)); store.set('arca.xp', String(sv.xp || 0)); store.set('arca.inv', JSON.stringify(sv.inv || null));
+  store.set('arca.st', JSON.stringify(sv.st || null)); store.set('arca.q', JSON.stringify(sv.q || null)); store.set('arca.title', sv.title || '');
+  if (sv.name) store.set('arca.name', sv.name);
+  if (sv.color) store.set('arca.color', sv.color);
+  if (sv.hat !== undefined) store.set('arca.hat', String(sv.hat));
+}
+function wipeSave() { for (const k of ['acc', 'lv', 'xp', 'inv', 'st', 'q', 'title', 'deco']) { try { localStorage.removeItem('arca.' + k); } catch (e) { /* 괜찮음 */ } } }
 function loadInv() { try { return JSON.parse(store.get('arca.inv') || 'null'); } catch (e) { return null; } }
 function connect() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   ws = new WebSocket(`${proto}://${location.host}`);
   ws.onopen = () => ws.send(JSON.stringify({ t: 'join', name: profile.name, color: profile.color, hat: profile.hat,
-    lv: Number(store.get('arca.lv')) || 1, xp: Number(store.get('arca.xp')) || 0, inv: loadInv(), deco: loadDeco(), q: loadQ(), uid: myUid(), st: loadSt(), title: store.get('arca.title') || '', v: ARCA.VERSION }));
+    lv: Number(store.get('arca.lv')) || 1, xp: Number(store.get('arca.xp')) || 0, inv: loadInv(), deco: loadDeco(), q: loadQ(), uid: myUid(), st: loadSt(), title: store.get('arca.title') || '', v: ARCA.VERSION, acc: (loadAcct() || {}).id, tok: (loadAcct() || {}).tok }));
   ws.onmessage = (ev) => {
     let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
     const h = handlers[m.t]; if (h) h(m);
@@ -1406,6 +1416,7 @@ const handlers = {
   },
   kicked(m) {
     kickedOut = true; joined = false;
+    if (m.out) wipeSave(); // 계정이 다른 기기로 넘어감: 이 기기에는 캐릭터를 남기지 않음 (복사 방지)
     const box = $('kicked');
     box.querySelector('p').textContent = m.text;
     box.hidden = false;
@@ -1462,6 +1473,45 @@ function net(obj) { if (joined && ws.readyState === 1) ws.send(JSON.stringify(ob
   };
   $('start').onclick = start;
   $('name').addEventListener('keydown', (e) => { if (e.key === 'Enter') start(); });
+
+  // ----- 계정: 아이디와 비밀번호로 캐릭터를 서버에 맡겨서 다른 기기에서도 이어 함 -----
+  let mode = '';
+  const acct = loadAcct(), lvNow = Number(store.get('arca.lv')) || 1;
+  const api = (body) => fetch('/api/acct', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then((r) => r.json());
+  const show = () => {
+    $('acctState').innerHTML = '';
+    if (acct) { $('acctState').append('🔐 ', el('b', '', acct.id), ' 계정에 저장되고 있어요. 다른 기기에서도 이 아이디로 로그인하면 이어서 해요.'); }
+    else $('acctState').textContent = '지금은 이 기기에만 저장돼요. 계정을 만들면 다른 기기에서도 이어서 할 수 있어요.';
+    $('acctLogin').hidden = $('acctSignup').hidden = !!acct; $('acctLogout').hidden = !acct;
+  };
+  const open = (m) => {
+    mode = m; $('acctForm').hidden = false; $('acctMsg').textContent = '';
+    $('acctTitle').textContent = m === 'signup' ? `계정 만들기 — 지금 이 기기의 Lv${lvNow} 캐릭터가 계정에 저장돼요` : '로그인 — 계정에 저장된 캐릭터를 불러와요';
+    $('acctId').focus();
+  };
+  fetch('/api/acct').then((r) => r.json()).then((r) => { if (r.on || acct) { $('acctBox').hidden = false; show(); } }).catch(() => {});
+  $('acctLogin').onclick = () => open('login');
+  $('acctSignup').onclick = () => open('signup');
+  $('acctCancel').onclick = () => { $('acctForm').hidden = true; };
+  $('acctLogout').onclick = () => {
+    if (!confirm(`로그아웃하면 이 기기에는 캐릭터가 남지 않아요.\n캐릭터는 '${acct.id}' 계정에 그대로 있고, 다시 로그인하면 돌아와요.\n로그아웃할까요?`)) return;
+    wipeSave(); location.reload();
+  };
+  $('acctForm').onsubmit = (e) => {
+    e.preventDefault();
+    const id = $('acctId').value.trim(), pw = $('acctPw').value;
+    if (mode === 'login' && lvNow > 1 && !confirm(`로그인하면 이 기기에 있던 Lv${lvNow} 캐릭터는 사라지고, 계정에 저장된 캐릭터로 바뀌어요.\n(이 캐릭터를 지키려면 취소하고 '계정 만들기'를 눌러요)\n로그인할까요?`)) return;
+    if (mode === 'signup' && !confirm(`지금 이 기기의 Lv${lvNow} 캐릭터를 '${id}' 계정에 저장해요.\n비밀번호를 잊으면 선생님께 말해야 하니 꼭 기억해 두세요.\n만들까요?`)) return;
+    $('acctOk').disabled = true; $('acctMsg').textContent = '잠시만요…';
+    const save = { lv: lvNow, xp: Number(store.get('arca.xp')) || 0, inv: loadInv(), st: loadSt(), q: loadQ(), title: store.get('arca.title') || '', name: $('name').value.trim().slice(0, 12), color: profile.color, hat: profile.hat };
+    api(mode === 'signup' ? { op: 'signup', id, pw, save } : { op: 'login', id, pw }).then((r) => {
+      $('acctOk').disabled = false;
+      if (!r.ok) { $('acctMsg').textContent = r.text || '잘 안 됐어요. 다시 해 주세요'; return; }
+      if (mode === 'login') { try { localStorage.removeItem('arca.deco'); } catch (e2) { /* 괜찮음 */ } writeSave(r.save); }
+      store.set('arca.acc', JSON.stringify({ id: r.id, tok: r.tok }));
+      location.reload();
+    }).catch(() => { $('acctOk').disabled = false; $('acctMsg').textContent = '서버에 연결하지 못했어요. 잠시 뒤 다시 해 주세요'; });
+  };
 }
 
 // ================= 조작 =================

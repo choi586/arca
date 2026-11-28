@@ -2,6 +2,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
 const A = require('./public/shared.js');
 
@@ -97,7 +98,7 @@ for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, async () => {
   for (const c of channels.values()) for (const p of c.players.values()) { seenLeave(p); p.joinedAt = 0; }
   if (seen.size) store.dirty = true;
   const t = setTimeout(() => process.exit(0), 8000);
-  await saveStore(); clearTimeout(t); process.exit(0);
+  await Promise.all([saveStore(), saveAccts(true)]); clearTimeout(t); process.exit(0);
 });
 const seenKey = (p) => p.uid || 'name:' + p.name;
 function seenJoin(p) {
@@ -113,13 +114,158 @@ function seenTouch(p, e = seen.get(seenKey(p))) {
   Object.assign(e, { name: p.name, lv: p.lv, gold: p.inv.gold, last: Date.now() });
 }
 function seenLeave(p) { const e = seen.get(seenKey(p)); if (e && p.joinedAt) { e.playMs += Date.now() - p.joinedAt; seenTouch(p, e); store.dirty = true; } }
-function adminStatus(req, res) {
-  // 열쇠에 한글이 들어가도 되도록 화면이 주소 글자(encodeURIComponent)로 바꿔 보냄. 비교는 해시끼리
+// ---------- 계정: 아이디와 비밀번호로 캐릭터를 서버에 저장 → 다른 기기에서도 이어서 함 ----------
+// 계정마다 파일 하나(accounts/<아이디>.json)를 기록 저장소에 둠. 비밀번호는 그대로 두지 않고 scrypt 로 섞은 값만 저장
+// 시험할 때는 ACCT_DIR 로 내 컴퓨터의 폴더를 씀. 둘 다 없으면 계정 기능을 끔(서버가 잠들면 사라질 곳에 캐릭터를 맡기지 않게)
+const ACCT_DIR = (process.env.ACCT_DIR || '').trim();
+const ACCT_ON = !!DATA_TOKEN || !!ACCT_DIR;
+const accts = new Map(), acctLoading = new Map(); // key -> 계정 / 불러오는 중인 약속
+const acctKey = (id) => String(id || '').trim().toLowerCase();
+const acctIdOk = (id) => /^[가-힣a-zA-Z0-9_]{2,12}$/.test(id);
+const acctPath = (key) => 'accounts/' + Buffer.from(key).toString('hex') + '.json';
+const sha = (t) => crypto.createHash('sha256').update(String(t)).digest('hex');
+const pwHash = (pw, salt) => new Promise((ok, no) => crypto.scrypt(String(pw), salt, 32, (e, b) => (e ? no(e) : ok(b.toString('hex')))));
+async function ghFile(file, method, body) {
+  const res = await fetch(`https://api.github.com/repos/${DATA_REPO}/contents/${file}`, {
+    method, body: body && JSON.stringify(body),
+    headers: { Authorization: `Bearer ${DATA_TOKEN}`, Accept: 'application/vnd.github+json', 'User-Agent': 'arca-server', 'X-GitHub-Api-Version': '2022-11-28' },
+  });
+  return { status: res.status, json: await res.json().catch(() => ({})) };
+}
+function acctLoad(key) { // 없으면 null. 한 번 불러온 계정은 서버가 켜져 있는 동안 기억함
+  if (accts.has(key)) return Promise.resolve(accts.get(key));
+  if (acctLoading.has(key)) return acctLoading.get(key);
+  const job = (async () => {
+    let a = null;
+    if (ACCT_DIR) { try { a = JSON.parse(fs.readFileSync(path.join(ACCT_DIR, path.basename(acctPath(key))), 'utf8')); } catch (e) { a = null; } }
+    else {
+      const r = await ghFile(acctPath(key), 'GET');
+      if (r.status === 200) { a = JSON.parse(Buffer.from(r.json.content || '', 'base64').toString('utf8')); a.sha = r.json.sha; }
+      else if (r.status !== 404) throw new Error(`계정 불러오기 ${r.status}`);
+    }
+    if (a) accts.set(key, a);
+    return a;
+  })().finally(() => acctLoading.delete(key));
+  acctLoading.set(key, job);
+  return job;
+}
+async function acctSave(a) { // 실패하면 dirty 로 남겨서 다음 저장 때 다시 함
+  if (a.busy) { a.dirty = true; return; }
+  a.busy = true; a.dirty = false;
+  try {
+    const data = JSON.stringify({ id: a.id, key: a.key, salt: a.salt, hash: a.hash, tok: a.tok, created: a.created, updated: Date.now(), save: a.save });
+    if (ACCT_DIR) { fs.mkdirSync(ACCT_DIR, { recursive: true }); fs.writeFileSync(path.join(ACCT_DIR, path.basename(acctPath(a.key))), data); }
+    else {
+      const body = { message: `계정 저장 (${a.key})`, content: Buffer.from(data).toString('base64') };
+      if (a.sha) body.sha = a.sha;
+      let r = await ghFile(acctPath(a.key), 'PUT', body);
+      if (r.status === 409 || r.status === 422) { const g = await ghFile(acctPath(a.key), 'GET'); if (g.status === 200) { body.sha = g.json.sha; r = await ghFile(acctPath(a.key), 'PUT', body); } }
+      if (r.status !== 200 && r.status !== 201) throw new Error(`계정 저장 ${r.status} ${r.json.message || ''}`);
+      a.sha = r.json.content.sha;
+    }
+    a.error = '';
+  } catch (e) { a.dirty = true; a.error = String(e.message || e).slice(0, 200); console.log('계정 저장 실패:', a.key, a.error); }
+  a.busy = false;
+}
+function cleanSave(raw) { // 계정에 담는 캐릭터 (브라우저가 보낸 것이든 서버가 만든 것이든 같은 모양으로)
+  raw = raw && typeof raw === 'object' ? raw : {};
+  const lv = Math.max(1, Math.min(A.MAX_LV, Math.floor(num(raw.lv, 1))));
+  return { lv, xp: Math.max(0, Math.min(A.needXp(lv) - 1, Math.floor(num(raw.xp)))), inv: A.cleanInv(raw.inv), st: A.cleanStats(raw.st), q: A.cleanQuests(raw.q),
+    title: A.TITLES[raw.title] ? raw.title : '', name: cleanText(raw.name, 12), color: COLORS.includes(raw.color) ? raw.color : '', hat: Math.max(0, Math.min(3, Math.floor(num(raw.hat)))) };
+}
+function acctSnap(p) { // 접속 중인 캐릭터의 지금 상태를 계정에 옮겨 적음
+  const a = p.acct && accts.get(p.acct); if (!a) return;
+  a.save = cleanSave({ lv: p.lv, xp: p.xp, inv: p.inv, st: p.st, q: p.q, title: p.title, name: p.name, color: p.color, hat: p.hat });
+  a.dirty = true;
+}
+function saveAccts(all) { // 바뀐 계정만 저장. all 이면 접속 중인 사람부터 옮겨 적음
+  if (!ACCT_ON) return Promise.resolve();
+  if (all) for (const c of channels.values()) for (const p of c.players.values()) acctSnap(p);
+  return Promise.all([...accts.values()].filter((a) => a.dirty).map(acctSave));
+}
+setInterval(() => saveAccts(true), Number(process.env.SAVE_MS) || 5 * 60000);
+function acctKick(key, text, out = true) { for (const c of channels.values()) for (const q of [...c.players.values()]) if (q.acct === key) { acctSnap(q); q.acct = ''; kick(q, text, out); } } // acct 를 비워서, 연결이 닫힐 때 옛 상태로 덮어쓰지 않게 함
+function readBody(req, max) {
+  return new Promise((ok, no) => {
+    let n = 0; const parts = [];
+    req.on('data', (d) => { n += d.length; if (n > max) { no(new Error('big')); req.destroy(); } else parts.push(d); });
+    req.on('end', () => { try { ok(JSON.parse(Buffer.concat(parts).toString('utf8') || '{}')); } catch (e) { no(e); } });
+    req.on('error', no);
+  });
+}
+let signups = 0; setInterval(() => { signups = 0; }, 3600000); // 한 시간에 만들 수 있는 계정 수(도배 방지)
+async function acctApi(req, res) {
+  const out = (code, o) => { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(o)); };
+  if (req.method === 'GET') return out(200, { on: ACCT_ON });
+  if (req.method !== 'POST') return out(405, { ok: false });
+  if (!ACCT_ON) return out(200, { ok: false, text: '지금은 계정을 쓸 수 없어요' });
+  let m;
+  try { m = await readBody(req, 60000); } catch (e) { return out(400, { ok: false, text: '보낸 내용을 읽지 못했어요' }); }
+  const id = cleanText(m.id, 12), key = acctKey(id), pw = String(m.pw || '');
+  try {
+    if (m.op === 'adminpw') { // 선생님이 비밀번호를 새로 정해 줌 (그 계정으로 접속 중인 기기는 내보냄)
+      if (!adminKeyOk(req)) return out(401, { ok: false, text: '열쇠가 맞지 않아요' });
+      const a = await acctLoad(key);
+      if (!a) return out(200, { ok: false, text: '그런 아이디가 없어요' });
+      if (pw.length < 4 || pw.length > 30) return out(200, { ok: false, text: '비밀번호는 4~30자로 정해요' });
+      a.salt = crypto.randomBytes(12).toString('hex'); a.hash = await pwHash(pw, a.salt); a.tok = ''; a.fails = 0; a.lockUntil = 0;
+      acctKick(key, '선생님이 비밀번호를 바꿨어요. 새 비밀번호로 다시 로그인해 주세요');
+      await acctSave(a);
+      return out(200, { ok: !a.error, text: a.error ? '저장하지 못했어요: ' + a.error : `${a.id} 계정의 비밀번호를 바꿨어요`, lv: a.save.lv, name: a.save.name });
+    }
+    if (m.op === 'adminmake') { // 선생님이 잃어버린 캐릭터를 되살려 줌: 레벨과 골드만 넣은 새 계정을 만듦 (가방은 서버에 남아 있지 않음)
+      if (!adminKeyOk(req)) return out(401, { ok: false, text: '열쇠가 맞지 않아요' });
+      if (!acctIdOk(id)) return out(200, { ok: false, text: '아이디는 한글·영문·숫자로 2~12자예요 (띄어쓰기 없이)' });
+      if (pw.length < 4 || pw.length > 30) return out(200, { ok: false, text: '비밀번호는 4~30자로 정해요' });
+      if (await acctLoad(key)) return out(200, { ok: false, text: '이미 있는 아이디예요' });
+      const salt = crypto.randomBytes(12).toString('hex');
+      const a = { id, key, salt, hash: await pwHash(pw, salt), tok: '', created: Date.now(), save: cleanSave({ lv: m.lv, inv: { gold: m.gold }, name: m.name }) };
+      accts.set(key, a);
+      await acctSave(a);
+      if (a.error) { accts.delete(key); return out(200, { ok: false, text: '저장하지 못했어요: ' + a.error }); }
+      return out(200, { ok: true, text: `${a.id} 계정을 만들었어요 (Lv${a.save.lv}, ${a.save.inv.gold}G)` });
+    }
+    if (!acctIdOk(id)) return out(200, { ok: false, text: '아이디는 한글·영문·숫자로 2~12자예요 (띄어쓰기 없이)' });
+    if (pw.length < 4 || pw.length > 30) return out(200, { ok: false, text: '비밀번호는 4~30자로 정해요' });
+    if (m.op === 'signup') {
+      if (await acctLoad(key)) return out(200, { ok: false, text: '이미 있는 아이디예요. 다른 아이디로 만들어요' });
+      if (++signups > 60) return out(200, { ok: false, text: '지금은 계정을 너무 많이 만들었어요. 조금 뒤에 다시 해 주세요' });
+      const salt = crypto.randomBytes(12).toString('hex'), tok = crypto.randomBytes(24).toString('hex');
+      const a = { id, key, salt, hash: await pwHash(pw, salt), tok: sha(tok), created: Date.now(), save: cleanSave(m.save) };
+      if (accts.has(key)) return out(200, { ok: false, text: '이미 있는 아이디예요. 다른 아이디로 만들어요' });
+      accts.set(key, a);
+      await acctSave(a);
+      if (a.error) { accts.delete(key); return out(200, { ok: false, text: '계정을 저장하지 못했어요. 잠시 뒤 다시 해 주세요' }); }
+      return out(200, { ok: true, id: a.id, tok, save: a.save });
+    }
+    if (m.op === 'login') {
+      const a = await acctLoad(key);
+      if (!a) return out(200, { ok: false, text: '아이디나 비밀번호가 맞지 않아요' });
+      if (Date.now() < (a.lockUntil || 0)) return out(200, { ok: false, text: `여러 번 틀려서 잠겼어요. ${Math.ceil((a.lockUntil - Date.now()) / 1000)}초 뒤에 다시 해 주세요` });
+      if (await pwHash(pw, a.salt) !== a.hash) {
+        a.fails = (a.fails || 0) + 1;
+        if (a.fails >= 5) { a.fails = 0; a.lockUntil = Date.now() + 60000; }
+        return out(200, { ok: false, text: '아이디나 비밀번호가 맞지 않아요' });
+      }
+      a.fails = 0;
+      acctKick(key, '다른 기기에서 로그인해서 이 기기는 로그아웃됐어요. 다시 로그인하면 이어서 할 수 있어요'); // 먼저 있던 기기의 마지막 상태를 받아 적고 내보냄
+      const tok = crypto.randomBytes(24).toString('hex');
+      a.tok = sha(tok); a.dirty = true;
+      await acctSave(a);
+      return out(200, { ok: true, id: a.id, tok, save: a.save });
+    }
+    return out(400, { ok: false });
+  } catch (e) { console.log('계정 처리 실패:', String(e.message || e)); return out(200, { ok: false, text: '서버가 계정을 불러오지 못했어요. 잠시 뒤 다시 해 주세요' }); }
+}
+function adminKeyOk(req) { // 열쇠에 한글이 들어가도 되도록 화면이 주소 글자(encodeURIComponent)로 바꿔 보냄. 비교는 해시끼리
   let key = String(req.headers['x-admin-key'] || '');
   try { key = decodeURIComponent(key).trim(); } catch (e) { /* 그대로 비교 */ }
-  const crypto = require('crypto'), h = (t) => crypto.createHash('sha256').update(t).digest();
+  const h = (t) => crypto.createHash('sha256').update(t).digest();
+  return !!ADMIN_KEY && [...ADMIN_KEY].length >= 8 && crypto.timingSafeEqual(h(key), h(ADMIN_KEY));
+}
+function adminStatus(req, res) {
   const short = ADMIN_KEY && [...ADMIN_KEY].length < 8;
-  const ok = ADMIN_KEY && !short && crypto.timingSafeEqual(h(key), h(ADMIN_KEY));
+  const ok = adminKeyOk(req);
   if (!ok) return setTimeout(() => { res.writeHead(ADMIN_KEY ? 401 : 404, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: !ADMIN_KEY ? 'off' : short ? 'short' : 'key' })); }, 400);
   const now = Date.now(), online = [], onKeys = new Map();
   for (const [ch, c] of channels) for (const p of c.players.values()) {
@@ -147,6 +293,7 @@ const server = http.createServer((req, res) => {
   try { url = new URL(req.url, 'http://x'); } catch (e) { res.writeHead(400); return res.end(); }
   if (url.pathname === '/healthz') { res.writeHead(200); return res.end('ok'); }
   if (url.pathname === '/admin/status') return adminStatus(req, res);
+  if (url.pathname === '/api/acct') return acctApi(req, res);
   let rel = decodeURIComponent(url.pathname);
   if (rel === '/') rel = '/index.html';
   const file = path.join(PUBLIC, path.normalize(rel));
@@ -1235,7 +1382,8 @@ wss.on('connection', (ws) => {
   ws.isAlive = true;
   ws.on('pong', () => { ws.isAlive = true; });
 
-  ws.on('message', (raw) => {
+  let joinAcct = null, joinBusy = false; // 계정으로 들어올 때: 계정을 불러온 뒤 입장을 이어서 함
+  const onMsg = (raw) => {
     if (--budget < 0) return;
     let m;
     try { m = JSON.parse(raw); } catch (e) { return; }
@@ -1246,29 +1394,42 @@ wss.on('connection', (ws) => {
     if (m.t === 'join' && !me) {
       // 새로고침을 안 한 예전 화면은 새 몬스터·아이템을 몰라서 오류가 나므로, 다시 들어오게 안내함
       if (num(m.v) < A.VERSION) { send(ws, { t: 'kicked', text: '🆕 새 버전이 나왔어요! 아래 버튼을 누르면 새 버전으로 다시 들어가요. 캐릭터는 그대로예요.' }); return ws.close(); }
+      if (m.acc && !joinAcct) { // 로그인한 기기: 계정을 불러와 열쇠(tok)가 맞는지 본 뒤에 들여보냄
+        if (joinBusy) return;
+        joinBusy = true;
+        const out = (text) => { send(ws, { t: 'kicked', text, out: true }); ws.close(); };
+        if (!ACCT_ON) return out('지금은 계정을 쓸 수 없어요');
+        acctLoad(acctKey(m.acc)).then((a) => {
+          if (!a || !a.tok || a.tok !== sha(m.tok)) return out('다른 기기에서 로그인해서 이 기기는 로그아웃됐어요. 다시 로그인하면 이어서 할 수 있어요');
+          joinAcct = a; budget++; onMsg(raw);
+        }).catch(() => { send(ws, { t: 'kicked', text: '계정을 불러오지 못했어요. 잠시 뒤 다시 들어와 주세요' }); ws.close(); });
+        return;
+      }
+      if (joinAcct) acctKick(joinAcct.key, '다른 창에서 같은 계정으로 접속해서 이 창은 섬에서 나왔어요', false); // 먼저 있던 창의 마지막 상태를 받아 적은 뒤
+      const sv = joinAcct ? joinAcct.save : m; // 계정이 있으면 브라우저가 보낸 것 대신 서버에 저장된 캐릭터를 씀
       // 같은 브라우저가 또 들어오면 먼저 있던 캐릭터를 내보냄 (창을 두 개 열었거나, 끊긴 접속이 남은 경우)
       const uid = cleanText(m.uid, 40);
       if (uid) for (const c of channels.values()) for (const q of c.players.values()) if (q.uid === uid) kick(q, '다른 창에서 다시 접속해서 이 창은 섬에서 나왔어요');
       const ch = pickChannel();
       // 레벨은 브라우저에 저장된 값을 이어받음 (무료 서버는 잠들면 기억이 지워져서)
-      const lv = Math.max(1, Math.min(A.MAX_LV, Math.floor(num(m.lv, 1))));
+      const lv = Math.max(1, Math.min(A.MAX_LV, Math.floor(num(sv.lv, 1))));
       me = {
         id: nextId++, ws, ch,
         name: cleanText(m.name, 12) || '바람잡이',
         color: COLORS.includes(m.color) ? m.color : COLORS[(nextId * 3) % COLORS.length],
         hat: Math.max(0, Math.min(3, Math.floor(num(m.hat)))),
         x: (Math.random() - 0.5) * 6, y: 2, z: 6 + Math.random() * 3, ry: Math.PI, a: 0, // 광장 바닥 높이(공중에 떠 보이지 않게)
-        lastChat: 0, lv, xp: Math.max(0, Math.min(A.needXp(lv) - 1, Math.floor(num(m.xp)))),
+        lastChat: 0, lv, xp: Math.max(0, Math.min(A.needXp(lv) - 1, Math.floor(num(sv.xp)))), acct: joinAcct ? joinAcct.key : '',
         hp: 0, maxHp: 0, atk: 0, dead: false, deadAt: 0, lastHurt: 0, lastAtk: 0, cds: {}, guard: 0, guardUntil: 0, potionAt: 0,
-        inv: A.cleanInv(m.inv), // 가방도 브라우저에 저장된 것을 이어받음
+        inv: A.cleanInv(sv.inv), // 가방도 브라우저에 저장된 것을 이어받음
         party: 0, trade: null, asks: new Map(), uid, lastAct: Date.now(),
-        st: A.cleanStats(m.st), title: '', duel: null, fish: null, buffUntil: 0, // 기록도 브라우저에 저장된 것을 이어받음
-        q: A.cleanQuests(m.q), // 의뢰 진행도 브라우저에 저장된 것을 이어받음
+        st: A.cleanStats(sv.st), title: '', duel: null, fish: null, buffUntil: 0, // 기록도 브라우저에 저장된 것을 이어받음
+        q: A.cleanQuests(sv.q), // 의뢰 진행도 브라우저에 저장된 것을 이어받음
       };
       applyLevel(me); me.hp = me.maxHp;
-      if (A.TITLES[m.title] && A.TITLES[m.title].ok(statsOf(me))) me.title = m.title;
+      if (A.TITLES[sv.title] && A.TITLES[sv.title].ok(statsOf(me))) me.title = sv.title;
       // 보장이 생기기 전에 낚은 횟수도 쳐 줌 (처음 한 번만)
-      if (m.inv && m.inv.wp === undefined && !me.inv.pets.includes('whale')) me.inv.wp = Math.min(A.FISH.whalePity - 1, me.st.fish);
+      if (sv.inv && sv.inv.wp === undefined && !me.inv.pets.includes('whale')) me.inv.wp = Math.min(A.FISH.whalePity - 1, me.st.fish);
       const c = channels.get(ch);
       c.players.set(me.id, me);
       seenJoin(me);
@@ -1333,12 +1494,14 @@ wss.on('connection', (ws) => {
       const e = Math.max(1, Math.min(3, Math.floor(num(m.e))));
       broadcast(me.ch, { t: 'emote', id: me.id, e }, me.id);
     }
-  });
+  };
 
+  ws.on('message', onMsg);
   ws.on('close', () => {
     clearInterval(refill);
     if (!me) return;
     seenLeave(me);
+    if (me.acct) { acctSnap(me); const a = accts.get(me.acct); if (a) acctSave(a); } // 나갈 때 바로 저장
     const c = channels.get(me.ch);
     c.players.delete(me.id);
     if (me.duel) endDuel(me.duel, null, `${me.name} 님이 나가서 결투가 끝났어요`);
@@ -1379,8 +1542,8 @@ setInterval(() => {
 }, TICK_MS);
 
 // 섬에서 내보내기 (오래 쉰 사람, 같은 브라우저의 예전 접속)
-function kick(p, text) {
-  send(p.ws, { t: 'kicked', text });
+function kick(p, text, out) { // out: 이 기기에 남은 캐릭터 사본을 지우게 함 (계정이 다른 기기로 넘어갔을 때)
+  send(p.ws, { t: 'kicked', text, out: !!out });
   channels.get(p.ch).players.delete(p.id); // 바로 안 보이게 하고, 나머지 정리는 연결이 닫힐 때
   broadcast(p.ch, { t: 'leave', id: p.id, name: p.name });
   p.kicked = true;

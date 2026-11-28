@@ -68,6 +68,16 @@
 
   <h2>다녀간 사람 <small id="visNote"></small></h2>
   <div class="wrap"><table id="visitors"></table></div>
+
+  <h2>계정 관리 <small>로그인 계정의 비밀번호를 바꾸거나, 잃어버린 캐릭터를 되살려 줘요</small></h2>
+  <div class="wrap" style="padding:12px;display:grid;gap:10px">
+    <div><b>비밀번호 바꾸기</b> <small class="sub">비밀번호를 잊은 학생에게 새로 정해 줘요. 그 계정으로 접속 중인 기기는 섬에서 나와요.</small><br>
+      <input id="pwId" placeholder="아이디" autocomplete="off" style="width:140px"> <input id="pwNew" placeholder="새 비밀번호 (4자 이상)" autocomplete="off" style="width:180px"> <button id="pwGo">바꾸기</button></div>
+    <div><b>캐릭터 되살리기</b> <small class="sub">위 '다녀간 사람' 표에서 레벨과 골드를 보고 새 계정을 만들어 줘요. 가방·무기·강화는 서버에 남아 있지 않아서 못 살려요.</small><br>
+      <input id="mkId" placeholder="새 아이디" autocomplete="off" style="width:140px"> <input id="mkPw" placeholder="비밀번호 (4자 이상)" autocomplete="off" style="width:160px">
+      <input id="mkName" placeholder="캐릭터 이름" autocomplete="off" style="width:120px"> <input id="mkLv" type="number" min="1" max="70" placeholder="레벨" style="width:70px"> <input id="mkGold" type="number" min="0" max="999999" placeholder="골드" style="width:100px"> <button id="mkGo">계정 만들기</button></div>
+    <div id="acctMsg" class="sub"></div>
+  </div>
 </main>
 
 <script>
@@ -80,6 +90,17 @@
   let key = '', timer = 0, data = null;
   try { key = sessionStorage.getItem('arca.admin') || ''; } catch (e) { /* 저장 못 해도 괜찮음 */ }
   const sort = { online: ['onMs', -1], visitors: ['last', -1] };
+
+  async function acctOp(body) {
+    $('acctMsg').textContent = '잠시만요…';
+    try {
+      const res = await fetch('/api/acct', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': encodeURIComponent(key) }, body: JSON.stringify(body) });
+      const r = await res.json();
+      $('acctMsg').textContent = (r.ok ? '✅ ' : '⚠️ ') + (r.text || (r.ok ? '됐어요' : '잘 안 됐어요'));
+    } catch (e) { $('acctMsg').textContent = '⚠️ 서버에 연결하지 못했어요'; }
+  }
+  $('pwGo').onclick = () => acctOp({ op: 'adminpw', id: $('pwId').value.trim(), pw: $('pwNew').value });
+  $('mkGo').onclick = () => acctOp({ op: 'adminmake', id: $('mkId').value.trim(), pw: $('mkPw').value, name: $('mkName').value.trim(), lv: Number($('mkLv').value) || 1, gold: Number($('mkGold').value) || 0 });
 
   function show(logged) { $('login').hidden = logged; $('app').hidden = !logged; if (!logged) { clearTimeout(timer); $('key').focus(); } }
 
