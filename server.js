@@ -894,8 +894,12 @@ function startTrial(p) {
   const set = parties.get(p.party);
   if (!set) return notice(p, '⚔️ 시련은 파티로만 도전할 수 있어요. 사람들(P)에서 친구를 파티에 초대해요');
   if (c.trial) return notice(p, `⚔️ 다른 파티가 도전하는 중이에요. 길어도 ${mmss(c.trial.end - now)} 뒤에는 끝나요`);
-  const team = [...set].filter((q) => q.ch === p.ch && !q.dead && !q.duel && !q.trade && near(q));
-  if (team.length < A.TRIAL.minParty) return notice(p, `⚔️ 파티원 ${A.TRIAL.minParty}명 이상이 비석 가까이에 모여야 해요 (지금 ${team.length}명)`);
+  // 파티원이 모두 비석 앞에 모여야 시작함 (누가 빠진 채로 올라가지 않게)
+  const team = [...set], away = team.filter((q) => q.ch !== p.ch || q.dead || !near(q));
+  if (away.length) return notice(p, `⚔️ 파티원이 다 모여야 올라갈 수 있어요. 아직 안 온 사람: ${away.map((q) => q.name).join(', ')}`);
+  const busy = team.filter((q) => q.duel || q.trade);
+  if (busy.length) return notice(p, `⚔️ ${busy.map((q) => q.name).join(', ')} 님이 결투나 거래를 하는 중이에요`);
+  if (team.length < A.TRIAL.minParty) return;
   const m = c.warden;
   let power = 0;
   for (const q of team) power += q.atk * (1 + A.UP_BONUS * (q.inv.up[q.inv.equip] || 0));
