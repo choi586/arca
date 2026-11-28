@@ -826,6 +826,21 @@ function makeMonster(kind) {
     body.add(core, shell, eye(-0.17, 1.58, 0.4), eye(0.17, 1.58, 0.4));
     [-1, 1].forEach((sd) => { const leaf = monsterMesh(new THREE.ConeGeometry(0.22, 0.9, 4), '#2f9e44', mats); leaf.position.set(sd * 0.85, 1.55, -0.1); leaf.rotation.z = sd * -1.2; body.add(leaf); });
     g.userData.float = true;
+  } else if (kind === 'warden') { // 파티 시련의 보스: 떠 있는 갑옷 수호자
+    const robe = monsterMesh(new THREE.ConeGeometry(1.5, 3.6, 7), '#343a6b', mats); robe.position.y = 2.4;
+    const chest = monsterMesh(new THREE.DodecahedronGeometry(1.15, 0), '#4c5196', mats); chest.position.y = 4.0; chest.scale.set(1.25, 0.9, 0.9);
+    const core = monsterMesh(new THREE.OctahedronGeometry(0.45, 0), '#ff8787', mats, { emissive: '#ff6b6b', emissiveIntensity: 1.6 }); core.position.set(0, 4.0, 1.0);
+    const head = monsterMesh(new THREE.OctahedronGeometry(0.72, 0), '#dee2ff', mats, { emissive: '#748ffc', emissiveIntensity: 0.6 }); head.position.y = 5.45;
+    const halo = monsterMesh(new THREE.TorusGeometry(1.0, 0.09, 5, 20), '#ffd43b', mats, { emissive: '#ffd43b', emissiveIntensity: 1.4 }); halo.position.y = 6.45; halo.rotation.x = Math.PI / 2;
+    body.add(robe, chest, core, head, halo, eye(-0.22, 5.5, 0.5, 1.2), eye(0.22, 5.5, 0.5, 1.2));
+    const arms = [-1, 1].map((sd) => {
+      const a = new THREE.Group(); a.position.set(sd * 1.9, 4.5, 0);
+      const sh = monsterMesh(new THREE.DodecahedronGeometry(0.6, 0), '#5c63b0', mats);
+      const blade = monsterMesh(new THREE.BoxGeometry(0.32, 3.2, 0.12), '#e9ecef', mats, { emissive: '#bac8ff', emissiveIntensity: 0.5 }); blade.position.y = -1.9;
+      const hilt = monsterMesh(new THREE.BoxGeometry(0.9, 0.16, 0.2), '#ffd43b', mats); hilt.position.y = -0.4;
+      a.add(sh, blade, hilt); body.add(a); return a;
+    });
+    g.userData.arms = arms; g.userData.float = true;
   } else if (kind === 'golem') { // 월드 보스: 큰 바위 거인
     const glow = (geo, x, y, z) => { const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0x66e3ff })); m.position.set(x, y, z); return m; };
     const torso = monsterMesh(new THREE.DodecahedronGeometry(1.7, 0), '#6c6480', mats); torso.position.y = 2.9; torso.scale.set(1.15, 1, 0.9);
@@ -937,8 +952,18 @@ const effects = [];
 function addEffect(obj, dur, update, onEnd) { scene.add(obj); effects.push({ obj, t: 0, dur, update, onEnd }); }
 function flatMat(color, opacity) { return new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide }); }
 function groundTop(x, z, r) { let y = islandH(x, z); for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; y = Math.max(y, groundAt(x + Math.cos(a) * r, z + Math.sin(a) * r)); } return y; }
-function telegraph(x, z, r, ms) {
+function telegraph(x, z, r, ms, r0, safe) {
   const g = new THREE.Group();
+  if (r0) { // 도넛 모양: 안쪽(r0)은 안전. safe 면 파란 원으로 '여기로 오세요' 를 알림
+    const fill = new THREE.Mesh(new THREE.RingGeometry(r0, r, 64), flatMat(0xff3b3b, 0.08));
+    const edge = new THREE.Mesh(new THREE.RingGeometry(r0 - 0.2, r0, 48), flatMat(safe ? 0x1c7ed6 : 0xff2222, 0.9));
+    fill.rotation.x = edge.rotation.x = -Math.PI / 2;
+    g.add(fill, edge);
+    if (safe) { const ok = new THREE.Mesh(new THREE.CircleGeometry(r0, 40), flatMat(0x4dabf7, 0.6)); ok.rotation.x = -Math.PI / 2; ok.position.y = 0.02; g.add(ok); }
+    g.position.set(x, islandH(x, z) + 0.1, z);
+    addEffect(g, ms / 1000 + 0.1, (e, p) => { fill.material.opacity = 0.08 + 0.3 * Math.min(1, p * 1.08); edge.material.opacity = 0.6 + Math.sin(e.t * 25) * 0.3; });
+    return;
+  }
   const ring = new THREE.Mesh(new THREE.RingGeometry(r - 0.15, r, 40), flatMat(0xff2222, 0.8));
   const fill = new THREE.Mesh(new THREE.CircleGeometry(r, 40), flatMat(0xff3b3b, 0.28));
   ring.rotation.x = fill.rotation.x = -Math.PI / 2;
@@ -1215,9 +1240,16 @@ const handlers = {
       if (mo.hp !== hp) { mo.hp = hp; setTagHp(mo.tag, hp); }
     }
     if (m.f) for (const [id, mo] of monsters) if (!seen.has(id) && !mo.dying) removeMonster(id);
-    for (const mo of monsters.values()) if (mo.kind === 'golem' && !mo.dying) bossHp = mo.hp;
+    let wHp = null;
+    for (const mo of monsters.values()) { if (mo.dying) continue; if (mo.kind === 'golem') bossHp = mo.hp; else if (mo.kind === 'warden' && trial) wHp = mo.hp; }
+    if (wHp !== null) bossHp = wHp; // 시련 중에는 수호자의 체력과 남은 시간을 보여 줌
     $('bossBar').hidden = bossHp === null;
-    if (bossHp !== null) { $('bossFill').style.width = bossHp + '%'; $('bossPct').textContent = bossHp + '%'; }
+    if (bossHp !== null) {
+      $('bossFill').style.width = bossHp + '%';
+      const left = wHp !== null ? Math.max(0, Math.ceil((trial.end - performance.now()) / 1000)) : 0;
+      $('bossName').textContent = wHp !== null ? '⚔️ 시련의 수호자' : '⚡ 폭풍 골렘';
+      $('bossPct').textContent = bossHp + '%' + (wHp !== null ? ` · ⏱ ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : '');
+    }
   },
   join(m) { addOther(m.p); updateCount(); addLog(`${m.p.name} 님이 섬에 왔어요`); renderPeople(); },
   leave(m) { removeOther(m.id); updateCount(); addLog(`${m.name} 님이 섬을 떠났어요`); renderPeople(); },
@@ -1263,7 +1295,15 @@ const handlers = {
     pop(`레벨 업! Lv${m.lv}`, av.position.x, av.position.y + 3, av.position.z, 'lvup');
     if (m.id === me.id) toast(`🎉 레벨이 올랐어요! 이제 Lv${m.lv}`);
   },
-  tele(m) { telegraph(m.x, m.z, m.r, m.ms); },
+  tele(m) { telegraph(m.x, m.z, m.r, m.ms, m.r0, m.safe); },
+  tp(m) { // 서버가 나를 다른 곳으로 옮김 (파티 시련의 시작과 끝)
+    me.x = m.x; me.y = m.y + 0.3; me.z = m.z; me.vy = 0; me.ry = m.ry; camYaw = m.ry - Math.PI; me.glide = false; me.dashT = 0;
+    if (fishState) stopFishing();
+  },
+  trial(m) {
+    if (m.on) { const t = performance.now() + m.ready; trial = { start: t, end: t + m.ms }; toast('⚔️ 시련 시작! 빨간 바닥은 피하고, 파란 원은 안전해요. 경기장 밖으로 떨어지면 끝이에요'); }
+    else { trial = null; if (m.win) toast('🏆 시련 성공! 수호자를 쓰러뜨렸어요'); }
+  },
   ask(m) { showAsk(m); },
   time(m) { dayPhase = m.phase; phaseAt = performance.now(); },
   decoadd(m) { addDeco(m.d); if (m.d.o === me.id) { saveDecos(); renderDeco(); } },
@@ -1774,7 +1814,7 @@ $('quest').querySelector('.x').onclick = () => { $('quest').hidden = true; };
 
 // ================= 기록 · 칭호 · 순위 · 결투 =================
 let myst = { kills: 0, boss: 0, wins: 0, loses: 0, quests: 0 }, myTitle = '', rankData = null, duelOp = 0, duelStart = 0, knownTitles = null;
-function myStats() { return { lv: me.lv, gold: me.inv.gold, chests: myst.chests || 0, fish: myst.fish || 0, kills: myst.kills, boss: myst.boss, wins: myst.wins, quests: myst.quests, maxUp: Math.max(0, ...Object.values(me.inv.up || {})) }; } // (칭호 계산용)
+function myStats() { return { lv: me.lv, gold: me.inv.gold, chests: myst.chests || 0, trials: myst.trials || 0, fish: myst.fish || 0, kills: myst.kills, boss: myst.boss, wins: myst.wins, quests: myst.quests, maxUp: Math.max(0, ...Object.values(me.inv.up || {})) }; } // (칭호 계산용)
 function earnedTitles() { const st = myStats(); return ARCA.TITLE_IDS.filter((id) => ARCA.TITLES[id].ok(st)); }
 function checkNewTitles() { // 새 칭호를 얻으면 알려 줌
   const now = earnedTitles();
@@ -1794,7 +1834,7 @@ function checkNewTitles() { // 새 칭호를 얻으면 알려 줌
 function renderRecord() {
   if (!$('record') || $('record').hidden) return;
   const box = $('recStats'); box.textContent = '';
-  for (const [label, v] of [['🗡️ 사냥', myst.kills], ['⚡ 골렘', myst.boss], ['⚔️ 결투', `${myst.wins}승 ${myst.loses}패`], ['📜 의뢰', myst.quests], ['🎣 낚시', myst.fish || 0], ['🧰 보물', myst.chests || 0]]) {
+  for (const [label, v] of [['🗡️ 사냥', myst.kills], ['⚡ 골렘', myst.boss], ['⚔️ 결투', `${myst.wins}승 ${myst.loses}패`], ['📜 의뢰', myst.quests], ['🎣 낚시', myst.fish || 0], ['🛡️ 시련', myst.trials || 0], ['🧰 보물', myst.chests || 0]]) {
     const d = el('div'); d.append(el('small', '', label), el('b', '', String(v))); box.appendChild(d);
   }
   const st = myStats(), tl = $('recTitles'); tl.textContent = '';
@@ -1874,7 +1914,33 @@ fishLine.visible = false; fishLine.frustumCulled = false; scene.add(fishLine);
   const hints = $('hints');
   const mk = (id, text, fn) => { const d = el('div'); d.id = id; d.hidden = true; const b = el('button', '', text); b.onclick = fn; d.appendChild(b); hints.appendChild(d); };
   mk('fishHint', '🎣 구름 낚시 (X)', () => fishKey());
+  mk('trialHint', '⚔️ 파티 시련 도전', () => net({ t: 'trial' }));
   mk('cookHint', '🍢 모닥불에 생선 굽기 (C)', () => net({ t: 'cook' }));
+}
+// ---------- 파티 시련: 광장 북쪽의 비석과 하늘 높이 떠 있는 경기장 ----------
+const AR = ISLANDS[5], TG = ARCA.TRIAL.gate;
+let trial = null, nearGate = false; // trial = { start, end } (내가 도전 중일 때만)
+const gateObj = new THREE.Group(), gateTag = makeTag('⚔️ 시련의 비석');
+{
+  gateObj.position.set(TG.x, islandH(TG.x, TG.z), TG.z);
+  const base = mesh(new THREE.CylinderGeometry(1.3, 1.5, 0.4, 8), '#868e96'); base.position.y = 0.2;
+  const stone = mesh(new THREE.BoxGeometry(1.3, 3.2, 0.6), '#495057'); stone.position.y = 2;
+  const cap = mesh(new THREE.ConeGeometry(0.95, 0.7, 4), '#343a40'); cap.position.y = 3.95; cap.rotation.y = Math.PI / 4;
+  const rune = mesh(new THREE.OctahedronGeometry(0.4, 0), '#ff8787', { emissive: '#ff6b6b', emissiveIntensity: 1.5 }, false); rune.position.set(0, 2.4, 0.36);
+  gateObj.add(base, stone, cap, rune); gateObj.userData.rune = rune;
+  scene.add(gateObj);
+  const g = new THREE.Group(), top = AR.base + 1;
+  const floor = mesh(new THREE.CylinderGeometry(AR.R, AR.R - 0.6, 1.2, 40), '#6b6f8a'); floor.position.set(AR.x, top - 0.6, AR.z); floor.receiveShadow = true;
+  const bottom = rockBottom(AR.R - 0.5, 20, 23, -0.1); bottom.position.x = AR.x; bottom.position.z = AR.z; bottom.position.y += AR.base; bottom.material.color.set(0x9aa0c8);
+  g.add(floor, bottom);
+  [[5.6, 6, 0xffd43b], [12.6, 13, 0xbac8ff], [AR.R - 0.9, AR.R - 0.3, 0xffd43b]].forEach(([a, b, col]) => { const r = new THREE.Mesh(new THREE.RingGeometry(a, b, 56), flatMat(col, 0.55)); r.rotation.x = -Math.PI / 2; r.position.set(AR.x, top + 0.03, AR.z); g.add(r); });
+  for (let i = 0; i < 8; i++) { // 가장자리의 기둥 (꾸밈이라 부딪히지 않음)
+    const a = (i + 0.5) / 8 * Math.PI * 2, x = AR.x + Math.cos(a) * (AR.R - 1.3), z = AR.z + Math.sin(a) * (AR.R - 1.3);
+    const col = mesh(new THREE.BoxGeometry(0.9, 4.5, 0.9), '#8a8fb0'); col.position.set(x, top + 2.25, z); col.rotation.y = -a;
+    const fire = mesh(new THREE.OctahedronGeometry(0.45, 0), '#ffd43b', { emissive: '#ffa94d', emissiveIntensity: 1.5 }, false); fire.position.set(x, top + 5.1, z);
+    g.add(col, fire);
+  }
+  scene.add(g);
 }
 function stopFishing() { fishState = null; bobber.visible = false; fishLine.visible = false; me.actT = 0; }
 function fishKey() { // X: 던지기 / 당기기
@@ -1919,6 +1985,10 @@ function updateLeisure(dt) {
   if (fl !== fishLabel) { fishLabel = fl; const b = $('fishHint').firstChild; b.textContent = ['🎣 구름 낚시' + (isTouch() ? '' : ' (X)'), '🎣 기다리는 중…', '❗ 지금 당기기!'][fl]; b.classList.toggle('bite', fl === 2); }
   let cook = false;
   if (!me.dead && rawFishCount() > 0) for (const e of decos.values()) if (e.d.k === 'campfire' && Math.hypot(e.d.x - me.x, e.d.z - me.z) < ARCA.COOK_RANGE) { cook = true; break; }
+  const ng = !me.dead && !trial && Math.hypot(me.x - TG.x, me.z - TG.z) < ARCA.TRIAL.range;
+  if (ng !== nearGate) { nearGate = ng; $('trialHint').hidden = !ng; }
+  gateObj.userData.rune.rotation.y += dt * 1.5;
+  placeTag(gateTag, gateObj, dt, 4.6, 40);
   if (cook !== canCookNow) { canCookNow = cook; $('cookHint').hidden = !cook; }
   if (buffUntil && (buffTick += dt) > 1) { buffTick = 0; if (now > buffUntil) buffUntil = 0; renderTrack(); }
 }
@@ -2595,7 +2665,7 @@ function drawMinimap() { // 내가 있는 섬을 보여 줌
   const X = (x) => c + (x - I.x) * s, Z = (z) => c + (z - I.z) * s, on = (x, z, pad = 4) => Math.hypot(x - I.x, z - I.z) < I.R + pad;
   const dot = (x, z, r) => { mm.beginPath(); mm.arc(X(x), Z(z), r, 0, Math.PI * 2); mm.fill(); };
   mm.clearRect(0, 0, W, W);
-  mm.fillStyle = I.id === 4 ? '#3b3a7a' : I.id === 3 ? '#5c2e1f' : I.id === 2 ? '#dbe4ff' : I.id ? '#3f8f7f' : '#69b34c'; dot(I.x, I.z, I.R * s);
+  mm.fillStyle = I.id === 5 ? '#6b6f8a' : I.id === 4 ? '#3b3a7a' : I.id === 3 ? '#5c2e1f' : I.id === 2 ? '#dbe4ff' : I.id ? '#3f8f7f' : '#69b34c'; dot(I.x, I.z, I.R * s);
   if (I.id === 0) {
     mm.fillStyle = '#e6d6ae'; dot(0, 0, 13 * s);
     mm.fillStyle = '#5fc1ff'; dot(0, 0, 3 * s);
@@ -2611,7 +2681,7 @@ function drawMinimap() { // 내가 있는 섬을 보여 줌
   for (const mo of monsters.values()) {
     if (mo.dying || !mo.av.visible || !on(mo.av.position.x, mo.av.position.z)) continue;
     mm.fillStyle = mo.kind === 'golem' ? '#9c36b5' : mo.kind === 'turtle' || mo.kind === 'giant' || mo.kind === 'queen' || mo.kind === 'dragon' || mo.kind === 'meteor' ? '#7a3b00' : '#e03131';
-    dot(mo.av.position.x, mo.av.position.z, mo.kind === 'golem' ? 6 : mo.kind === 'giant' || mo.kind === 'queen' || mo.kind === 'dragon' ? 5 : mo.kind === 'turtle' ? 3.5 : 2);
+    dot(mo.av.position.x, mo.av.position.z, mo.kind === 'golem' || mo.kind === 'warden' ? 6 : mo.kind === 'giant' || mo.kind === 'queen' || mo.kind === 'dragon' ? 5 : mo.kind === 'turtle' ? 3.5 : 2);
   }
   for (const [id, o] of others) {
     if (!on(o.av.position.x, o.av.position.z)) continue;

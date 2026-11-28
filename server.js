@@ -177,7 +177,10 @@ function makeChannel() {
   const boss = make({ kind: 'golem', x: A.BOSS.x, z: A.BOSS.z });
   boss.alive = false; boss.deadUntil = Date.now() + BOSS_FIRST_MS;
   monsters.push(boss);
-  return { players: new Map(), monsters, boss, decos: new Map(), chest: null, nextChest: Date.now() + 60000 };
+  const AR = A.ISLANDS[5], warden = make({ kind: 'warden', x: AR.x, z: AR.z, isl: 5 }); // 파티 시련의 보스. 도전이 시작될 때만 나타남
+  warden.alive = false; warden.deadUntil = Infinity;
+  monsters.push(warden);
+  return { players: new Map(), monsters, boss, warden, trial: null, decos: new Map(), chest: null, nextChest: Date.now() + 60000 };
 }
 function pickChannel() {
   for (let n = 1; ; n++) {
@@ -201,7 +204,7 @@ const r2 = (v) => Math.round(v * 100) / 100;
 const r1 = (v) => Math.round(v * 10) / 10;
 function sendStats(p) { send(p.ws, { t: 'stats', hp: Math.ceil(p.hp), maxHp: p.maxHp, lv: p.lv, xp: p.xp, need: A.needXp(p.lv), atk: p.atk }); }
 function titleName(p) { return p.title && A.TITLES[p.title] ? A.TITLES[p.title].name : ''; }
-function statsOf(p) { return { lv: p.lv, gold: p.inv.gold, kills: p.st.kills, boss: p.st.boss, wins: p.st.wins, quests: p.st.quests, fish: p.st.fish, chests: p.st.chests, maxUp: Math.max(0, ...Object.values(p.inv.up)) }; }
+function statsOf(p) { return { lv: p.lv, gold: p.inv.gold, kills: p.st.kills, boss: p.st.boss, wins: p.st.wins, quests: p.st.quests, fish: p.st.fish, chests: p.st.chests, trials: p.st.trials, maxUp: Math.max(0, ...Object.values(p.inv.up)) }; }
 function sendSt(p) { send(p.ws, { t: 'st', st: p.st, title: p.title }); }
 function perk(p) { const pet = A.PETS[p.inv.pet]; return (pet && pet.perk) || {}; } // 데리고 있는 펫의 능력
 function sendInv(p) {
@@ -227,6 +230,7 @@ function hurtMonster(ch, m, p, mult) {
     if (Date.now() - (p.safeTold || 0) > 4000) { p.safeTold = Date.now(); notice(p, '🛡️ 광장 안에서는 몬스터를 공격할 수 없어요. 밖으로 나가서 싸워요'); }
     return;
   }
+  if (m.def.trial) { const T = channels.get(ch).trial; if (!T || !T.ids.has(p.id) || Date.now() < T.start) return; } // 시련의 보스는 도전한 파티만 때릴 수 있음
   const sk = p.curSk || {};
   const crit = Math.random() < 0.12 + (sk.crit || 0) + (perk(p).crit || 0); // 단검과 꼬마 유령은 치명타가 더 잘 터짐
   const up = (1 + A.UP_BONUS * (p.inv.up[p.inv.equip] || 0)) * (Date.now() < p.buffUntil ? A.FOOD_BUFF.atk : 1); // 강화한 무기와 구운 생선은 더 아픔
@@ -248,6 +252,7 @@ function killMonster(ch, m) {
   // 때린 사람 모두가 경험치를 다 받음 → 모르는 사람과도 같이 싸우면 이득
   const list = channels.get(ch).players;
   if (m.def.boss) return bossRewards(ch, m);
+  if (m.def.trial) return endTrial(ch, true);
   // 같은 파티 사람은 가까이 있으면 때리지 않아도 같이 받음
   for (const pid of [...m.hitters]) {
     const p = list.get(pid), party = p && parties.get(p.party);
@@ -798,6 +803,7 @@ function updateMonsters(ch, dt) {
   const now = Date.now();
   for (const m of monsters) {
     const def = m.def;
+    if (def.trial) continue; // 시련의 보스는 updateTrial 이 따로 움직임
     if (!m.alive) {
       if (def.boss && !m.warned && m.deadUntil - now < 30000) { m.warned = true; broadcast(ch, { t: 'notice', text: '⚡ 30초 뒤 섬 서북쪽에 폭풍 골렘이 나타나요!' }); }
       if (now >= m.deadUntil) {
@@ -861,6 +867,172 @@ function updateMonsters(ch, dt) {
     }
     pushOut(m);
   }
+}
+
+// ---------- 파티 시련: 파티가 경기장으로 올라가 패턴을 쓰는 보스와 싸움 ----------
+// 공격은 '맞는 사람 최대 체력의 몇 %' 라서 레벨이 달라도 똑같이 아픔 → 피하는 실력이 중요
+const ARENA = A.ISLANDS[5];
+const TRIAL_DMG = Number(process.env.TRIAL_DMG) || 1; // 시험할 때만 피해를 줄여 봄
+let trialBest = 0; // 서버가 켜진 뒤 가장 빠른 기록(ms)
+const mmss = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+function teleport(p, x, z, ry) {
+  p.x = x; p.z = z; p.y = A.islandH(x, z); p.ry = ry; p.tpAt = Date.now();
+  send(p.ws, { t: 'tp', x: r2(x), y: r2(p.y), z: r2(z), ry: r2(ry) });
+}
+function startTrial(p) {
+  const c = channels.get(p.ch), G = A.TRIAL.gate, now = Date.now();
+  const near = (q) => Math.hypot(q.x - G.x, q.z - G.z) <= A.TRIAL.range;
+  if (p.dead || !near(p)) return;
+  const set = parties.get(p.party);
+  if (!set) return notice(p, '⚔️ 시련은 파티로만 도전할 수 있어요. 사람들(P)에서 친구를 파티에 초대해요');
+  if (c.trial) return notice(p, `⚔️ 다른 파티가 도전하는 중이에요. 길어도 ${mmss(c.trial.end - now)} 뒤에는 끝나요`);
+  const team = [...set].filter((q) => q.ch === p.ch && !q.dead && !q.duel && !q.trade && near(q));
+  if (team.length < A.TRIAL.minParty) return notice(p, `⚔️ 파티원 ${A.TRIAL.minParty}명 이상이 비석 가까이에 모여야 해요 (지금 ${team.length}명)`);
+  const m = c.warden;
+  let power = 0;
+  for (const q of team) power += q.atk * (1 + A.UP_BONUS * (q.inv.up[q.inv.equip] || 0));
+  Object.assign(m, { alive: true, x: ARENA.x, z: ARENA.z, ry: Math.PI, st: 0, target: 0, slowUntil: 0 });
+  m.maxHp = m.hp = Math.round(power * A.TRIAL.hpPer); m.hitters.clear();
+  const start = now + A.TRIAL.ready;
+  c.trial = { ids: new Set(team.map((q) => q.id)), names: team.map((q) => q.name), start, end: start + A.TRIAL.maxMs, phase: 1, pat: 0, next: start + 1500, casts: [], hits: [] };
+  team.forEach((q, i) => {
+    const a = Math.PI + (i - (team.length - 1) / 2) * 0.35; // 보스 북쪽에 나란히
+    q.hp = q.maxHp; sendStats(q);
+    teleport(q, ARENA.x + Math.sin(a) * 12, ARENA.z + Math.cos(a) * 12, a + Math.PI);
+    send(q.ws, { t: 'trial', on: true, ready: A.TRIAL.ready, ms: A.TRIAL.maxMs });
+  });
+  broadcast(p.ch, { t: 'notice', text: `⚔️ ${c.trial.names.join(' · ')} 파티가 시련의 수호자에게 도전해요!` });
+}
+function endTrial(ch, win, why) {
+  const c = channels.get(ch), T = c.trial, m = c.warden, now = Date.now();
+  if (!T) return;
+  c.trial = null;
+  const left = Math.max(1, Math.round(m.hp / m.maxHp * 100));
+  if (m.alive) { m.alive = false; m.st = 0; broadcast(ch, { t: 'mdie', id: m.id }); }
+  m.deadUntil = Infinity; m.hitters.clear();
+  const took = now - T.start, G = A.TRIAL.gate;
+  let best = false;
+  if (win && (!trialBest || took < trialBest)) { trialBest = took; best = true; }
+  for (const id of T.ids) {
+    const p = c.players.get(id); if (!p) continue;
+    send(p.ws, { t: 'trial', on: false, win });
+    if (win) {
+      p.st.trials++; sendSt(p);
+      if (now - (p.trialPaid || 0) >= A.TRIAL.rewardMs) { // 보상은 가끔만 (기록과 칭호는 매번 오름)
+        p.trialPaid = now;
+        const gold = 150 + p.lv * 10;
+        p.inv.gold = Math.min(999999, p.inv.gold + gold);
+        const n = addItem(p.inv, 'shard', 1);
+        giveXp(ch, p, Math.round(A.needXp(p.lv) * 0.06));
+        send(p.ws, { t: 'loot', gold, items: n ? [['shard', n]] : [], x: r2(p.x), z: r2(p.z) });
+        sendInv(p);
+      } else notice(p, `보상은 ${Math.round(A.TRIAL.rewardMs / 60000)}분에 한 번만 받을 수 있어요 (${mmss(A.TRIAL.rewardMs - (now - p.trialPaid))} 남음). 기록은 올라갔어요`);
+    } else notice(p, `💀 시련 실패: ${why} 수호자의 체력이 ${left}% 남았어요`);
+    // 경기장에 서 있는 사람은 광장 비석 앞으로 돌려보냄 (쓰러진 사람은 다시 일어날 때 광장으로 감)
+    if (!p.dead && Math.hypot(p.x - ARENA.x, p.z - ARENA.z) <= ARENA.R + 3) { p.hp = p.maxHp; sendStats(p); teleport(p, G.x - 2 + Math.random() * 4, G.z + 2.5 + Math.random() * 1.5, Math.PI); }
+  }
+  if (win) broadcast(ch, { t: 'notice', text: `🏆 ${T.names.join(' · ')} 파티가 시련의 수호자를 ${mmss(took)} 만에 쓰러뜨렸어요!${best ? ' 지금까지 가장 빠른 기록이에요!' : ` (최고 기록 ${mmss(trialBest)})`}` });
+}
+// 패턴 하나 = 예고(casts) 여러 개. 예고는 at 에 바닥에 그려지고, wind 뒤에 그 안에 있는 사람이 frac 만큼 다침
+// 모양 { x, z, r, r0 }: 반지름 r 안이 위험. r0 가 있으면 그 안쪽은 안전(도넛)
+const TRIAL_PATTERNS = {
+  slam(T, m, ph) { // 한 사람을 노려 내려찍기. 단계가 오르면 연달아
+    const n = ph, out = [];
+    for (let i = 0; i < n; i++) out.push({ delay: i * 950, wind: 1000, frac: 0.25, make: (c) => { const t = c.target; m.ry = Math.atan2(t.x - m.x, t.z - m.z); return [{ x: t.x, z: t.z, r: 4.5 }]; } });
+    return out;
+  },
+  chase(T, m, ph) { // 모두의 발밑에 번개가 연달아 떨어짐 (계속 움직여야 함)
+    const out = [];
+    for (let i = 0; i < 2 + ph; i++) out.push({ delay: i * 800, wind: 1000, frac: 0.16, make: (c) => c.alive.map((p) => ({ x: p.x, z: p.z, r: 3 })) });
+    return out;
+  },
+  inner(T, m, ph) { // 보스 둘레가 터짐 → 멀리 떨어지기. 2단계부터는 곧바로 바깥이 터짐
+    const out = [{ delay: 0, wind: 1600, frac: 0.35, make: () => [{ x: m.x, z: m.z, r: 11 }] }];
+    if (ph >= 2) out.push({ delay: 1500, wind: 1500, frac: 0.35, make: () => [{ x: m.x, z: m.z, r: 46, r0: 6 }] });
+    return out;
+  },
+  donut(T, m, ph) { // 보스 곁만 안전 → 바짝 붙기. 2단계부터는 곧바로 안쪽이 터짐
+    const out = [{ delay: 0, wind: 1900, frac: 0.35, make: () => [{ x: m.x, z: m.z, r: 46, r0: 6 }] }];
+    if (ph >= 2) out.push({ delay: 1800, wind: 1500, frac: 0.35, make: () => [{ x: m.x, z: m.z, r: 11 }] });
+    return out;
+  },
+  cross(T, m, ph) { // 십자로 뻗는 불길, 이어서 비스듬히 한 번 더
+    const a0 = Math.random() * Math.PI, out = [];
+    for (let i = 0; i < ph; i++) out.push({ delay: i * 1200, wind: 1500, frac: 0.28, make: () => {
+      const list = [{ x: m.x, z: m.z, r: 3 }];
+      for (let k = 0; k < 4; k++) for (let d = 4.5; d < 42; d += 4.2) {
+        const a = a0 + i * Math.PI / 4 + k * Math.PI / 2, x = m.x + Math.sin(a) * d, z = m.z + Math.cos(a) * d;
+        if (Math.hypot(x - ARENA.x, z - ARENA.z) < ARENA.R + 1) list.push({ x, z, r: 2.6 });
+      }
+      return list;
+    } });
+    return out;
+  },
+  meteors(T, m, ph) { // 경기장 곳곳에 별똥별이 세 번 쏟아짐
+    const out = [];
+    for (let i = 0; i < 3; i++) out.push({ delay: i * 1300, wind: 1300, frac: 0.22, make: () => {
+      const list = [];
+      for (let k = 0; k < 5 + ph * 2; k++) { const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * (ARENA.R - 2); list.push({ x: ARENA.x + Math.cos(a) * d, z: ARENA.z + Math.sin(a) * d, r: 3 }); }
+      return list;
+    } });
+    return out;
+  },
+  haven(T, m) { // 3단계: 경기장 전체가 터지고 파란 원 안만 안전
+    const a = Math.random() * Math.PI * 2, d = 5 + Math.random() * 5;
+    return [{ delay: 0, wind: 4000, frac: 0.6, make: () => [{ x: ARENA.x + Math.cos(a) * d, z: ARENA.z + Math.sin(a) * d, r: 64, r0: 4.5, safe: 1 }] }];
+  },
+};
+const TRIAL_ORDER = { 1: ['slam', 'chase', 'inner', 'slam', 'meteors', 'donut'], 2: ['slam', 'cross', 'donut', 'chase', 'meteors', 'inner'], 3: ['haven', 'cross', 'slam', 'donut', 'chase', 'meteors', 'inner'] };
+function updateTrial(ch, c, now, dt) {
+  const T = c.trial; if (!T) return;
+  const m = c.warden;
+  const alive = [];
+  for (const id of T.ids) { const p = c.players.get(id); if (p && !p.dead && Math.hypot(p.x - ARENA.x, p.z - ARENA.z) <= ARENA.R + 1 && p.y > ARENA.base - 2) alive.push(p); }
+  if (!alive.length && now > T.start - A.TRIAL.ready + 2500) return endTrial(ch, false, '모두 쓰러지거나 떨어졌어요.');
+  if (now >= T.end) return endTrial(ch, false, '시간이 다 됐어요.');
+  // 예고가 끝난 공격: 그 안에 있는 사람이 다침 (한 공격에 한 번만)
+  for (let i = T.hits.length - 1; i >= 0; i--) {
+    const h = T.hits[i]; if (now < h.at) continue;
+    T.hits.splice(i, 1);
+    for (const p of alive) {
+      if (h.shapes.some((s) => { const d = Math.hypot(p.x - s.x, p.z - s.z); return d < s.r + 0.3 && d > (s.r0 || -1); })) hurtPlayer(ch, p, p.maxHp * h.frac * TRIAL_DMG);
+    }
+  }
+  if (!c.trial) return;
+  let target = c.players.get(m.target);
+  if (!target || !alive.includes(target)) { target = alive[Math.floor(Math.random() * alive.length)]; m.target = target ? target.id : 0; }
+  if (!target) return;
+  // 차례가 된 예고를 바닥에 그림
+  for (let i = 0; i < T.casts.length; i++) {
+    const k = T.casts[i]; if (now < k.at) continue;
+    T.casts.splice(i--, 1);
+    const shapes = k.make({ alive, target });
+    for (const s of shapes) broadcast(ch, { t: 'tele', id: m.id, x: r2(s.x), z: r2(s.z), r: s.r, ms: k.wind, r0: s.r0, safe: s.safe });
+    T.hits.push({ at: now + k.wind, shapes, frac: k.frac });
+  }
+  if (now < T.start) return;
+  const f = m.hp / m.maxHp, ph = f > 0.7 ? 1 : f > 0.35 ? 2 : 3;
+  if (ph > T.phase) {
+    T.phase = ph; T.pat = 0;
+    for (const p of alive) notice(p, ph === 2 ? '🔥 수호자가 진지해졌어요! 공격이 이어져서 나와요' : '💢 수호자가 분노했어요! 파란 원이 보이면 그 안으로 뛰어요');
+  }
+  const busy = T.casts.length || T.hits.length;
+  if (busy) { m.st = 2; return; }
+  if (now >= T.next) {
+    const order = TRIAL_ORDER[T.phase], name = order[T.pat++ % order.length];
+    const casts = TRIAL_PATTERNS[name](T, m, T.phase);
+    let last = 0;
+    for (const k of casts) { T.casts.push({ at: now + k.delay, wind: k.wind, frac: k.frac, make: k.make }); last = Math.max(last, k.delay + k.wind); }
+    T.next = now + last + [0, 1700, 1300, 1000][T.phase];
+    if (Math.random() < 0.5) m.target = 0; // 가끔 노리는 사람을 바꿈
+    m.st = 2; return;
+  }
+  // 공격 사이에는 노리는 사람 쪽으로 걸어감 (경기장 가장자리까지는 안 감)
+  const d = Math.hypot(target.x - m.x, target.z - m.z);
+  if (d > m.def.reach) { m.st = 1; stepToward(m, target.x, target.z, m.def.speed * (now < m.slowUntil ? 0.6 : 1), dt); }
+  else { m.st = 0; m.ry = Math.atan2(target.x - m.x, target.z - m.z); }
+  const dx = m.x - ARENA.x, dz = m.z - ARENA.z, r = Math.hypot(dx, dz), lim = ARENA.R - 6;
+  if (r > lim) { m.x = ARENA.x + dx * lim / r; m.z = ARENA.z + dz * lim / r; }
 }
 
 // ---------- 꾸미기 (접속해 있는 동안 섬에 놓이는 내 물건) ----------
@@ -1074,6 +1246,7 @@ wss.on('connection', (ws) => {
       const d = Math.hypot(dx, dz);
       if (d > 0.05 || Math.abs(ry - me.ry) > 0.02) me.lastAct = Date.now(); // 실제로 움직이거나 몸을 돌렸을 때만
       const nearSpawn = Math.hypot(x, z - 7) < SPAWN_R;
+      if (Date.now() - (me.tpAt || 0) < 1500 && d > 8) return; // 방금 옮겨졌는데 옛 자리에서 보낸 소식은 버림
       if (d > MAX_STEP && !nearSpawn) { x = me.x + (dx / d) * MAX_STEP; z = me.z + (dz / d) * MAX_STEP; }
       me.x = Math.max(-200, Math.min(200, x));
       me.y = Math.max(-80, Math.min(80, y));
@@ -1095,6 +1268,8 @@ wss.on('connection', (ws) => {
       handleRecord(me, m);
     } else if (['pinvite', 'pleave', 'treq', 'dreq', 'answer', 'toffer', 'tok', 'tcancel'].includes(m.t)) {
       handleSocial(me, m);
+    } else if (m.t === 'trial') {
+      startTrial(me);
     } else if (m.t === 'deco' || m.t === 'decodel') {
       handleDeco(me, m);
     } else if (['qtake', 'qdone', 'qdrop', 'donate', 'upgrade', 'craft'].includes(m.t)) {
@@ -1136,6 +1311,7 @@ setInterval(() => {
   for (const [ch, c] of channels) {
     if (c.players.size === 0) continue;
     updateMonsters(ch, dt);
+    updateTrial(ch, c, now, dt);
     // 전송량 줄이기: 사람마다 ①가까운 몬스터만 ②지난번과 달라진 것만 보냄. FULL_EVERY 번에 한 번은 전부(f:1) 보내서 화면을 맞춤
     const pl = [], ml = [];
     for (const q of c.players.values()) pl.push([q.id, JSON.stringify([q.id, r2(q.x), r2(q.y), r2(q.z), r2(q.ry), q.a, Math.round(q.hp / q.maxHp * 100), q.lv])]);

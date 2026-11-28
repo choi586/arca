@@ -27,12 +27,16 @@ const ISLANDS = [
   { id: 2, name: '서리봉우리', icon: '❄️', x: 0, z: -132, R: 34 }, // 북쪽의 눈 덮인 섬. 바닥이 미끄러움
   { id: 3, name: '불꽃마루', icon: '🌋', x: 0, z: 136, R: 36, minLv: 30 }, // 남쪽의 화산섬. Lv30 이 되어야 나타남
   { id: 4, name: '별무리 하늘섬', icon: '🌌', x: 0, z: 240, R: 34, minLv: 45, base: 12 }, // 불꽃마루 남쪽, 다른 섬보다 훨씬 높이 떠 있는 밤의 섬. Lv45 부터
+  { id: 5, name: '시련의 경기장', icon: '⚔️', x: 150, z: 150, R: 20, base: 30 }, // 걸어서도 날아서도 못 가는 높은 곳. 파티 시련을 시작하면 옮겨짐
 ];
 // 바람 기둥: 글라이더를 편 채 들어가면 하늘 높이 올라감
 const UPDRAFTS = [{ x: 56, z: 0, r: 4.5 }, { x: 99, z: 0, r: 4.5 }, { x: 0, z: -56, r: 4.5 }, { x: 0, z: -103, r: 4.5 },
   { x: 0, z: 56, r: 4.5, minLv: 30 }, { x: 0, z: 105, r: 4.5, minLv: 30 }, // 이 둘은 불꽃마루로 가는 기둥 (Lv30 부터 보임)
   { x: 0, z: 166, r: 4.5, minLv: 45, top: 36 }, { x: 0, z: 211, r: 4.5, minLv: 45, top: 30 }]; // 불꽃마루 남쪽 끝과 하늘섬 북쪽 끝의 높은 기둥 (top = 올라가는 높이)
 const UPDRAFT_TOP = 22;
+// 파티 시련: 광장 북쪽 비석에서 파티가 함께 경기장으로 올라가 '시련의 수호자'와 싸움
+// hpPer 수호자 체력 = 도전자들의 공격력 합 × 이 값 · maxMs 제한 시간 · rewardMs 보상을 다시 받기까지 걸리는 시간
+const TRIAL = { gate: { x: 0, z: -11 }, range: 6, minParty: 2, maxMs: 300000, ready: 4000, hpPer: 280, rewardMs: 600000 };
 // 레벨 제한이 있는 섬은 그 레벨이 되기 전에는 '없는 섬'이다. 화면 쪽에서 world.lv 에 내 레벨을 넣어 둠 (서버는 비워 둬서 모든 섬이 있음)
 function unlocked(o) { return !o.minLv || world.lv === undefined || world.lv >= o.minLv; }
 function islandOf(x, z) { for (const I of ISLANDS) if (unlocked(I) && Math.hypot(x - I.x, z - I.z) <= I.R) return I; return null; }
@@ -58,6 +62,8 @@ function starH(x, z) { // 하늘섬: 높이 떠 있는 완만한 언덕. 가운�
   return I.base + 1.6 + 2.2 * Math.exp(-r * r / 90) + bumps * smooth(0, 8, I.R - r) - smooth(I.R - 7, I.R, r) * 1.6;
 }
 function islandH(x, z) {
+  const T = ISLANDS[5];
+  if (Math.hypot(x - T.x, z - T.z) <= T.R + 0.5) return T.base + 1; // 경기장은 평평함
   const S = ISLANDS[4];
   if (Math.hypot(x - S.x, z - S.z) <= S.R + 0.5) return starH(x, z);
   const V = ISLANDS[3];
@@ -91,6 +97,7 @@ function buildLayout() {
   obstacles.push({ x: 5.5, z: 4, r: 0.5 }); // 환영 팻말
   obstacles.push({ x: MERCHANT.x, z: MERCHANT.z, r: 1.7 }); // 상인 가게
   obstacles.push({ x: ELDER.x, z: ELDER.z, r: 0.7 });       // 촌장
+  obstacles.push({ x: 0, z: -11, r: 1.1 });                  // 시련의 비석
   for (let i = 0, made = 0; i < 400 && made < 95; i++) {
     const a = rand() * Math.PI * 2, r = 25 + rand() * (R - 30), x = Math.cos(a) * r, z = Math.sin(a) * r;
     if (obstacles.some((o) => Math.hypot(o.x - x, o.z - z) < o.r + 2.2)) continue;
@@ -182,7 +189,8 @@ MONSTERS.starbun = { name: '별똥 토끼', lv: 48, hp: 5200, atk: 195, speed: 5
 MONSTERS.shade = { name: '달그림자', lv: 52, hp: 7200, atk: 255, speed: 4.0, xp: 2800, aggro: 9, reach: 2.8, hitR: 3.0, hitAt: 1.2, windup: 700, cd: 1800, size: 1.3, respawn: 32000, minLv: 45 };
 MONSTERS.meteor = { name: '유성 골렘', lv: 56, hp: 13000, atk: 300, speed: 2.2, xp: 5200, aggro: 11, reach: 3.6, hitR: 4.2, hitAt: 0.0, windup: 1300, cd: 2800, size: 2.0, respawn: 50000, elite: true, ringR: 7, minLv: 45 };
 // 새 종류는 반드시 맨 뒤에 붙임 (번호가 바뀌면 새로고침 안 한 화면에서 몬스터가 뒤바뀜)
-const MONSTER_KINDS = ['slime', 'shroom', 'turtle', 'golem', 'toad', 'wisp', 'yeti', 'wolf', 'giant', 'bee', 'scarecrow', 'bat', 'treant', 'penguin', 'icewisp', 'queen', 'lizard', 'magma', 'firebird', 'dragon', 'cinder', 'drake', 'starbun', 'shade', 'meteor'];
+MONSTERS.warden = { name: '시련의 수호자', lv: 60, hp: 10000, atk: 0, speed: 3.2, xp: 0, aggro: 60, reach: 4, hitR: 4.5, hitAt: 0, windup: 1000, cd: 2000, size: 2.6, respawn: 1e13, trial: true }; // 체력은 도전하는 파티에 맞춰 정해지고, 공격은 맞는 사람 체력의 몇 % 로 들어감
+const MONSTER_KINDS = ['slime', 'shroom', 'turtle', 'golem', 'toad', 'wisp', 'yeti', 'wolf', 'giant', 'bee', 'scarecrow', 'bat', 'treant', 'penguin', 'icewisp', 'queen', 'lizard', 'magma', 'firebird', 'dragon', 'cinder', 'drake', 'starbun', 'shade', 'meteor', 'warden'];
 const BOSS = { x: -30, z: -26 };
 const PARTY_MAX = 4, PARTY_SHARE_RANGE = 30;
 
@@ -452,7 +460,7 @@ const LOOT = {
 const FISH = { edge: 7, minMs: 2000, maxMs: 6000, window: 1300, whale: 0.01, whalePity: 100 }; // 고래는 1%, 못 만나도 100번째에는 반드시
 const FISH_DAY = [['cloudfish', 0.5], ['starfish', 0.25], ['boot', 0.14], ['rainbow', 0.08], ['windstone', 0.03]];
 const FISH_NIGHT = [['cloudfish', 0.33], ['starfish', 0.22], ['moonjelly', 0.27], ['boot', 0.08], ['rainbow', 0.08], ['windstone', 0.02]];
-function canFish(x, z) { const I = islandOf(x, z); return !!I && Math.hypot(x - I.x, z - I.z) > I.R - FISH.edge; }
+function canFish(x, z) { const I = islandOf(x, z); return !!I && I.id !== 5 && Math.hypot(x - I.x, z - I.z) > I.R - FISH.edge; }
 const FOOD_BUFF = { atk: 1.15, ms: 120000 };
 const COOK_RANGE = 5; // 모닥불에서 이만큼 안
 const PETS = {
@@ -634,6 +642,8 @@ const TITLES = {
   champion: { name: '광장의 챔피언', how: '결투 10번 승리', ok: (s) => s.wins >= 10 },
   legend: { name: '전설의 대장장이', how: '무기 하나를 +10까지 강화', ok: (s) => s.maxUp >= 10 },
   treasure: { name: '보물 사냥꾼', how: '보물 상자 10개 열기', ok: (s) => s.chests >= 10 },
+  trial: { name: '시련을 넘은 자', how: '파티 시련 1번 성공', ok: (s) => s.trials >= 1 },
+  warden: { name: '수호자의 맞수', how: '파티 시련 10번 성공', ok: (s) => s.trials >= 10 },
   angler: { name: '구름 강태공', how: '낚시 30번 성공', ok: (s) => s.fish >= 30 },
   sky: { name: '하늘의 주인', how: 'Lv 20 달성', ok: (s) => s.lv >= 20 },
   lv40: { name: '구름 위의 전설', how: 'Lv 40 달성', ok: (s) => s.lv >= 40 },
@@ -643,7 +653,7 @@ const TITLE_IDS = Object.keys(TITLES);
 function cleanStats(raw) {
   const n = (v) => Math.max(0, Math.min(9999999, Math.floor(Number(v) || 0)));
   raw = raw && typeof raw === 'object' ? raw : {};
-  return { kills: n(raw.kills), boss: n(raw.boss), wins: n(raw.wins), loses: n(raw.loses), quests: n(raw.quests), fish: n(raw.fish), chests: n(raw.chests) };
+  return { kills: n(raw.kills), boss: n(raw.boss), wins: n(raw.wins), loses: n(raw.loses), quests: n(raw.quests), fish: n(raw.fish), chests: n(raw.chests), trials: n(raw.trials) };
 }
 // ---------- 결투 ----------
 const DUEL = { countdown: 3000, maxMs: 90000, range: 12, leave: 45, dmg: 0.5, loserHp: 0.3 };
@@ -654,8 +664,8 @@ const XP_HARD_LV = 20, XP_HARD_STEP = 0.08;
 const needXp = (lv) => Math.round((10 * lv * lv + 10) * (lv >= XP_HARD_LV ? 1 + (lv - XP_HARD_LV + 1) * XP_HARD_STEP : 1));
 const statsFor = (lv) => ({ maxHp: 80 + (lv - 1) * 15, atk: 10 + (lv - 1) * 3 });
 
-const VERSION = 31; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
-const api = { UP_PITY, upChance, unlocked, VERSION, SLOTS, ACCS, ACC_IDS, CHEST, GACHA, RARITY, SAFE_R, inSafe, FISH, FISH_DAY, FISH_NIGHT, canFish, FOOD_BUFF, COOK_RANGE, PETS, PET_IDS, TITLES, TITLE_IDS, cleanStats, DUEL, ELDER, TALK_RANGE, ALTAR_RANGE, BRIDGE, world, onBridge, MAX_UP, UP_BONUS, UPGRADES, QUESTS, QUEST_IDS, QUEST_ACTIVE_MAX, cleanQuests, ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
+const VERSION = 32; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
+const api = { UP_PITY, upChance, unlocked, VERSION, SLOTS, ACCS, ACC_IDS, CHEST, GACHA, RARITY, SAFE_R, inSafe, FISH, FISH_DAY, FISH_NIGHT, canFish, FOOD_BUFF, COOK_RANGE, PETS, PET_IDS, TITLES, TITLE_IDS, cleanStats, DUEL, ELDER, TALK_RANGE, ALTAR_RANGE, BRIDGE, world, onBridge, MAX_UP, UP_BONUS, UPGRADES, QUESTS, QUEST_IDS, QUEST_ACTIVE_MAX, cleanQuests, ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, TRIAL, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
   UNLOCK, KEYS, WEAPONS, WEAPON_IDS, ITEMS, ITEM_IDS, SHOP_ITEMS, MAX_STACK, BAG_SLOTS, LOOT, cleanInv, MAX_LV, needXp, statsFor };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ARCA = api;
 })(this);
