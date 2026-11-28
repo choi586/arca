@@ -391,7 +391,8 @@ const starFx = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMate
   g.computeVertexNormals();
   const top = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.9 }));
   top.receiveShadow = true;
-  const bottom = rockBottom(I.R, 30, 17, 0.9); bottom.position.set(I.x, I.base, I.z);
+  const bottom = rockBottom(I.R, 30, 17, 0.9); bottom.position.x = I.x; bottom.position.z = I.z; bottom.position.y += I.base; // 높이는 더하기만 (덮어쓰면 밑바닥이 섬 위로 솟음)
+  bottom.material.color.set(0x8f84d8); // 갈색 바위 대신 남보랏빛 바위
   grp.add(top, bottom);
   // 빛나는 별 수정 (꾸밈이라 부딪히지 않음)
   for (let i = 0; i < 26; i++) {
@@ -2724,5 +2725,5 @@ requestAnimationFrame(frame);
 refreshStats();
 
 // 자동 확인용
-window.__arca = { chest: () => chest, fish: () => fishState, fishKey: () => fishKey(), me, others: () => others.size, monsters: () => monsters, groundAt, tryAttack, net: (o) => net(o), openPanel, decos: () => decos, setPhase: (p) => { dayPhase = p; phaseAt = performance.now(); }, party: () => party, trade: () => trade, otherIds: () => [...others.keys()] };
+window.__arca = { far: () => farIslands, chest: () => chest, fish: () => fishState, fishKey: () => fishKey(), me, others: () => others.size, monsters: () => monsters, groundAt, tryAttack, net: (o) => net(o), openPanel, decos: () => decos, setPhase: (p) => { dayPhase = p; phaseAt = performance.now(); }, party: () => party, trade: () => trade, otherIds: () => [...others.keys()] };
 })();
