@@ -620,9 +620,11 @@ function handleShop(p, m) {
     } else if (A.ACCS[m.id]) {
       const it = A.ITEMS[m.id];
       if (!it.buy) return notice(p, `${it.name}은(는) 상점에서 팔지 않아요. 뽑기 상자에서 나와요`);
+      if (A.ACCS[m.id].lux && inv.items[m.id]) return notice(p, '이미 가지고 있어요');
       if (inv.gold < it.buy) return notice(p, '골드가 모자라요');
       if (!addItem(inv, m.id, 1)) return notice(p, '가방이 꽉 찼어요');
       inv.gold -= it.buy;
+      if (A.ACCS[m.id].lux) broadcast(p.ch, { t: 'notice', text: `💎 ${p.name} 님이 명품 ${it.icon} ${it.name}을(를) ${it.buy.toLocaleString('en-US')}G에 샀어요!` });
       const slot = it.slot;
       if (!inv.wear[slot]) { inv.wear[slot] = m.id; broadcast(p.ch, { t: 'cos', id: p.id, cos: inv.wear }); } // 그 부위가 비어 있으면 바로 달아 줌
       notice(p, `${it.icon} ${it.name}을(를) 샀어요! 가방(I)에서 달고 뗄 수 있어요`);

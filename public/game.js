@@ -1653,7 +1653,7 @@ function renderShop() {
     for (const [slot, slotName] of ARCA.SLOTS) {
       list.appendChild(el('div', 'ptitle', slotName));
       for (const id of ARCA.ACC_IDS) {
-        const it = ITEMS[id]; if (it.slot !== slot) continue;
+        const it = ITEMS[id]; if (it.slot !== slot || ARCA.ACCS[id].lux) continue; // 명품은 명품 탭에서
         const have = me.inv.items[id] || 0;
         if (ARCA.ACCS[id].craft) { list.appendChild(shopRow(it.icon, it.name, '제작 탭에서 시련의 증표로 만들어요' + (have ? ' · 가지고 있음' : ''), '', [['제작으로만', false, () => {}]])); continue; }
         if (!it.buy) { list.appendChild(shopRow(it.icon, it.name, '뽑기 상자에서만 나와요' + (have ? ` · 가진 수 ${have}` : ''), '', [['뽑기로만', false, () => {}]])); continue; }
@@ -1683,6 +1683,14 @@ function renderShop() {
       list.appendChild(odds);
     }
     list.appendChild(el('div', 'tip', '섬 상자는 골드와 그 섬 몬스터의 재료로 열어요. 그 섬 상자에서만 나오는 장신구와 펫이 있어요. 장신구는 여러 개 나와도 가방에 쌓여요. 남는 건 친구와 거래하거나 팔 수 있어요. 이미 가진 펫이 나오면 골드로 돌려받아요.'));
+  } else if (shopTab === 'lux') { // 명품: 능력 없이 비싸기만 한 것들
+    list.appendChild(el('div', 'tip', '능력은 하나도 없고 값만 비싼 장신구예요. 되팔 수도, 친구에게 넘길 수도 없어요. 사면 채널 모두에게 알려져요. 하나씩만 살 수 있어요.'));
+    for (const id of ARCA.ACC_IDS) {
+      const a = ARCA.ACCS[id]; if (!a.lux) continue;
+      const own = !!me.inv.items[id], slotName = ARCA.SLOTS.find((x) => x[0] === a.slot)[1];
+      list.appendChild(shopRow(a.icon, a.name, `${slotName} 장신구` + (own ? ' · 가지고 있음' : ''), own ? '' : `${a.buy.toLocaleString('en-US')}G`, [[own ? '가지고 있음' : '사기', !own && g >= a.buy, () => net({ t: 'buy', id })]]));
+    }
+    list.appendChild(el('div', 'tip', '섬에 놓는 명품(황금 동상, 보석 나무)은 꾸미기(K)에 있어요.'));
   } else if (shopTab === 'craft') { // 제작 무기
     list.appendChild(el('div', 'tip', '상점에서 팔지 않는 무기예요. 몬스터와 보스가 떨어뜨리는 재료를 모아 와서 만들어요. 만든 무기는 가방(I)에서 바꿔 들 수 있고, 강화도 똑같이 돼요.'));
     for (const id of ARCA.WEAPON_IDS) {
@@ -1773,6 +1781,8 @@ const bridgeMesh = new THREE.Group();
   tabUp.onclick = () => { shopTab = 'up'; renderShop(); };
   const tabC = el('button', '', '제작'); tabC.dataset.tab = 'craft'; document.querySelector('#shop .tabs').appendChild(tabC);
   tabC.onclick = () => { shopTab = 'craft'; renderShop(); };
+  const tabL = el('button', '', '명품'); tabL.dataset.tab = 'lux'; document.querySelector('#shop .tabs').appendChild(tabL);
+  tabL.onclick = () => { shopTab = 'lux'; renderShop(); };
   const tabG = el('button', '', '🎁 뽑기'); tabG.dataset.tab = 'gacha'; document.querySelector('#shop .tabs').appendChild(tabG);
   tabG.onclick = () => { shopTab = 'gacha'; renderShop(); };
   const tabA = el('button', '', '장신구'); tabA.dataset.tab = 'acc'; document.querySelector('#shop .tabs').insertBefore(tabA, tabUp);
@@ -2123,6 +2133,31 @@ function makeCos(id) {
     M(new THREE.BoxGeometry(0.55, 0.34, 0.02), '#ffd43b', null, -0.78, 2.45, -0.35);
   } else if (id === 'a_star') {
     g.userData.spin = M(new THREE.OctahedronGeometry(0.22, 0), '#ffe066', { emissive: '#fab005', emissiveIntensity: 1.1 }, 0, 2.95, 0);
+  } else if (id === 'a_lux_crown') { // 명품: 금테에 뾰족한 살, 꼭대기에 도는 다이아
+    const gold = { metalness: 0.25, roughness: 0.35, emissive: '#f59f00', emissiveIntensity: 0.7 };
+    const band = M(new THREE.CylinderGeometry(0.34, 0.31, 0.16, 12, 1, true), '#fcc419', Object.assign({ side: THREE.DoubleSide }, gold), 0, 2.3, 0);
+    for (let i = 0; i < 6; i++) { const a2 = i / 6 * Math.PI * 2; M(new THREE.ConeGeometry(0.07, 0.22, 4), '#fcc419', gold, Math.cos(a2) * 0.32, 2.47, Math.sin(a2) * 0.32); M(new THREE.SphereGeometry(0.035, 5, 4), ['#ff6b6b', '#4dabf7', '#69db7c'][i % 3], { emissive: ['#ff6b6b', '#4dabf7', '#69db7c'][i % 3], emissiveIntensity: 0.8 }, Math.cos(a2) * 0.34, 2.3, Math.sin(a2) * 0.34); }
+    g.userData.spin = M(new THREE.OctahedronGeometry(0.13, 0), '#e7f5ff', { emissive: '#74c0fc', emissiveIntensity: 1.0, metalness: 0.3, roughness: 0.1 }, 0, 2.78, 0);
+  } else if (id === 'a_lux_monocle') { // 명품: 금테 외알 안경과 늘어진 금줄
+    const gold = { metalness: 0.25, roughness: 0.35, emissive: '#f59f00', emissiveIntensity: 0.7 };
+    M(new THREE.TorusGeometry(0.11, 0.022, 6, 16), '#fcc419', gold, 0.15, 1.82, 0.38);
+    M(new THREE.CircleGeometry(0.1, 14), '#d0ebff', { transparent: true, opacity: 0.5, emissive: '#a5d8ff', emissiveIntensity: 0.5 }, 0.15, 1.82, 0.385);
+    const chain = M(new THREE.BoxGeometry(0.018, 0.5, 0.018), '#fcc419', gold, 0.3, 1.58, 0.33); chain.rotation.z = -0.25;
+  } else if (id === 'a_lux_chain') { // 명품: 굵은 금줄에 큰 보석
+    const gold = { metalness: 0.25, roughness: 0.35, emissive: '#f59f00', emissiveIntensity: 0.7 };
+    const ring = M(new THREE.TorusGeometry(0.4, 0.06, 6, 16), '#fcc419', gold, 0, 1.4, 0.05); ring.rotation.x = Math.PI / 2 + 0.35;
+    g.userData.spin = M(new THREE.OctahedronGeometry(0.15, 0), '#f783ac', { emissive: '#e64980', emissiveIntensity: 1.0, metalness: 0.3, roughness: 0.1 }, 0, 1.2, 0.46);
+  } else if (id === 'a_lux_wings') { // 명품: 일곱 빛깔 깃이 겹친 큰 날개
+    const cols = ['#ff6b6b', '#ffa94d', '#ffd43b', '#69db7c', '#4dabf7', '#9775fa'];
+    for (const x of [-1, 1]) cols.forEach((c, i) => {
+      const w = M(new THREE.ConeGeometry(0.2, 1.25 - i * 0.12, 4), c, { emissive: c, emissiveIntensity: 0.7 }, x * (0.55 + i * 0.1), 1.95 - i * 0.2, -0.5 - i * 0.01); w.scale.z = 0.2; w.rotation.z = -x * (0.55 + i * 0.22);
+    });
+  } else if (id === 'a_lux_gold') { // 명품: 몸 둘레를 도는 금괴 더미
+    const gold = { metalness: 0.25, roughness: 0.35, emissive: '#f59f00', emissiveIntensity: 0.7 };
+    const pile = new THREE.Group(); g.add(pile);
+    for (const [x, y, ry] of [[-0.13, 0, 0], [0.13, 0, 0], [0, 0.12, 0.3]]) { const b = mesh(new THREE.BoxGeometry(0.24, 0.11, 0.13), '#fcc419', gold, false); b.position.set(x, y, 0); b.rotation.y = ry; pile.add(b); }
+    const star = mesh(new THREE.OctahedronGeometry(0.06, 0), '#fff3bf', { emissive: '#ffd43b', emissiveIntensity: 1.6 }, false); star.position.set(0.05, 0.3, 0); pile.add(star);
+    g.userData.orbit = pile;
   } else if (id === 'a_wardenhalo') { // 수호자의 광륜: 큰 금빛 고리와 그 위를 도는 별
     const h = M(new THREE.TorusGeometry(0.44, 0.05, 6, 24), '#ffd43b', { emissive: '#ffa94d', emissiveIntensity: 0.9 }, 0, 2.4, 0); h.rotation.x = Math.PI / 2 - 0.25;
     g.userData.spin = M(new THREE.OctahedronGeometry(0.17, 0), '#ff8787', { emissive: '#ff6b6b', emissiveIntensity: 0.8 }, 0, 3.0, 0);
@@ -2243,6 +2278,22 @@ function makeDeco(d) {
     g.add(pot);
     ['#ff8787', '#ffd43b', '#da77f2'].forEach((c, i) => { const f = mesh(new THREE.IcosahedronGeometry(0.16, 0), c); f.position.set(Math.cos(i * 2.1) * 0.14, 0.62 + i * 0.07, Math.sin(i * 2.1) * 0.14); g.add(f); });
     const leaf = mesh(new THREE.ConeGeometry(0.2, 0.35, 5), '#2f9e44'); leaf.position.y = 0.5; g.add(leaf);
+  } else if (d.k === 'goldstatue') { // 명품: 금으로 만든 내 동상 (받침대 포함)
+    const gold = { metalness: 0.25, roughness: 0.35, emissive: '#f59f00', emissiveIntensity: 0.7 };
+    const base = mesh(new THREE.CylinderGeometry(0.8, 0.95, 0.5, 8), '#868e96'); base.position.y = 0.25;
+    const body = mesh(new THREE.BoxGeometry(0.7, 0.9, 0.45), '#fcc419', gold); body.position.y = 1.25;
+    const head = mesh(new THREE.IcosahedronGeometry(0.42, 1), '#fcc419', gold); head.position.y = 2.1;
+    const arm = mesh(new THREE.BoxGeometry(0.18, 0.8, 0.18), '#fcc419', gold); arm.position.set(0.5, 1.75, 0); arm.rotation.z = -0.5;
+    const arm2 = mesh(new THREE.BoxGeometry(0.18, 0.7, 0.18), '#fcc419', gold); arm2.position.set(-0.46, 1.2, 0);
+    [-0.18, 0.18].forEach((x) => { const leg = mesh(new THREE.BoxGeometry(0.24, 0.45, 0.28), '#fcc419', gold); leg.position.set(x, 0.7, 0); g.add(leg); });
+    g.add(base, body, head, arm, arm2);
+  } else if (d.k === 'gemtree') { // 명품: 은빛 줄기에 보석이 열린 나무
+    const trunk = mesh(new THREE.CylinderGeometry(0.14, 0.22, 1.8, 6), '#f1f3f5', { emissive: '#ced4da', emissiveIntensity: 0.5 }); trunk.position.y = 0.9;
+    g.add(trunk);
+    ['#ff6b6b', '#4dabf7', '#69db7c', '#ffd43b', '#da77f2', '#74c0fc', '#f783ac'].forEach((c, i) => {
+      const a = i * 0.9, r = i ? 0.55 + (i % 2) * 0.25 : 0, gem = mesh(new THREE.OctahedronGeometry(i ? 0.26 : 0.36, 0), c, { emissive: c, emissiveIntensity: 0.9, metalness: 0.3, roughness: 0.1 }, false);
+      gem.position.set(Math.cos(a) * r, i ? 1.6 + (i % 3) * 0.35 : 2.6, Math.sin(a) * r); g.add(gem);
+    });
   } else { // sign
     const post = mesh(new THREE.BoxGeometry(0.12, 1.3, 0.12), '#7a4b2a'); post.position.y = 0.65;
     const board = mesh(new THREE.BoxGeometry(1.3, 0.6, 0.08), '#c8955a'); board.position.y = 1.35;

@@ -425,12 +425,18 @@ const ACCS = {
   a_flamewings: { name: '불꽃 날개', icon: '🔥', slot: 'back', buy: 0, sell: 600 },
   a_goldcape: { name: '황금 망토', icon: '👑', slot: 'back', buy: 0, sell: 800 },
   a_comet: { name: '꼬마 혜성', icon: '☄️', slot: 'side', buy: 0, sell: 800 },
+  // 명품: 능력은 없고 값만 비쌈. 되팔 수도 넘길 수도 없어서 쓴 골드는 그대로 사라짐 (골드가 남아도는 고레벨용)
+  a_lux_crown: { name: '다이아 왕관', icon: '👑', slot: 'head', buy: 50000, lux: true },
+  a_lux_monocle: { name: '황금 외알 안경', icon: '🧐', slot: 'face', buy: 100000, lux: true },
+  a_lux_chain: { name: '왕보석 목걸이', icon: '📿', slot: 'neck', buy: 200000, lux: true },
+  a_lux_wings: { name: '무지개 날개', icon: '🌈', slot: 'back', buy: 400000, lux: true },
+  a_lux_gold: { name: '따라다니는 금괴', icon: '🪙', slot: 'side', buy: 800000, lux: true },
   a_wardenhalo: { name: '수호자의 광륜', icon: '🌟', slot: 'head', buy: 0, craft: { gold: 500, mats: { trialmark: 5 } } }, // 파티 시련의 증표로만 만듦. 팔 수도 넘길 수도 없음
 };
 const ACC_IDS = Object.keys(ACCS);
 for (const id of ACC_IDS) { // 가방에 들어가는 아이템으로도 등록
   const a = ACCS[id], slotName = SLOTS.find((x) => x[0] === a.slot)[1];
-  ITEMS[id] = { name: a.name, icon: a.icon, type: 'acc', slot: a.slot, buy: a.buy, sell: a.sell || Math.round(a.buy * 0.4), notrade: !!a.craft, desc: `${slotName}에 다는 장신구${a.buy ? '' : a.craft ? ' (시련의 증표로만 만들어요)' : ' (뽑기 상자에서만 나와요)'}. 눌러서 달고 떼요` };
+  ITEMS[id] = { name: a.name, icon: a.icon, type: 'acc', slot: a.slot, buy: a.buy, sell: a.lux ? 0 : a.sell || Math.round(a.buy * 0.4), notrade: !!(a.craft || a.lux), desc: `${slotName}에 다는 장신구${a.lux ? ' (명품. 되팔 수도 넘길 수도 없어요)' : a.buy ? '' : a.craft ? ' (시련의 증표로만 만들어요)' : ' (뽑기 상자에서만 나와요)'}. 눌러서 달고 떼요` };
 }
 ITEMS.firework = { name: '폭죽', icon: '🎆', type: 'fun', buy: 30, sell: 5, desc: '눌러서 쏘면 하늘에서 터져요. 모두에게 보여요' };
 ITEM_IDS.push(...ACC_IDS, 'firework');
@@ -634,6 +640,8 @@ const DECOS = {
   flag: { name: '깃발', icon: '🚩', price: 25 },
   flower: { name: '꽃 화분', icon: '🌷', price: 15 },
   sign: { name: '팻말', icon: '🪧', price: 20, text: true },
+  goldstatue: { name: '황금 동상', icon: '🗿', price: 5000, lux: true },
+  gemtree: { name: '보석 나무', icon: '💎', price: 20000, lux: true },
 };
 const DECO_MAX = 8, DECO_TEXT = 16;
 function decoAllowed(x, z) { return groundAt(x, z) > -Infinity && Math.hypot(x, z) > 15 && !UPDRAFTS.some((u) => Math.hypot(u.x - x, u.z - z) < u.r + 1); }
@@ -674,7 +682,7 @@ const XP_HARD_LV = 20, XP_HARD_STEP = 0.08;
 const needXp = (lv) => Math.round((10 * lv * lv + 10) * (lv >= XP_HARD_LV ? 1 + (lv - XP_HARD_LV + 1) * XP_HARD_STEP : 1));
 const statsFor = (lv) => ({ maxHp: 80 + (lv - 1) * 15, atk: 10 + (lv - 1) * 3 });
 
-const VERSION = 35; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
+const VERSION = 36; // 화면과 서버의 버전이 다르면 '새로고침' 안내를 띄움. 배포할 때마다 올림
 const api = { UP_PITY, upChance, unlocked, VERSION, SLOTS, ACCS, ACC_IDS, CHEST, GACHA, RARITY, SAFE_R, inSafe, FISH, FISH_DAY, FISH_NIGHT, canFish, FOOD_BUFF, COOK_RANGE, PETS, PET_IDS, TITLES, TITLE_IDS, cleanStats, DUEL, ELDER, TALK_RANGE, ALTAR_RANGE, BRIDGE, world, onBridge, MAX_UP, UP_BONUS, UPGRADES, QUESTS, QUEST_IDS, QUEST_ACTIVE_MAX, cleanQuests, ISLANDS, UPDRAFTS, UPDRAFT_TOP, islandOf, DAY_MS, isNightPhase, NIGHT_ATK, NIGHT_REWARD, DECOS, DECO_MAX, DECO_TEXT, decoAllowed, R, SPAWN, MERCHANT, SHOP_RANGE, rng, smooth, islandH, groundAt, buildLayout, MONSTERS, MONSTER_KINDS, BOSS, TRIAL, PARTY_MAX, PARTY_SHARE_RANGE, monsterHomes,
   UNLOCK, KEYS, WEAPONS, WEAPON_IDS, ITEMS, ITEM_IDS, SHOP_ITEMS, MAX_STACK, BAG_SLOTS, LOOT, cleanInv, MAX_LV, needXp, statsFor };
 if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ARCA = api;
